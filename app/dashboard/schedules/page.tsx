@@ -11,7 +11,9 @@ import {
   SubjectItem,
   TeacherItem,
   SubjectTeacherItem,
+  StudentItem,
 } from '@/lib/types';
+import StudentScheduleView from './StudentScheduleView';
 import {
   Calendar,
   Clock,
@@ -31,6 +33,7 @@ import {
   Filter,
   CheckSquare,
   Sparkles,
+  Eye,
 } from 'lucide-react';
 
 export default function SchedulesPage() {
@@ -42,17 +45,19 @@ export default function SchedulesPage() {
   const [subjects, setSubjects] = useState<SubjectItem[]>([]);
   const [teachers, setTeachers] = useState<TeacherItem[]>([]);
   const [subjectTeachers, setSubjectTeachers] = useState<SubjectTeacherItem[]>([]);
+  const [students, setStudents] = useState<StudentItem[]>([]);
 
   // Current session
   const currentUser = AuthService.getSession();
+  const isStudent = currentUser?.role === 'student';
   const isTeacher = currentUser?.role === 'teacher';
   const isAdmin = currentUser?.role === 'admin';
   const isMudir = currentUser?.role === 'mudir';
   const canManage = isAdmin || isMudir;
 
-  // View mode: 'my-schedule' (teacher's personal schedule) vs 'all-classes'
-  const [viewMode, setViewMode] = useState<'my-schedule' | 'all-classes'>(
-    isTeacher ? 'my-schedule' : 'all-classes'
+  // View mode: 'my-schedule' | 'all-classes' | 'student-preview'
+  const [viewMode, setViewMode] = useState<'my-schedule' | 'all-classes' | 'student-preview'>(
+    isStudent ? 'student-preview' : isTeacher ? 'my-schedule' : 'all-classes'
   );
 
   // Selected teacher for Admin/Mudir inspector
@@ -115,11 +120,13 @@ export default function SchedulesPage() {
     const subs = DataStore.getSubjects();
     const tchs = DataStore.getTeachers();
     const stMap = DataStore.getSubjectTeachers();
+    const stds = DataStore.getStudents();
     setClasses(cls);
     setSubjects(subs);
     setTeachers(tchs);
     setSubjectTeachers(stMap);
     setSchedules(DataStore.getSchedules());
+    setStudents(stds);
 
     if (cls.length > 0 && selectedClassId === 0) {
       setSelectedClassId(cls[0].ClassID);
@@ -131,6 +138,18 @@ export default function SchedulesPage() {
       }));
     }
   };
+
+  const currentStudent = useMemo(() => {
+    return (
+      students.find(s => s.StudentID === currentUser?.linkedId) ||
+      students.find(s => s.Email === currentUser?.email) ||
+      students[0]
+    );
+  }, [students, currentUser]);
+
+  const studentEnrolledClass = useMemo(() => {
+    return classes.find(c => c.ClassID === currentStudent?.ClassID);
+  }, [classes, currentStudent]);
 
   const daysList: ('Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday')[] = [
     'Sunday',
@@ -264,6 +283,26 @@ export default function SchedulesPage() {
 
   const activeConflicts = detectInstitutionConflicts();
 
+  // If the logged in user is a student, strictly show their schedule only!
+  if (isStudent) {
+    if (!currentStudent) {
+      return (
+        <div className="flex items-center justify-center p-12 text-slate-500">
+          <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      );
+    }
+    return (
+      <StudentScheduleView
+        student={currentStudent}
+        enrolledClass={studentEnrolledClass}
+        schedules={schedules}
+        subjects={subjects}
+        teachers={teachers}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Top Header & Navigation Bar */}
@@ -375,6 +414,20 @@ export default function SchedulesPage() {
           >
             <Building2 className="w-4 h-4 text-blue-400" />
             <span>جدول كافة الصفوف (All Classes Timetable)</span>
+          </button>
+
+          {/* Tab 3: Student View Preview */}
+          <button
+            type="button"
+            onClick={() => setViewMode('student-preview')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+              viewMode === 'student-preview'
+                ? 'bg-emerald-800 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+            }`}
+          >
+            <Eye className="w-4 h-4 text-amber-400" />
+            <span>معاينة جدول الطالب (Student View)</span>
           </button>
         </div>
 
@@ -947,6 +1000,32 @@ export default function SchedulesPage() {
               &bull; {hoveredTeacher.schedule.Day} from {hoveredTeacher.schedule.StartTime} to {hoveredTeacher.schedule.EndTime} ({hoveredTeacher.schedule.Room})
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SECTION C: STUDENT SCHEDULE VIEW PREVIEW                                  */}
+      {/* ========================================================================= */}
+      {viewMode === 'student-preview' && currentStudent && (
+        <div className="space-y-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 text-xs">
+            <div className="flex items-center gap-2">
+              <Eye className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span className="font-bold">معاينة واجهة جدول الطالب:</span>
+              <span>هذه هي الشاشة المخصصة التي تظهر للطالب حصراً مع جدول الحصص الأسبوعي الخاص به.</span>
+            </div>
+            <span className="font-mono bg-white px-2.5 py-1 rounded-lg border border-amber-300 font-bold self-start sm:self-auto">
+              Student Role Preview
+            </span>
+          </div>
+
+          <StudentScheduleView
+            student={currentStudent}
+            enrolledClass={studentEnrolledClass}
+            schedules={schedules}
+            subjects={subjects}
+            teachers={teachers}
+          />
         </div>
       )}
 

@@ -188,6 +188,36 @@ export const initialTeachers: TeacherItem[] = [
     ProfilePic: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
     IsMudir: false,
   },
+  {
+    TeacherID: 6,
+    Name: 'Ustadh Al-Yasa',
+    NameArabic: 'اليسع',
+    Gender: 'Male',
+    Nationality: 'Saudi',
+    Email: 'alyasa@jmaa.edu',
+    Password: 'teacher123',
+    IdNumber: 'TCH-006-YAS',
+    Degree: 'B.A. in Islamic Jurisprudence (Fiqh)',
+    AdmissionDate: '2019-09-01',
+    Remarks: 'Lecturer of Fiqh',
+    ProfilePic: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    IsMudir: false,
+  },
+  {
+    TeacherID: 7,
+    Name: 'Ustadh Ryan Madid',
+    NameArabic: 'ريان',
+    Gender: 'Male',
+    Nationality: 'Filipino / Arab',
+    Email: 'ryan@jmaa.edu',
+    Password: 'teacher123',
+    IdNumber: 'TCH-007-RYN',
+    Degree: 'B.S. in Islamic Theology & Tawheed',
+    AdmissionDate: '2020-08-15',
+    Remarks: 'Lecturer of Tawheed & Islamic Beliefs',
+    ProfilePic: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    IsMudir: false,
+  },
 ];
 
 // 3. Subjects
@@ -212,12 +242,12 @@ export const initialSubjects: SubjectItem[] = [
 
 // 4. Subject-Teacher Mappings
 export const initialSubjectTeachers: SubjectTeacherItem[] = [
-  { ID: 1, ClassID: 1, SubjectID: 1, TeacherID: 2 }, // Sheikh Ahmad Al-Farouq / Teacher Ryan (Fiqh)
-  { ID: 2, ClassID: 1, SubjectID: 2, TeacherID: 2 }, // Sheikh Ahmad Al-Farouq (Tawheed)
-  { ID: 3, ClassID: 1, SubjectID: 3, TeacherID: 2 }, // Sheikh Ahmad Al-Farouq (Quran)
-  { ID: 4, ClassID: 1, SubjectID: 4, TeacherID: 4 }, // Sheikh Bilal Mansoor
-  { ID: 5, ClassID: 1, SubjectID: 5, TeacherID: 4 }, // Sheikh Bilal Mansoor
-  { ID: 6, ClassID: 1, SubjectID: 6, TeacherID: 3 }, // Ustadha Fatima
+  { ID: 1, ClassID: 1, SubjectID: 1, TeacherID: 6 }, // اليسع (Fiqh)
+  { ID: 2, ClassID: 1, SubjectID: 2, TeacherID: 7 }, // ريان (Tawheed)
+  { ID: 3, ClassID: 1, SubjectID: 3, TeacherID: 2 }, // الشيخ أحمد (Quran)
+  { ID: 4, ClassID: 1, SubjectID: 4, TeacherID: 4 }, // الشيخ بلال (Tabeer)
+  { ID: 5, ClassID: 1, SubjectID: 5, TeacherID: 6 }, // اليسع (Nusoos)
+  { ID: 6, ClassID: 1, SubjectID: 6, TeacherID: 3 }, // Ustadha Fatima (Adab)
   { ID: 7, ClassID: 7, SubjectID: 7, TeacherID: 1 },
   { ID: 8, ClassID: 7, SubjectID: 8, TeacherID: 4 },
   { ID: 9, ClassID: 7, SubjectID: 9, TeacherID: 5 },
@@ -227,42 +257,65 @@ export const initialSubjectTeachers: SubjectTeacherItem[] = [
   { ID: 13, ClassID: 13, SubjectID: 13, TeacherID: 5 },
   { ID: 14, ClassID: 17, SubjectID: 14, TeacherID: 2 },
   { ID: 15, ClassID: 21, SubjectID: 15, TeacherID: 3 },
-  { ID: 16, ClassID: 15, SubjectID: 16, TeacherID: 2 }, // Fiqh in 3 Kulliyah (مرحلة: 3 كلية)
+  { ID: 16, ClassID: 15, SubjectID: 16, TeacherID: 2 },
 ];
 
 // 5. Weekly Class Schedules
 export const initialSchedules: ClassScheduleItem[] = [
-  // Sunday
-  { ID: 1, ClassID: 1, SubjectID: 1, TeacherID: 2, Day: 'Sunday', StartTime: '08:00', EndTime: '09:00', Room: 'Hall 101' },
-  { ID: 2, ClassID: 1, SubjectID: 2, TeacherID: 4, Day: 'Sunday', StartTime: '09:15', EndTime: '10:15', Room: 'Hall 101' },
-  { ID: 3, ClassID: 7, SubjectID: 4, TeacherID: 1, Day: 'Sunday', StartTime: '08:00', EndTime: '09:30', Room: 'Lecture Hall B' },
-  { ID: 4, ClassID: 7, SubjectID: 5, TeacherID: 4, Day: 'Sunday', StartTime: '10:30', EndTime: '11:30', Room: 'Lecture Hall B' },
-  { ID: 5, ClassID: 10, SubjectID: 7, TeacherID: 5, Day: 'Sunday', StartTime: '08:30', EndTime: '10:00', Room: 'Seminar Room 2' },
-  { ID: 6, ClassID: 13, SubjectID: 9, TeacherID: 1, Day: 'Sunday', StartTime: '10:00', EndTime: '11:30', Room: 'Auditorium 1' },
+  // Class 1 - Sunday
+  { ID: 1, ClassID: 1, SubjectID: 3, TeacherID: 2, Day: 'Sunday', StartTime: '07:00', EndTime: '08:30', Room: 'Hall 101' },
+  { ID: 2, ClassID: 1, SubjectID: 1, TeacherID: 6, Day: 'Sunday', StartTime: '08:30', EndTime: '09:30', Room: 'Hall 101' },
+  { ID: 3, ClassID: 1, SubjectID: 2, TeacherID: 7, Day: 'Sunday', StartTime: '09:40', EndTime: '10:40', Room: 'Hall 101' },
+  { ID: 4, ClassID: 1, SubjectID: 4, TeacherID: 4, Day: 'Sunday', StartTime: '10:40', EndTime: '11:30', Room: 'Hall 101' },
+  { ID: 5, ClassID: 1, SubjectID: 5, TeacherID: 6, Day: 'Sunday', StartTime: '11:30', EndTime: '12:30', Room: 'Hall 101' },
+
+  // Class 1 - Monday
+  { ID: 6, ClassID: 1, SubjectID: 2, TeacherID: 7, Day: 'Monday', StartTime: '07:00', EndTime: '08:30', Room: 'Hall 101' },
+  { ID: 7, ClassID: 1, SubjectID: 3, TeacherID: 2, Day: 'Monday', StartTime: '08:30', EndTime: '09:30', Room: 'Hall 101' },
+  { ID: 8, ClassID: 1, SubjectID: 1, TeacherID: 6, Day: 'Monday', StartTime: '09:40', EndTime: '10:40', Room: 'Hall 101' },
+  { ID: 9, ClassID: 1, SubjectID: 6, TeacherID: 3, Day: 'Monday', StartTime: '10:40', EndTime: '11:30', Room: 'Hall 101' },
+  { ID: 10, ClassID: 1, SubjectID: 4, TeacherID: 4, Day: 'Monday', StartTime: '11:30', EndTime: '12:30', Room: 'Hall 101' },
+
+  // Class 1 - Tuesday
+  { ID: 11, ClassID: 1, SubjectID: 1, TeacherID: 6, Day: 'Tuesday', StartTime: '07:00', EndTime: '08:30', Room: 'Hall 101' },
+  { ID: 12, ClassID: 1, SubjectID: 5, TeacherID: 6, Day: 'Tuesday', StartTime: '08:30', EndTime: '09:30', Room: 'Hall 101' },
+  { ID: 17, ClassID: 1, SubjectID: 3, TeacherID: 2, Day: 'Tuesday', StartTime: '09:40', EndTime: '10:40', Room: 'Hall 101' },
+  { ID: 18, ClassID: 1, SubjectID: 2, TeacherID: 7, Day: 'Tuesday', StartTime: '10:40', EndTime: '11:30', Room: 'Hall 101' },
+  { ID: 19, ClassID: 1, SubjectID: 6, TeacherID: 3, Day: 'Tuesday', StartTime: '11:30', EndTime: '12:30', Room: 'Hall 101' },
+
+  // Class 1 - Wednesday
+  { ID: 20, ClassID: 1, SubjectID: 3, TeacherID: 2, Day: 'Wednesday', StartTime: '07:00', EndTime: '08:30', Room: 'Hall 101' },
+  { ID: 21, ClassID: 1, SubjectID: 4, TeacherID: 4, Day: 'Wednesday', StartTime: '08:30', EndTime: '09:30', Room: 'Hall 101' },
+  { ID: 24, ClassID: 1, SubjectID: 1, TeacherID: 6, Day: 'Wednesday', StartTime: '09:40', EndTime: '10:40', Room: 'Hall 101' },
+  { ID: 25, ClassID: 1, SubjectID: 5, TeacherID: 6, Day: 'Wednesday', StartTime: '10:40', EndTime: '11:30', Room: 'Hall 101' },
+  { ID: 26, ClassID: 1, SubjectID: 2, TeacherID: 7, Day: 'Wednesday', StartTime: '11:30', EndTime: '12:30', Room: 'Hall 101' },
+
+  // Class 1 - Thursday (Exact Mockup Match)
+  { ID: 22, ClassID: 1, SubjectID: 1, TeacherID: 6, Day: 'Thursday', StartTime: '07:00', EndTime: '08:30', Room: 'Hall 101' },
+  { ID: 27, ClassID: 1, SubjectID: 2, TeacherID: 7, Day: 'Thursday', StartTime: '08:30', EndTime: '09:30', Room: 'Hall 101' },
+  { ID: 28, ClassID: 1, SubjectID: 2, TeacherID: 7, Day: 'Thursday', StartTime: '09:40', EndTime: '10:40', Room: 'Hall 101' },
+  { ID: 29, ClassID: 1, SubjectID: 1, TeacherID: 6, Day: 'Thursday', StartTime: '10:40', EndTime: '11:30', Room: 'Hall 101' },
+  { ID: 30, ClassID: 1, SubjectID: 1, TeacherID: 6, Day: 'Thursday', StartTime: '11:30', EndTime: '12:30', Room: 'Hall 101' },
+
+  // Other Classes / Faculty Slots
+  { ID: 31, ClassID: 7, SubjectID: 4, TeacherID: 1, Day: 'Sunday', StartTime: '08:00', EndTime: '09:30', Room: 'Lecture Hall B' },
+  { ID: 32, ClassID: 7, SubjectID: 5, TeacherID: 4, Day: 'Sunday', StartTime: '10:30', EndTime: '11:30', Room: 'Lecture Hall B' },
+  { ID: 33, ClassID: 10, SubjectID: 7, TeacherID: 5, Day: 'Sunday', StartTime: '08:30', EndTime: '10:00', Room: 'Seminar Room 2' },
+  { ID: 34, ClassID: 13, SubjectID: 9, TeacherID: 1, Day: 'Sunday', StartTime: '10:00', EndTime: '11:30', Room: 'Auditorium 1' },
   { ID: 16, ClassID: 15, SubjectID: 16, TeacherID: 2, Day: 'Sunday', StartTime: '11:45', EndTime: '13:00', Room: 'Kulliyah Wing 3' },
   
-  // Monday
-  { ID: 7, ClassID: 1, SubjectID: 3, TeacherID: 3, Day: 'Monday', StartTime: '08:00', EndTime: '09:00', Room: 'Hall 101' },
-  { ID: 8, ClassID: 1, SubjectID: 1, TeacherID: 2, Day: 'Monday', StartTime: '09:15', EndTime: '10:15', Room: 'Hall 101' },
-  { ID: 9, ClassID: 7, SubjectID: 6, TeacherID: 5, Day: 'Monday', StartTime: '08:00', EndTime: '09:30', Room: 'Lecture Hall B' },
-  { ID: 10, ClassID: 10, SubjectID: 8, TeacherID: 2, Day: 'Monday', StartTime: '10:30', EndTime: '12:00', Room: 'Seminar Room 2' },
-  { ID: 11, ClassID: 17, SubjectID: 11, TeacherID: 2, Day: 'Monday', StartTime: '13:00', EndTime: '14:30', Room: 'Dawa Hall' },
-  { ID: 12, ClassID: 21, SubjectID: 12, TeacherID: 3, Day: 'Monday', StartTime: '10:00', EndTime: '11:30', Room: 'Tarbiya Lab' },
+  { ID: 35, ClassID: 7, SubjectID: 6, TeacherID: 5, Day: 'Monday', StartTime: '08:00', EndTime: '09:30', Room: 'Lecture Hall B' },
+  { ID: 36, ClassID: 10, SubjectID: 8, TeacherID: 2, Day: 'Monday', StartTime: '10:30', EndTime: '12:00', Room: 'Seminar Room 2' },
+  { ID: 37, ClassID: 17, SubjectID: 11, TeacherID: 2, Day: 'Monday', StartTime: '13:00', EndTime: '14:30', Room: 'Dawa Hall' },
+  { ID: 38, ClassID: 21, SubjectID: 12, TeacherID: 3, Day: 'Monday', StartTime: '10:00', EndTime: '11:30', Room: 'Tarbiya Lab' },
 
-  // Tuesday
-  { ID: 17, ClassID: 1, SubjectID: 2, TeacherID: 2, Day: 'Tuesday', StartTime: '08:00', EndTime: '09:00', Room: 'Hall 101' },
-  { ID: 18, ClassID: 15, SubjectID: 16, TeacherID: 2, Day: 'Tuesday', StartTime: '09:30', EndTime: '11:00', Room: 'Kulliyah Wing 3' },
-  { ID: 19, ClassID: 10, SubjectID: 11, TeacherID: 2, Day: 'Tuesday', StartTime: '11:15', EndTime: '12:30', Room: 'Seminar Room 2' },
+  { ID: 39, ClassID: 15, SubjectID: 16, TeacherID: 2, Day: 'Tuesday', StartTime: '09:30', EndTime: '11:00', Room: 'Kulliyah Wing 3' },
+  { ID: 40, ClassID: 10, SubjectID: 11, TeacherID: 2, Day: 'Tuesday', StartTime: '11:15', EndTime: '12:30', Room: 'Seminar Room 2' },
 
-  // Wednesday
-  { ID: 20, ClassID: 1, SubjectID: 3, TeacherID: 2, Day: 'Wednesday', StartTime: '08:00', EndTime: '09:30', Room: 'Hall 101' },
-  { ID: 21, ClassID: 15, SubjectID: 16, TeacherID: 2, Day: 'Wednesday', StartTime: '10:00', EndTime: '11:30', Room: 'Kulliyah Wing 3' },
-
-  // Thursday
-  { ID: 22, ClassID: 1, SubjectID: 1, TeacherID: 2, Day: 'Thursday', StartTime: '08:00', EndTime: '09:15', Room: 'Hall 101' },
+  { ID: 41, ClassID: 15, SubjectID: 16, TeacherID: 2, Day: 'Wednesday', StartTime: '10:00', EndTime: '11:30', Room: 'Kulliyah Wing 3' },
   { ID: 23, ClassID: 17, SubjectID: 14, TeacherID: 2, Day: 'Thursday', StartTime: '10:00', EndTime: '11:30', Room: 'Dawa Hall' },
 
-  // Friday (2-Days Department)
+  // Weekend (Friday & Saturday)
   { ID: 13, ClassID: 25, SubjectID: 1, TeacherID: 2, Day: 'Friday', StartTime: '08:00', EndTime: '09:30', Room: 'Weekend Wing 1' },
   { ID: 14, ClassID: 31, SubjectID: 4, TeacherID: 5, Day: 'Friday', StartTime: '09:45', EndTime: '11:15', Room: 'Weekend Wing 2' },
   { ID: 15, ClassID: 37, SubjectID: 12, TeacherID: 3, Day: 'Saturday', StartTime: '08:30', EndTime: '10:30', Room: 'Weekend Wing 3' },
@@ -909,6 +962,14 @@ export const DataStore = {
       const idx = list.findIndex(s => s.ID === initSch.ID);
       if (idx === -1) {
         list.push(initSch);
+        updated = true;
+      } else if (
+        list[idx].StartTime !== initSch.StartTime ||
+        list[idx].EndTime !== initSch.EndTime ||
+        list[idx].TeacherID !== initSch.TeacherID ||
+        list[idx].SubjectID !== initSch.SubjectID
+      ) {
+        list[idx] = { ...initSch };
         updated = true;
       }
     }

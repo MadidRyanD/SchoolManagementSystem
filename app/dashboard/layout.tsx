@@ -26,7 +26,10 @@ import {
   X,
   ShieldCheck,
   Crown,
-  UserCheck
+  UserCheck,
+  Phone,
+  Clock,
+  Facebook,
 } from 'lucide-react';
 
 export default function DashboardLayout({
@@ -64,91 +67,91 @@ export default function DashboardLayout({
   const role = currentUser.role;
   const isCurrent = (path: string) => pathname === path;
 
-  // Role badge color helper
-  const getRoleBadge = (r: UserRole) => {
+  // Arabic Role Helper
+  const getRoleArabic = (r: UserRole) => {
     switch (r) {
-      case 'admin':
-        return { label: 'Admin (المشرف)', bg: 'bg-red-600', icon: ShieldCheck };
-      case 'mudir':
-        return { label: 'Mudir / Dean (المدير)', bg: 'bg-amber-600', icon: Crown };
-      case 'cashier':
-        return { label: 'Cashier (أمين الصندوق)', bg: 'bg-blue-600', icon: Wallet };
-      case 'teacher':
-        return { label: 'Teacher (أستاذ)', bg: 'bg-purple-600', icon: UserCheck };
       case 'student':
-        return { label: 'Student (طالب)', bg: 'bg-teal-600', icon: GraduationCap };
+        return { label: 'طالب (Student)', labelAr: 'طالب', bg: 'bg-[#9f7a28]', icon: GraduationCap };
+      case 'teacher':
+        return { label: 'أستاذ (Teacher)', labelAr: 'أستاذ', bg: 'bg-emerald-700', icon: UserCheck };
+      case 'mudir':
+        return { label: 'المدير / العميد (Mudir)', labelAr: 'المدير / العميد', bg: 'bg-amber-600', icon: Crown };
+      case 'cashier':
+        return { label: 'أمين الصندوق (Cashier)', labelAr: 'أمين الصندوق', bg: 'bg-blue-600', icon: Wallet };
+      case 'admin':
+        return { label: 'المشرف (Admin)', labelAr: 'المشرف الإداري', bg: 'bg-red-600', icon: ShieldCheck };
     }
   };
 
-  const badge = getRoleBadge(role);
-  const BadgeIcon = badge.icon;
+  const roleInfo = getRoleArabic(role);
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#f3efe6] flex flex-col font-sans text-slate-800">
       {/* Top Navbar */}
-      <header className="bg-emerald-950 text-white shadow-lg z-30 sticky top-0 border-b border-emerald-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+      <header className="bg-white text-slate-900 shadow-xs z-30 sticky top-0 border-b border-[#dfd4b8]">
+        <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          {/* Left: JMAA-MoritAko Branding Tag & Mobile Menu Trigger */}
+          <div className="flex items-center gap-3">
+            {/* Mobile Menu Button */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-lg hover:bg-emerald-800 focus:outline-none cursor-pointer lg:hidden"
+              className="p-2 rounded-xl bg-[#dfd4b8] hover:bg-[#d4c6a4] text-[#126b38] focus:outline-none cursor-pointer lg:hidden transition-colors"
               aria-label="Toggle Navigation"
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="w-5 h-5" />
             </button>
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-tr from-emerald-500 to-amber-400 rounded-xl shadow text-emerald-950 font-bold">
-                <School className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-base sm:text-lg tracking-tight text-white">
-                    Jamiatu Monib Alkuzbary Al-Arabia
-                  </span>
-                  <span className="hidden sm:inline-block text-xs bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded font-mono font-bold">
-                    JMAA-MoritAko
-                  </span>
-                </div>
-                <div className="text-xs text-amber-200/90 font-serif" dir="rtl">
-                  جامعة منيب الكزبري العربية
-                </div>
-              </div>
+
+            {/* JMAA-MoritAko Brand Tag matching Mockup */}
+            <div className="flex items-center gap-2">
+              <span className="bg-[#dfd4b8] border border-[#ccbf99] text-[#126b38] px-3.5 py-1 rounded-full font-black text-xs sm:text-sm tracking-wide shadow-2xs font-mono">
+                JMAA-MoritAko
+              </span>
+              <span className="hidden md:inline-block text-xs text-slate-500 font-serif">
+                جامعة منيب الكزبري العربية
+              </span>
             </div>
           </div>
 
+          {/* Right: User Profile Avatar, Name, Role Badge, and Logout */}
           <div className="flex items-center space-x-3 sm:space-x-4">
-            <div className="hidden md:flex flex-col text-right">
-              <span className="text-sm font-bold text-white">{currentUser.name}</span>
-              <span className="text-xs text-emerald-300 flex items-center gap-1 justify-end">
-                <span className={`w-2 h-2 rounded-full ${badge.bg}`}></span>
-                {badge.label}
-              </span>
-            </div>
-
-            <Link
-              href="/dashboard/profile"
-              className="w-9 h-9 rounded-full bg-emerald-700 hover:ring-2 hover:ring-amber-400 flex items-center justify-center text-white overflow-hidden shadow transition-all"
-              title="My Profile"
-            >
-              {currentUser.profilePic ? (
-                <img src={currentUser.profilePic} alt={currentUser.name} className="w-full h-full object-cover" />
-              ) : (
-                <User className="w-5 h-5" />
-              )}
-            </Link>
-
+            {/* Sign Out Button in Arabic */}
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-red-600/90 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer shadow"
-              title="Sign Out"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-full transition-colors cursor-pointer shadow-2xs"
+              title="تسجيل الخروج"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Logout</span>
+              <span className="hidden sm:inline font-serif">تسجيل الخروج</span>
             </button>
+
+            {/* Profile Info & Avatar */}
+            <div className="flex items-center gap-2.5">
+              <div className="text-right">
+                <span className="text-sm font-extrabold text-slate-900 block leading-tight">
+                  {currentUser.name}
+                </span>
+                <span className="text-[11px] font-bold text-emerald-800 font-serif block">
+                  {roleInfo.labelAr}
+                </span>
+              </div>
+
+              <Link
+                href="/dashboard/profile"
+                className="w-10 h-10 rounded-full bg-[#126b38] ring-2 ring-amber-400/80 flex items-center justify-center text-white overflow-hidden shadow transition-all hover:scale-105"
+                title="الملف الشخصي"
+              >
+                {currentUser.profilePic ? (
+                  <img src={currentUser.profilePic} alt={currentUser.name} className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-5 h-5" />
+                )}
+              </Link>
+            </div>
           </div>
         </div>
       </header>
 
+      {/* Main Body: Content on Left, Sidebar on Right */}
       <div className="flex-1 flex overflow-hidden">
         {/* Mobile Backdrop */}
         {sidebarOpen && (
@@ -158,282 +161,383 @@ export default function DashboardLayout({
           />
         )}
 
-        {/* Sidebar */}
-        <aside
-          className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-200 flex flex-col transform transition-transform duration-200 ease-in-out border-r border-slate-800 ${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-          }`}
-        >
-          {/* Profile Card in Sidebar */}
-          <div className="p-4 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between">
-            <div className="flex items-center space-x-3 overflow-hidden">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow ${badge.bg}`}>
-                <BadgeIcon className="w-5 h-5" />
-              </div>
-              <div className="overflow-hidden">
-                <p className="font-bold text-sm text-white truncate">{currentUser.name}</p>
-                <p className="text-[11px] text-amber-300 truncate">{badge.label}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-1 text-slate-400 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Nav items */}
-          <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-1 text-sm font-medium">
-            
-            {/* 1. Dashboard Overview */}
-            <Link
-              href="/dashboard"
-              onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                isCurrent('/dashboard')
-                  ? 'bg-emerald-700 text-white font-bold shadow'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <LayoutDashboard className="w-5 h-5 text-emerald-400" />
-              <span>Dashboard Home</span>
-            </Link>
-
-            {/* 2. Departments & Classes */}
-            <Link
-              href="/dashboard/classes"
-              onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                isCurrent('/dashboard/classes')
-                  ? 'bg-emerald-700 text-white font-bold shadow'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <Building2 className="w-5 h-5 text-blue-400" />
-              <span>Departments & Classes</span>
-            </Link>
-
-            {/* 3. Class Schedules */}
-            <Link
-              href="/dashboard/schedules"
-              onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                isCurrent('/dashboard/schedules')
-                  ? 'bg-emerald-700 text-white font-bold shadow'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <Calendar className="w-5 h-5 text-amber-400" />
-              <span>Class Schedules</span>
-            </Link>
-
-            {/* 4. Grades & Evaluation (6 Gradings / Dawr) */}
-            <Link
-              href="/dashboard/grades"
-              onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                isCurrent('/dashboard/grades')
-                  ? 'bg-emerald-700 text-white font-bold shadow'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <ClipboardList className="w-5 h-5 text-rose-400" />
-              <span>Grades & 6-Dawr Matrix</span>
-            </Link>
-
-            {/* 5. Honor Roll & Tops */}
-            <Link
-              href="/dashboard/honors"
-              onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                isCurrent('/dashboard/honors')
-                  ? 'bg-emerald-700 text-white font-bold shadow'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <Award className="w-5 h-5 text-yellow-400" />
-              <span>Honor Roll & Top Scholars</span>
-            </Link>
-
-            {/* 6. Subjects / Curriculum */}
-            {(role === 'admin' || role === 'mudir' || role === 'teacher') && (
-              <Link
-                href="/dashboard/subjects"
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  isCurrent('/dashboard/subjects')
-                    ? 'bg-emerald-700 text-white font-bold shadow'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                <BookOpen className="w-5 h-5 text-cyan-400" />
-                <span>Curriculum & Subjects</span>
-              </Link>
-            )}
-
-            {/* 7. Faculty & Staff Directory */}
-            {(role === 'admin' || role === 'mudir') && (
-              <Link
-                href="/dashboard/teachers"
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  isCurrent('/dashboard/teachers')
-                    ? 'bg-emerald-700 text-white font-bold shadow'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                <Users className="w-5 h-5 text-purple-400" />
-                <span>Faculty & Teachers</span>
-              </Link>
-            )}
-
-            {/* Teacher Subject Allocation */}
-            {(role === 'admin' || role === 'mudir') && (
-              <Link
-                href="/dashboard/teachers/assignments"
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  isCurrent('/dashboard/teachers/assignments')
-                    ? 'bg-emerald-700 text-white font-bold shadow'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                <UserCheck className="w-5 h-5 text-pink-400" />
-                <span>Teacher Subject Allocation</span>
-              </Link>
-            )}
-
-            {/* 8. Students Directory */}
-            {role !== 'student' && (
-              <Link
-                href="/dashboard/students"
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  isCurrent('/dashboard/students')
-                    ? 'bg-emerald-700 text-white font-bold shadow'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                <GraduationCap className="w-5 h-5 text-teal-400" />
-                <span>Student Directory</span>
-              </Link>
-            )}
-
-            {/* 9. Attendance & Audit */}
-            {(role === 'admin' || role === 'mudir' || role === 'teacher') && (
-              <Link
-                href="/dashboard/attendance"
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  isCurrent('/dashboard/attendance')
-                    ? 'bg-emerald-700 text-white font-bold shadow'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                <CalendarCheck className="w-5 h-5 text-indigo-400" />
-                <span>Attendance & Audit</span>
-              </Link>
-            )}
-
-            {/* 10. Finance & Cashier Module */}
-            {(role === 'admin' || role === 'mudir' || role === 'cashier' || role === 'teacher' || role === 'student') && (
-              <Link
-                href="/dashboard/finance"
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  isCurrent('/dashboard/finance')
-                    ? 'bg-emerald-700 text-white font-bold shadow'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                <Wallet className="w-5 h-5 text-emerald-400" />
-                <span>
-                  {role === 'cashier' ? 'Cashier & Tuition Matrix' : role === 'student' ? 'My Billings & Receipts' : 'Finance & Payroll'}
-                </span>
-              </Link>
-            )}
-
-            {/* 11. Announcements */}
-            <Link
-              href="/dashboard/announcements"
-              onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                isCurrent('/dashboard/announcements')
-                  ? 'bg-emerald-700 text-white font-bold shadow'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <Megaphone className="w-5 h-5 text-orange-400" />
-              <span>Announcements</span>
-            </Link>
-
-            {/* 12. Form Builder (Admin) */}
-            {role === 'admin' && (
-              <Link
-                href="/dashboard/forms"
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  isCurrent('/dashboard/forms')
-                    ? 'bg-emerald-700 text-white font-bold shadow'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                <FileText className="w-5 h-5 text-sky-400" />
-                <span>Form Templates</span>
-              </Link>
-            )}
-
-            {/* 13. User Accounts (Admin) */}
-            {role === 'admin' && (
-              <Link
-                href="/dashboard/accounts"
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  isCurrent('/dashboard/accounts')
-                    ? 'bg-emerald-700 text-white font-bold shadow'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`}
-              >
-                <UserCog className="w-5 h-5 text-violet-400" />
-                <span>User Accounts & Roles</span>
-              </Link>
-            )}
-
-            {/* 14. Profile */}
-            <Link
-              href="/dashboard/profile"
-              onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                isCurrent('/dashboard/profile')
-                  ? 'bg-emerald-700 text-white font-bold shadow'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <User className="w-5 h-5 text-pink-400" />
-              <span>Personal Profile</span>
-            </Link>
-          </nav>
-
-          {/* Sidebar Footer */}
-          <div className="p-3 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between text-xs text-slate-400">
-            <span>v2.0 &bull; JMAA-MoritAko</span>
-            <button
-              onClick={handleLogout}
-              className="text-red-400 hover:text-red-300 font-semibold cursor-pointer"
-            >
-              Logout
-            </button>
-          </div>
-        </aside>
-
-        {/* Main View Area */}
+        {/* Main Content Area (Left side on desktop) */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>
         </main>
+
+        {/* Sidebar (Right side on desktop, sliding from right on mobile) */}
+        <aside
+          className={`fixed lg:static inset-y-0 right-0 z-50 w-72 bg-[#126b38] text-white flex flex-col justify-between transform transition-transform duration-200 ease-in-out border-l border-[#0e582e] shadow-2xl lg:shadow-none ${
+            sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
+          }`}
+        >
+          <div className="flex-1 flex flex-col overflow-y-auto">
+            {/* Sidebar Top: Crest Logo & Arabic Institution Title */}
+            <div className="p-5 border-b border-emerald-800/80 bg-emerald-950/20 text-center relative">
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="lg:hidden absolute top-4 left-4 p-1 text-emerald-200 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Crest Logo */}
+              <div className="w-20 h-20 mx-auto rounded-full bg-white/10 p-1.5 border-2 border-amber-400 shadow-md flex items-center justify-center overflow-hidden">
+                <img
+                  src="/logo.png"
+                  alt="JMAA Emblem"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+
+              {/* Institution Title in Arabic */}
+              <h2 className="mt-3 font-serif font-black text-lg text-white leading-tight">
+                جمعية منيب الكزبري العربية
+              </h2>
+              <p className="text-[11px] text-amber-200/90 font-sans mt-0.5 font-bold tracking-wider">
+                JAMIATU MONIB ALKUZBARY
+              </p>
+            </div>
+
+            {/* Pill Navigation Buttons */}
+            <nav className="p-4 space-y-2.5 font-serif" dir="rtl">
+              {/* STUDENT NAVIGATION (Exact Mockup Match) */}
+              {role === 'student' ? (
+                <>
+                  {/* 1. الرئيسية (Home / Dashboard) */}
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2.5 px-4 rounded-full text-center font-bold text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    الرئيسية
+                  </Link>
+
+                  {/* 2. الملف الشخصي (Profile) */}
+                  <Link
+                    href="/dashboard/profile"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2.5 px-4 rounded-full text-center font-bold text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/profile')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    الملف الشخصي
+                  </Link>
+
+                  {/* 3. الدرجات الأكاديمية (Grades) */}
+                  <Link
+                    href="/dashboard/grades"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2.5 px-4 rounded-full text-center font-bold text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/grades')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    الدرجات الأكاديمية
+                  </Link>
+
+                  {/* 4. جدول الحصص (Class Schedule) */}
+                  <Link
+                    href="/dashboard/schedules"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2.5 px-4 rounded-full text-center font-bold text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/schedules')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    جدول الحصص
+                  </Link>
+
+                  {/* 5. المواد الدراسية (Subjects) */}
+                  <Link
+                    href="/dashboard/grades"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2.5 px-4 rounded-full text-center font-bold text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/grades') && false
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    المواد الدراسية
+                  </Link>
+
+                  {/* 6. الرسوم والمستحقات (Billings) */}
+                  <Link
+                    href="/dashboard/finance"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2.5 px-4 rounded-full text-center font-bold text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/finance')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    الرسوم والمستحقات
+                  </Link>
+
+                  {/* 7. لوحة الشرف والمتفوقين (Honors) */}
+                  <Link
+                    href="/dashboard/honors"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2.5 px-4 rounded-full text-center font-bold text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/honors')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    لوحة الشرف والمتفوقين
+                  </Link>
+
+                  {/* 8. الإعلانات والتعاميم */}
+                  <Link
+                    href="/dashboard/announcements"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2.5 px-4 rounded-full text-center font-bold text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/announcements')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    الإعلانات والتعاميم
+                  </Link>
+                </>
+              ) : (
+                /* FACULTY & ADMIN NAVIGATION (All translated into Arabic pill buttons) */
+                <>
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    لوحة التحكم العامة
+                  </Link>
+
+                  <Link
+                    href="/dashboard/schedules"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/schedules')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    جدول الحصص الأسبوعي
+                  </Link>
+
+                  <Link
+                    href="/dashboard/grades"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/grades')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    رصد الدرجات والتقييم (6 أدوار)
+                  </Link>
+
+                  <Link
+                    href="/dashboard/honors"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/honors')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    لوحة الشرف والمتفوقين
+                  </Link>
+
+                  <Link
+                    href="/dashboard/classes"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/classes')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    الأقسام والصفوف الدراسية
+                  </Link>
+
+                  <Link
+                    href="/dashboard/subjects"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/subjects')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    المواد والمناهج الدراسية
+                  </Link>
+
+                  {(role === 'admin' || role === 'mudir') && (
+                    <>
+                      <Link
+                        href="/dashboard/teachers"
+                        onClick={() => setSidebarOpen(false)}
+                        className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
+                          isCurrent('/dashboard/teachers')
+                            ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                            : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                        }`}
+                      >
+                        الكادر التعليمي والمعلمين
+                      </Link>
+
+                      <Link
+                        href="/dashboard/teachers/assignments"
+                        onClick={() => setSidebarOpen(false)}
+                        className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
+                          isCurrent('/dashboard/teachers/assignments')
+                            ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                            : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                        }`}
+                      >
+                        توزيع المواد والمعلمين
+                      </Link>
+                    </>
+                  )}
+
+                  <Link
+                    href="/dashboard/students"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/students')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    سجل وبيانات الطلاب
+                  </Link>
+
+                  <Link
+                    href="/dashboard/attendance"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/attendance')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    سجل الحضور والغياب
+                  </Link>
+
+                  <Link
+                    href="/dashboard/finance"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/finance')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    المالية والصندوق
+                  </Link>
+
+                  <Link
+                    href="/dashboard/announcements"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/announcements')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    الإعلانات والتعاميم
+                  </Link>
+
+                  {role === 'admin' && (
+                    <>
+                      <Link
+                        href="/dashboard/forms"
+                        onClick={() => setSidebarOpen(false)}
+                        className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
+                          isCurrent('/dashboard/forms')
+                            ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                            : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                        }`}
+                      >
+                        النماذج والتقارير
+                      </Link>
+
+                      <Link
+                        href="/dashboard/accounts"
+                        onClick={() => setSidebarOpen(false)}
+                        className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
+                          isCurrent('/dashboard/accounts')
+                            ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                            : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                        }`}
+                      >
+                        الحسابات والصلاحيات
+                      </Link>
+                    </>
+                  )}
+
+                  <Link
+                    href="/dashboard/profile"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
+                      isCurrent('/dashboard/profile')
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
+                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    }`}
+                  >
+                    الملف الشخصي
+                  </Link>
+                </>
+              )}
+            </nav>
+          </div>
+
+          {/* Sidebar Footer */}
+          <div className="p-3 border-t border-emerald-800/60 bg-emerald-950/40 text-center text-xs text-amber-200/80 font-mono">
+            <span>جامعة منيب الكزبري &bull; v2.0</span>
+          </div>
+        </aside>
       </div>
+
+      {/* Bottom Footer Bar (Exact Mockup Match) */}
+      <footer className="bg-[#dfd4b8] border-t-2 border-[#ccbf99] text-slate-800 py-2.5 px-4 sm:px-8 z-30 shadow-inner">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm font-bold font-serif" dir="rtl">
+          {/* Office Hours */}
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-[#126b38]" />
+            <span>أوقات الدوام:</span>
+            <span className="font-mono text-slate-950 font-black" dir="ltr">8:00 AM - 12:00 PM</span>
+          </div>
+
+          {/* Social Follow */}
+          <div className="flex items-center gap-2">
+            <Facebook className="w-4 h-4 text-[#126b38]" />
+            <span>تابعنا:</span>
+            <span className="text-[#126b38] hover:underline cursor-pointer">صفحة فيسبوك الرسمية</span>
+          </div>
+
+          {/* Phone Contact */}
+          <div className="flex items-center gap-2">
+            <Phone className="w-4 h-4 text-[#126b38]" />
+            <span>اتصل بنا:</span>
+            <span className="font-mono text-slate-950 font-black" dir="ltr">09123456789</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
