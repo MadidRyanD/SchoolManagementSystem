@@ -17,7 +17,10 @@ import {
   Trash2,
   Mail,
   Phone,
-  GraduationCap
+  GraduationCap,
+  UserCheck,
+  ClipboardList,
+  ArrowUpRight,
 } from 'lucide-react';
 
 export default function DepartmentsAndClassesPage() {
@@ -26,7 +29,13 @@ export default function DepartmentsAndClassesPage() {
   const [subjects, setSubjects] = useState<SubjectItem[]>([]);
   const [allocations, setAllocations] = useState<SubjectTeacherItem[]>([]);
 
-  const [activeDept, setActiveDept] = useState<DepartmentType>('5-days');
+  const currentUser = AuthService.getSession();
+  const isTeacher = currentUser?.role === 'teacher';
+  const canManage = currentUser?.role === 'admin' || currentUser?.role === 'mudir';
+
+  const [activeTab, setActiveTab] = useState<'my-classes' | '5-days' | '2-days'>(
+    isTeacher ? 'my-classes' : '5-days'
+  );
   const [activeLevel, setActiveLevel] = useState<string>('All');
   const [selectedClass, setSelectedClass] = useState<ClassItem | null>(null);
 
@@ -37,9 +46,6 @@ export default function DepartmentsAndClassesPage() {
   const [newLevel, setNewLevel] = useState('Ibtidaiyyah');
   const [newGrade, setNewGrade] = useState(1);
   const [newAdviserId, setNewAdviserId] = useState<number | undefined>(undefined);
-
-  const currentUser = AuthService.getSession();
-  const canManage = currentUser?.role === 'admin' || currentUser?.role === 'mudir';
 
   useEffect(() => {
     loadData();
@@ -72,11 +78,23 @@ export default function DepartmentsAndClassesPage() {
     'Kulliyatu Tarbiyah',
   ];
 
-  const availableLevels = activeDept === '5-days' ? levels5Days : levels2Days;
+  const availableLevels = activeTab === '2-days' ? levels2Days : levels5Days;
+
+  // Teacher Assigned Classes
+  const teacherId = currentUser?.linkedId || 2;
+  const teacherSubjectIds = allocations.filter(a => a.TeacherID === teacherId).map(a => a.SubjectID);
+  const teacherClassesFromSubjects = subjects.filter(s => teacherSubjectIds.includes(s.SubjectID)).map(s => s.ClassID);
+  const myClassIds = Array.from(new Set([
+    ...teacherClassesFromSubjects,
+    ...classes.filter(c => c.AdviserID === teacherId).map(c => c.ClassID)
+  ]));
 
   // Filter classes
   const filteredClasses = classes.filter(c => {
-    if (c.Department !== activeDept) return false;
+    if (activeTab === 'my-classes') {
+      return myClassIds.includes(c.ClassID);
+    }
+    if (c.Department !== activeTab) return false;
     if (activeLevel !== 'All' && c.Level !== activeLevel) return false;
     return true;
   });
@@ -126,8 +144,48 @@ export default function DepartmentsAndClassesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner: Principal / Mudir Al-Aam at the very top */}
-      {mudir && (
+      {/* Top Banner: Teacher View vs Principal / Mudir View */}
+      {isTeacher ? (
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-slate-900 rounded-2xl p-6 text-white shadow-xl border border-emerald-700/50 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center space-x-5">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-amber-400/80 shadow-md bg-emerald-950 flex items-center justify-center flex-shrink-0">
+              {currentUser?.profilePic ? (
+                <img src={currentUser.profilePic} alt={currentUser.name} className="w-full h-full object-cover" />
+              ) : (
+                <UserCheck className="w-8 h-8 text-amber-300" />
+              )}
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-1 font-sans">
+                <span>Teacher Portal • فصولي وموادي المكلف بها</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white font-sans">
+                My Assigned Classes & Academic Levels
+              </h2>
+              <p className="text-xs sm:text-sm text-emerald-100/90 mt-0.5">
+                Assigned to: <span className="font-bold text-amber-300">{currentUser?.name}</span> &bull; {myClassIds.length} Classes assigned to your teaching schedule.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard/grades"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
+            >
+              <ClipboardList className="w-4 h-4" />
+              <span>Grade Management (Excel)</span>
+            </Link>
+            <Link
+              href="/dashboard/schedules"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer border border-emerald-600/40"
+            >
+              <Calendar className="w-4 h-4" />
+              <span>My Timetable</span>
+            </Link>
+          </div>
+        </div>
+      ) : mudir ? (
         <div className="bg-gradient-to-r from-amber-700 via-emerald-900 to-slate-900 rounded-2xl p-6 text-white shadow-xl border border-amber-500/30 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center space-x-5">
             <div className="relative">
@@ -177,7 +235,7 @@ export default function DepartmentsAndClassesPage() {
             )}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Detail View of a Selected Class */}
       {selectedClass ? (
@@ -303,37 +361,58 @@ export default function DepartmentsAndClassesPage() {
       ) : (
         /* Main Classes Grid View */
         <div className="space-y-6">
-          {/* Department Switcher Tabs */}
-          <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+          {/* Department / Scope Switcher Tabs */}
+          <div className="bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {isTeacher && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('my-classes');
+                    setActiveLevel('All');
+                  }}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === 'my-classes'
+                      ? 'bg-[#187d44] text-white shadow-md'
+                      : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-bold'
+                  }`}
+                >
+                  <Building2 className="w-3.5 h-3.5" />
+                  <span>My Assigned Classes ({myClassIds.length})</span>
+                  <span className="font-serif text-[11px] opacity-80" dir="rtl">(فصولي)</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => {
-                  setActiveDept('5-days');
+                  setActiveTab('5-days');
                   setActiveLevel('All');
                 }}
-                className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeDept === '5-days'
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === '5-days'
                     ? 'bg-emerald-800 text-white shadow-md'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                5-Days Department (القسم الصباحي - 5 أيام)
+                <span>5-Days Department</span>
+                <span className="text-[11px] opacity-80 font-serif ml-1">(القسم الصباحي)</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => {
-                  setActiveDept('2-days');
+                  setActiveTab('2-days');
                   setActiveLevel('All');
                 }}
-                className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeDept === '2-days'
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === '2-days'
                     ? 'bg-emerald-800 text-white shadow-md'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                2-Days Department (قسم نهاية الأسبوع - يومين)
+                <span>2-Days Department</span>
+                <span className="text-[11px] opacity-80 font-serif ml-1">(نهاية الأسبوع)</span>
               </button>
             </div>
 
@@ -342,29 +421,34 @@ export default function DepartmentsAndClassesPage() {
             </span>
           </div>
 
-          {/* Academic Level Pills Filter */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-2">
-            {availableLevels.map(lvl => (
-              <button
-                key={lvl}
-                type="button"
-                onClick={() => setActiveLevel(lvl)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap cursor-pointer transition-colors ${
-                  activeLevel === lvl
-                    ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
-                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                }`}
-              >
-                {lvl}
-              </button>
-            ))}
-          </div>
+          {/* Academic Level Pills Filter (shown when viewing 5-days or 2-days) */}
+          {activeTab !== 'my-classes' && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-2">
+              {availableLevels.map(lvl => (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => setActiveLevel(lvl)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap cursor-pointer transition-colors ${
+                    activeLevel === lvl
+                      ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+                      : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                  }`}
+                >
+                  {lvl}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Classes Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredClasses.map(cls => {
               const adviser = getAdviser(cls.AdviserID);
               const facultyCount = getClassFaculty(cls.ClassID).length;
+              const teacherSubjectsInThisClass = isTeacher
+                ? subjects.filter(s => s.ClassID === cls.ClassID && teacherSubjectIds.includes(s.SubjectID))
+                : [];
 
               return (
                 <div
@@ -385,6 +469,18 @@ export default function DepartmentsAndClassesPage() {
                     <h4 className="text-lg font-bold text-slate-900 group-hover:text-emerald-800 transition-colors">
                       {cls.ClassName}
                     </h4>
+
+                    {/* Teacher specific subject tag in this class */}
+                    {teacherSubjectsInThisClass.length > 0 && (
+                      <div className="mt-2.5 bg-emerald-50/80 border border-emerald-200 text-emerald-950 rounded-xl p-2.5 text-xs">
+                        <span className="font-bold text-[11px] text-emerald-800 uppercase tracking-wide block">
+                          Your Assigned Subject:
+                        </span>
+                        <p className="font-bold font-serif text-slate-900 mt-0.5" dir="rtl">
+                          {teacherSubjectsInThisClass.map(s => s.SubjectArabic || s.SubjectClass).join('، ')}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Adviser Indicator */}
                     <div className="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-600">

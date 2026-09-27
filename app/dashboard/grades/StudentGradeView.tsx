@@ -10,6 +10,7 @@ import {
   SubjectTeacherItem,
   GradingPeriod,
 } from '@/lib/types';
+import { toHindiNumerals } from '@/lib/numerals';
 import {
   Trophy,
   Award,
@@ -117,12 +118,12 @@ export default function StudentGradeView({
   // Grading Periods Mapping
   const gradingList: GradingPeriod[] = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
   const gradingNamesMap: Record<GradingPeriod, { en: string; ar: string; shortAr: string }> = {
-    '1st': { en: '1ˢᵗ Grading', ar: 'دور الأول', shortAr: 'دور 1' },
-    '2nd': { en: '2ⁿᵈ Grading', ar: 'دور الثاني', shortAr: 'دور 2' },
-    '3rd': { en: '3ʳᵈ Grading', ar: 'دور الثالث', shortAr: 'دور 3' },
-    '4th': { en: '4ᵗʰ Grading', ar: 'دور الرابع', shortAr: 'دور 4' },
-    '5th': { en: '5ᵗʰ Grading', ar: 'دور الخامس', shortAr: 'دور 5' },
-    '6th': { en: '6ᵗʰ Grading', ar: 'دور السادس', shortAr: 'دور 6' },
+    '1st': { en: '1ˢᵗ Grading', ar: 'دور الأول (١)', shortAr: 'دور ١' },
+    '2nd': { en: '2ⁿᵈ Grading', ar: 'دور الثاني (٢)', shortAr: 'دور ٢' },
+    '3rd': { en: '3ʳᵈ Grading', ar: 'دور الثالث (٣)', shortAr: 'دور ٣' },
+    '4th': { en: '4ᵗʰ Grading', ar: 'دور الرابع (٤)', shortAr: 'دور ٤' },
+    '5th': { en: '5ᵗʰ Grading', ar: 'دور الخامس (٥)', shortAr: 'دور ٥' },
+    '6th': { en: '6ᵗʰ Grading', ar: 'دور السادس (٦)', shortAr: 'دور ٦' },
   };
 
   // Semesters Dawr list
@@ -563,7 +564,7 @@ export default function StudentGradeView({
               </button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2" dir="rtl">
               {gradingList.map(period => {
                 const isActive = selectedGrading === period;
                 return (
@@ -665,28 +666,28 @@ export default function StudentGradeView({
                         {showCriteriaBreakdown && (
                           <>
                             <td className="py-3 px-2 text-center font-mono text-xs text-slate-600">
-                              {row.criteria['crit-att'] ?? '—'}
+                              {row.criteria['crit-att'] !== undefined ? toHindiNumerals(row.criteria['crit-att']) : '—'}
                             </td>
                             <td className="py-3 px-2 text-center font-mono text-xs text-slate-600">
-                              {row.criteria['crit-quiz'] ?? '—'}
+                              {row.criteria['crit-quiz'] !== undefined ? toHindiNumerals(row.criteria['crit-quiz']) : '—'}
                             </td>
                             <td className="py-3 px-2 text-center font-mono text-xs text-slate-600">
-                              {row.criteria['crit-mid'] ?? '—'}
+                              {row.criteria['crit-mid'] !== undefined ? toHindiNumerals(row.criteria['crit-mid']) : '—'}
                             </td>
                             <td className="py-3 px-2 text-center font-mono text-xs text-slate-600">
-                              {row.criteria['crit-final'] ?? '—'}
+                              {row.criteria['crit-final'] !== undefined ? toHindiNumerals(row.criteria['crit-final']) : '—'}
                             </td>
                           </>
                         )}
 
                         {/* Grading Score */}
                         <td className="py-3 px-4 text-center font-mono font-bold text-sm text-slate-950 bg-amber-50/30">
-                          {row.score !== null ? row.score : '—'}
+                          {row.score !== null ? toHindiNumerals(row.score) : '—'}
                         </td>
 
                         {/* Average */}
                         <td className="py-3 px-4 text-center font-mono font-bold text-sm text-slate-700">
-                          {row.score !== null ? row.score : '—'}
+                          {row.score !== null ? toHindiNumerals(row.score) : '—'}
                         </td>
 
                         {/* Rating Evaluation Badge */}
@@ -713,10 +714,10 @@ export default function StudentGradeView({
                       المجموع والمعدل العام للفترة ({gradingNamesMap[selectedGrading].ar})
                     </td>
                     <td className="py-3 px-4 text-center font-mono font-black text-sm text-slate-900">
-                      {singleGradingOverall.totalSum}
+                      {toHindiNumerals(singleGradingOverall.totalSum)}
                     </td>
                     <td className="py-3 px-4 text-center font-mono font-black text-sm text-emerald-950">
-                      {singleGradingOverall.overallAvg}%
+                      {toHindiNumerals(singleGradingOverall.overallAvg)}٪
                     </td>
                     <td className="py-2.5 px-4 text-center">
                       <span className={`inline-block w-full py-1 px-2.5 text-center text-xs font-black rounded-sm shadow-xs ${singleGradingOverall.rating.pillClass}`}>
@@ -797,19 +798,19 @@ export default function StudentGradeView({
                         const val = row.scores[p];
                         return (
                           <td key={p} className="py-3 px-2.5 text-center font-mono font-bold text-xs text-slate-800">
-                            {val !== null ? val : '—'}
+                            {val !== null ? toHindiNumerals(val) : '—'}
                           </td>
                         );
                       })}
 
                       {/* Total */}
                       <td className="py-3 px-3 text-center font-mono font-bold text-xs text-slate-900 bg-amber-50/40">
-                        {row.total !== null ? row.total : '—'}
+                        {row.total !== null ? toHindiNumerals(row.total) : '—'}
                       </td>
 
                       {/* Average */}
                       <td className="py-3 px-3 text-center font-mono font-extrabold text-sm text-slate-950 bg-amber-50/70">
-                        {row.average !== null ? row.average : '—'}
+                        {row.average !== null ? toHindiNumerals(row.average) : '—'}
                       </td>
 
                       {/* Rating Evaluation Badge */}
@@ -835,18 +836,18 @@ export default function StudentGradeView({
                   <td className="py-3 px-4 text-right font-black">المجموع والمعدل العام</td>
                   {gradingList.map(p => {
                     const col = allGradingsOverall.periodSums[p];
-                    const colAvg = col.count > 0 ? Math.round((col.total / col.count) * 10) / 10 : '-';
+                    const colAvg = col.count > 0 ? Math.round((col.total / col.count) * 10) / 10 : null;
                     return (
                       <td key={p} className="py-3 px-2.5 text-center font-mono text-xs text-slate-800">
-                        {colAvg}
+                        {colAvg !== null ? toHindiNumerals(colAvg) : '—'}
                       </td>
                     );
                   })}
                   <td className="py-3 px-3 text-center font-mono font-black text-xs text-slate-900">
-                    {allGradingsOverall.grandTotal}
+                    {toHindiNumerals(allGradingsOverall.grandTotal)}
                   </td>
                   <td className="py-3 px-3 text-center font-mono font-black text-sm text-emerald-950">
-                    {allGradingsOverall.grandAvg}%
+                    {toHindiNumerals(allGradingsOverall.grandAvg)}٪
                   </td>
                   <td className="py-2.5 px-4 text-center">
                     <span className={`inline-block w-full py-1 px-2.5 text-center text-xs font-black rounded-sm shadow-xs ${allGradingsOverall.rating.pillClass}`}>
@@ -899,7 +900,7 @@ export default function StudentGradeView({
                   <th className="py-3 px-4 text-right">المادة</th>
                   {activeSemDawrs.map((p, idx) => (
                     <th key={p} className="py-3 px-3 text-center">
-                      دور {selectedSemester === '1st' ? idx + 1 : idx + 4}
+                      دور {selectedSemester === '1st' ? toHindiNumerals(idx + 1) : toHindiNumerals(idx + 4)}
                     </th>
                   ))}
                   <th className="py-3 px-3 text-center">مجموع</th>
@@ -926,19 +927,19 @@ export default function StudentGradeView({
                         const val = row.dawrScores[p];
                         return (
                           <td key={p} className="py-3 px-3 text-center font-mono font-bold text-sm text-slate-800">
-                            {val !== null ? val : '—'}
+                            {val !== null ? toHindiNumerals(val) : '—'}
                           </td>
                         );
                       })}
 
                       {/* Total Score */}
                       <td className="py-3 px-3 text-center font-mono font-bold text-sm text-slate-900 bg-amber-50/40">
-                        {row.total !== null ? row.total : '—'}
+                        {row.total !== null ? toHindiNumerals(row.total) : '—'}
                       </td>
 
                       {/* Average Score */}
                       <td className="py-3 px-3 text-center font-mono font-extrabold text-sm text-slate-950 bg-amber-50/70">
-                        {row.average !== null ? row.average : '—'}
+                        {row.average !== null ? toHindiNumerals(row.average) : '—'}
                       </td>
 
                       {/* Rating Evaluation Badge */}
@@ -968,10 +969,10 @@ export default function StudentGradeView({
                     </td>
                   ))}
                   <td className="py-3 px-3 text-center font-mono font-black text-sm text-slate-900">
-                    {semOverall.totalSum}
+                    {toHindiNumerals(semOverall.totalSum)}
                   </td>
                   <td className="py-3 px-3 text-center font-mono font-black text-sm text-emerald-900">
-                    {semOverall.overallAvg}%
+                    {toHindiNumerals(semOverall.overallAvg)}٪
                   </td>
                   <td className="py-2.5 px-4 text-center">
                     <span className={`inline-block w-full py-1 px-2.5 text-center text-xs font-black rounded-sm shadow-xs ${semOverall.rating.pillClass}`}>
@@ -1045,22 +1046,22 @@ export default function StudentGradeView({
 
                       {/* Semester 1 Avg */}
                       <td className="py-3 px-4 text-center font-mono font-bold text-sm text-slate-800">
-                        {row.sem1Avg !== null ? row.sem1Avg : '—'}
+                        {row.sem1Avg !== null ? toHindiNumerals(row.sem1Avg) : '—'}
                       </td>
 
                       {/* Semester 2 Avg */}
                       <td className="py-3 px-4 text-center font-mono font-bold text-sm text-slate-800">
-                        {row.sem2Avg !== null ? row.sem2Avg : '—'}
+                        {row.sem2Avg !== null ? toHindiNumerals(row.sem2Avg) : '—'}
                       </td>
 
                       {/* Annual Total Score */}
                       <td className="py-3 px-4 text-center font-mono font-bold text-sm text-slate-900 bg-amber-50/40">
-                        {row.annualTotal !== null ? row.annualTotal : '—'}
+                        {row.annualTotal !== null ? toHindiNumerals(row.annualTotal) : '—'}
                       </td>
 
                       {/* Annual Final Average */}
                       <td className="py-3 px-4 text-center font-mono font-extrabold text-sm text-slate-950 bg-amber-50/70">
-                        {row.annualAvg !== null ? row.annualAvg : '—'}
+                        {row.annualAvg !== null ? toHindiNumerals(row.annualAvg) : '—'}
                       </td>
 
                       {/* Rating Evaluation Badge */}
@@ -1084,11 +1085,11 @@ export default function StudentGradeView({
               <tfoot className="bg-[#ede5d1] text-slate-950 font-bold border-t-2 border-[#b79e55]">
                 <tr>
                   <td className="py-3 px-4 text-right font-black">النتيجة السنوية العامة</td>
-                  <td colSpan={3} className="py-3 px-4 text-center text-xs text-slate-600">
+                  <td colSpan={3} className="py-3 px-4 text-center text-xs text-slate-600 font-serif">
                     معدل الأداء الأكاديمي السنوي لكافة المواد
                   </td>
                   <td className="py-3 px-4 text-center font-mono font-black text-sm text-emerald-950">
-                    {annualOverall.overallAvg}%
+                    {toHindiNumerals(annualOverall.overallAvg)}٪
                   </td>
                   <td className="py-2.5 px-4 text-center">
                     <span className={`inline-block w-full py-1 px-2.5 text-center text-xs font-black rounded-sm shadow-xs ${annualOverall.rating.pillClass}`}>
@@ -1153,14 +1154,14 @@ export default function StudentGradeView({
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-center text-xs text-slate-700">
+                      <td className="py-3 px-4 text-center text-xs text-slate-700 font-serif">
                         {row.teacher?.NameArabic || row.teacher?.Name || '—'}
                       </td>
                       <td className="py-3 px-4 text-center font-mono font-bold text-sm text-slate-900">
-                        {row.score !== null ? row.score : '—'}
+                        {row.score !== null ? toHindiNumerals(row.score) : '—'}
                       </td>
                       <td className="py-3 px-4 text-center font-mono font-bold text-sm text-slate-700">
-                        {row.score !== null ? row.score : '—'}
+                        {row.score !== null ? toHindiNumerals(row.score) : '—'}
                       </td>
                       <td className="py-2.5 px-4 text-center w-28">
                         {row.score !== null ? (
@@ -1209,7 +1210,7 @@ export default function StudentGradeView({
                     <th className="py-3 px-4 text-right">المادة</th>
                     {activeSemDawrs.map((p, idx) => (
                       <th key={p} className="py-3 px-3 text-center">
-                        دور {selectedSemester === '1st' ? idx + 1 : idx + 4}
+                        دور {selectedSemester === '1st' ? toHindiNumerals(idx + 1) : toHindiNumerals(idx + 4)}
                       </th>
                     ))}
                     <th className="py-3 px-3 text-center">مجموع</th>
@@ -1232,15 +1233,15 @@ export default function StudentGradeView({
                         const val = row.dawrScores[p];
                         return (
                           <td key={p} className="py-3 px-3 text-center font-mono font-bold text-sm text-slate-800">
-                            {val !== null ? val : '—'}
+                            {val !== null ? toHindiNumerals(val) : '—'}
                           </td>
                         );
                       })}
                       <td className="py-3 px-3 text-center font-mono font-bold text-sm text-slate-900 bg-amber-50/40">
-                        {row.total !== null ? row.total : '—'}
+                        {row.total !== null ? toHindiNumerals(row.total) : '—'}
                       </td>
                       <td className="py-3 px-3 text-center font-mono font-extrabold text-sm text-slate-950 bg-amber-50/70">
-                        {row.average !== null ? row.average : '—'}
+                        {row.average !== null ? toHindiNumerals(row.average) : '—'}
                       </td>
                       <td className="py-2.5 px-4 text-center w-28">
                         {row.average !== null ? (

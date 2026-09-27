@@ -238,6 +238,11 @@ export const initialSubjects: SubjectItem[] = [
   { SubjectID: 14, ClassID: 17, SubjectClass: 'Principles of Dawa & Dialogue', SubjectCode: 'DAW-401', SubjectArabic: 'أصول الدعوة والحوار', Semester: 'Both' },
   { SubjectID: 15, ClassID: 21, SubjectClass: 'Educational Psychology & Pedagogy', SubjectCode: 'TRB-401', SubjectArabic: 'علم النفس التربوي', Semester: 'Both' },
   { SubjectID: 16, ClassID: 15, SubjectClass: 'Fiqh Al-Muamalat (Jurisprudence)', SubjectCode: 'FIQ-301', SubjectArabic: 'فقه', Semester: 'Both' },
+  // 2-Days Department Subjects (Class 25)
+  { SubjectID: 17, ClassID: 25, SubjectClass: 'Fiqh (Jurisprudence)', SubjectCode: 'FIQ-101-W', SubjectArabic: 'فقه', Semester: 'Both' },
+  { SubjectID: 18, ClassID: 25, SubjectClass: 'Tawheed (Monotheism)', SubjectCode: 'TWH-101-W', SubjectArabic: 'توحيد', Semester: 'Both' },
+  { SubjectID: 19, ClassID: 25, SubjectClass: 'Quran & Tajweed', SubjectCode: 'QUR-101-W', SubjectArabic: 'قرآن', Semester: 'Both' },
+  { SubjectID: 20, ClassID: 25, SubjectClass: 'Islamic Morals (Adab & Akhlaq)', SubjectCode: 'ADB-101-W', SubjectArabic: 'آداب وأخلاق', Semester: 'Both' },
 ];
 
 // 4. Subject-Teacher Mappings
@@ -258,6 +263,11 @@ export const initialSubjectTeachers: SubjectTeacherItem[] = [
   { ID: 14, ClassID: 17, SubjectID: 14, TeacherID: 2 },
   { ID: 15, ClassID: 21, SubjectID: 15, TeacherID: 3 },
   { ID: 16, ClassID: 15, SubjectID: 16, TeacherID: 2 },
+  // 2-Days mappings
+  { ID: 17, ClassID: 25, SubjectID: 17, TeacherID: 6 }, // اليسع (Fiqh)
+  { ID: 18, ClassID: 25, SubjectID: 18, TeacherID: 7 }, // ريان (Tawheed)
+  { ID: 19, ClassID: 25, SubjectID: 19, TeacherID: 2 }, // الشيخ أحمد (Quran)
+  { ID: 20, ClassID: 25, SubjectID: 20, TeacherID: 3 }, // فاطمة (Adab)
 ];
 
 // 5. Weekly Class Schedules
@@ -315,8 +325,19 @@ export const initialSchedules: ClassScheduleItem[] = [
   { ID: 41, ClassID: 15, SubjectID: 16, TeacherID: 2, Day: 'Wednesday', StartTime: '10:00', EndTime: '11:30', Room: 'Kulliyah Wing 3' },
   { ID: 23, ClassID: 17, SubjectID: 14, TeacherID: 2, Day: 'Thursday', StartTime: '10:00', EndTime: '11:30', Room: 'Dawa Hall' },
 
-  // Weekend (Friday & Saturday)
-  { ID: 13, ClassID: 25, SubjectID: 1, TeacherID: 2, Day: 'Friday', StartTime: '08:00', EndTime: '09:30', Room: 'Weekend Wing 1' },
+  // 2-Days Department Schedule (Class 25 - Friday & Saturday)
+  { ID: 13, ClassID: 25, SubjectID: 17, TeacherID: 6, Day: 'Friday', StartTime: '07:00', EndTime: '08:30', Room: 'Weekend Wing 1' },
+  { ID: 42, ClassID: 25, SubjectID: 18, TeacherID: 7, Day: 'Friday', StartTime: '08:30', EndTime: '09:30', Room: 'Weekend Wing 1' },
+  { ID: 43, ClassID: 25, SubjectID: 19, TeacherID: 2, Day: 'Friday', StartTime: '09:40', EndTime: '10:40', Room: 'Weekend Wing 1' },
+  { ID: 44, ClassID: 25, SubjectID: 20, TeacherID: 3, Day: 'Friday', StartTime: '10:40', EndTime: '11:30', Room: 'Weekend Wing 1' },
+  { ID: 45, ClassID: 25, SubjectID: 17, TeacherID: 6, Day: 'Friday', StartTime: '11:30', EndTime: '12:30', Room: 'Weekend Wing 1' },
+
+  { ID: 46, ClassID: 25, SubjectID: 19, TeacherID: 2, Day: 'Saturday', StartTime: '07:00', EndTime: '08:30', Room: 'Weekend Wing 1' },
+  { ID: 47, ClassID: 25, SubjectID: 17, TeacherID: 6, Day: 'Saturday', StartTime: '08:30', EndTime: '09:30', Room: 'Weekend Wing 1' },
+  { ID: 48, ClassID: 25, SubjectID: 18, TeacherID: 7, Day: 'Saturday', StartTime: '09:40', EndTime: '10:40', Room: 'Weekend Wing 1' },
+  { ID: 49, ClassID: 25, SubjectID: 17, TeacherID: 6, Day: 'Saturday', StartTime: '10:40', EndTime: '11:30', Room: 'Weekend Wing 1' },
+  { ID: 50, ClassID: 25, SubjectID: 18, TeacherID: 7, Day: 'Saturday', StartTime: '11:30', EndTime: '12:30', Room: 'Weekend Wing 1' },
+
   { ID: 14, ClassID: 31, SubjectID: 4, TeacherID: 5, Day: 'Friday', StartTime: '09:45', EndTime: '11:15', Room: 'Weekend Wing 2' },
   { ID: 15, ClassID: 37, SubjectID: 12, TeacherID: 3, Day: 'Saturday', StartTime: '08:30', EndTime: '10:30', Room: 'Weekend Wing 3' },
 ];

@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { AuthService } from '@/lib/auth';
 import { UserSession, UserRole } from '@/lib/types';
+import { toHindiNumerals } from '@/lib/numerals';
 import {
   School,
   LayoutDashboard,
@@ -67,23 +68,125 @@ export default function DashboardLayout({
   const role = currentUser.role;
   const isCurrent = (path: string) => pathname === path;
 
-  // Arabic Role Helper
-  const getRoleArabic = (r: UserRole) => {
+  // Role details with English first
+  const getRoleDetails = (r: UserRole) => {
     switch (r) {
       case 'student':
-        return { label: 'طالب (Student)', labelAr: 'طالب', bg: 'bg-[#9f7a28]', icon: GraduationCap };
+        return {
+          titleEn: 'Student',
+          titleAr: 'طالب',
+          portalTitleEn: 'Student Portal',
+          portalTitleAr: 'بوابة الطالب الأكاديمية',
+          bg: 'bg-[#9f7a28]',
+          icon: GraduationCap,
+        };
       case 'teacher':
-        return { label: 'أستاذ (Teacher)', labelAr: 'أستاذ', bg: 'bg-emerald-700', icon: UserCheck };
+        return {
+          titleEn: 'Teacher',
+          titleAr: 'أستاذ',
+          portalTitleEn: 'Teacher Portal',
+          portalTitleAr: 'بوابة الأستاذ والمعلم',
+          bg: 'bg-emerald-700',
+          icon: UserCheck,
+        };
       case 'mudir':
-        return { label: 'المدير / العميد (Mudir)', labelAr: 'المدير / العميد', bg: 'bg-amber-600', icon: Crown };
+        return {
+          titleEn: 'Principal / Dean',
+          titleAr: 'المدير / العميد',
+          portalTitleEn: 'Principal & Dean Portal',
+          portalTitleAr: 'عمادة وإدارة الجامعة',
+          bg: 'bg-amber-600',
+          icon: Crown,
+        };
       case 'cashier':
-        return { label: 'أمين الصندوق (Cashier)', labelAr: 'أمين الصندوق', bg: 'bg-blue-600', icon: Wallet };
+        return {
+          titleEn: 'Cashier / Finance',
+          titleAr: 'أمين الصندوق',
+          portalTitleEn: 'Cashier & Finance Portal',
+          portalTitleAr: 'أمانة الصندوق والمالية',
+          bg: 'bg-blue-600',
+          icon: Wallet,
+        };
       case 'admin':
-        return { label: 'المشرف (Admin)', labelAr: 'المشرف الإداري', bg: 'bg-red-600', icon: ShieldCheck };
+        return {
+          titleEn: 'System Administrator',
+          titleAr: 'المشرف العام',
+          portalTitleEn: 'Admin Portal',
+          portalTitleAr: 'إدارة النظام والمشرف',
+          bg: 'bg-red-600',
+          icon: ShieldCheck,
+        };
     }
   };
 
-  const roleInfo = getRoleArabic(role);
+  const roleInfo = getRoleDetails(role);
+
+  // Navigation Items per Portal with English First
+  const getNavItems = () => {
+    if (role === 'teacher') {
+      return [
+        { href: '/dashboard', labelEn: 'Dashboard Overview', labelAr: 'لوحة المعلم الرئيسية', icon: LayoutDashboard },
+        { href: '/dashboard/schedules', labelEn: 'My Schedule & Timetable', labelAr: 'جدول الحصص الأسبوعي', icon: Calendar },
+        { href: '/dashboard/grades', labelEn: 'Grade Management (Excel)', labelAr: 'رصد وتعديل الدرجات', icon: ClipboardList },
+        { href: '/dashboard/classes', labelEn: 'My Classes & Subjects', labelAr: 'فصولي وموادي المكلف بها', icon: Building2 },
+        { href: '/dashboard/students/attendance', labelEn: 'Student Attendance', labelAr: 'سجل حضور الطلاب', icon: CalendarCheck },
+        { href: '/dashboard/honors', labelEn: 'Honor Roll & Top Students', labelAr: 'لوحة الشرف والمتفوقين', icon: Award },
+        { href: '/dashboard/announcements', labelEn: 'Announcements', labelAr: 'الإعلانات والتعاميم', icon: Megaphone },
+        { href: '/dashboard/profile', labelEn: 'Teacher Profile', labelAr: 'الملف الشخصي', icon: User },
+      ];
+    }
+
+    if (role === 'student') {
+      return [
+        { href: '/dashboard', labelEn: 'Home Dashboard', labelAr: 'الرئيسية', icon: LayoutDashboard },
+        { href: '/dashboard/profile', labelEn: 'My Profile', labelAr: 'الملف الشخصي', icon: User },
+        { href: '/dashboard/grades', labelEn: 'My Academic Grades', labelAr: 'الدرجات الأكاديمية', icon: ClipboardList },
+        { href: '/dashboard/schedules', labelEn: 'Class Schedule', labelAr: 'جدول الحصص', icon: Calendar },
+        { href: '/dashboard/finance', labelEn: 'Tuition & Billing', labelAr: 'الرسوم والمستحقات', icon: Wallet },
+        { href: '/dashboard/honors', labelEn: 'Honor Roll', labelAr: 'لوحة الشرف والمتفوقين', icon: Award },
+        { href: '/dashboard/announcements', labelEn: 'Announcements', labelAr: 'الإعلانات والتعاميم', icon: Megaphone },
+      ];
+    }
+
+    if (role === 'cashier') {
+      return [
+        { href: '/dashboard', labelEn: 'Cashier Dashboard', labelAr: 'لوحة المالية', icon: LayoutDashboard },
+        { href: '/dashboard/finance', labelEn: 'Tuition & Cashier Ledger', labelAr: 'المالية والصندوق', icon: Wallet },
+        { href: '/dashboard/students', labelEn: 'Student Directory', labelAr: 'بيانات الطلاب', icon: GraduationCap },
+        { href: '/dashboard/announcements', labelEn: 'Announcements', labelAr: 'الإعلانات والتعاميم', icon: Megaphone },
+        { href: '/dashboard/profile', labelEn: 'My Profile', labelAr: 'الملف الشخصي', icon: User },
+      ];
+    }
+
+    // Mudir / Admin Navigation
+    const adminItems = [
+      { href: '/dashboard', labelEn: 'Admin Dashboard', labelAr: 'لوحة التحكم العامة', icon: LayoutDashboard },
+      { href: '/dashboard/schedules', labelEn: 'Master Schedules', labelAr: 'جدول الحصص العام', icon: Calendar },
+      { href: '/dashboard/grades', labelEn: 'Master Grades Matrix', labelAr: 'سجل الدرجات (6 أدوار)', icon: ClipboardList },
+      { href: '/dashboard/classes', labelEn: 'Classes & Departments', labelAr: 'الأقسام والصفوف الدراسية', icon: Building2 },
+      { href: '/dashboard/subjects', labelEn: 'Curriculum & Subjects', labelAr: 'المناهج والمواد الدراسية', icon: BookOpen },
+      { href: '/dashboard/teachers', labelEn: 'Faculty & Teachers', labelAr: 'الكادر التعليمي والمعلمين', icon: Users },
+      { href: '/dashboard/teachers/assignments', labelEn: 'Subject Allocations', labelAr: 'توزيع المواد والمعلمين', icon: UserCog },
+      { href: '/dashboard/students', labelEn: 'Student Directory', labelAr: 'سجل وبيانات الطلاب', icon: GraduationCap },
+      { href: '/dashboard/students/attendance', labelEn: 'Student Attendance', labelAr: 'سجل حضور الطلاب', icon: CalendarCheck },
+      { href: '/dashboard/attendance', labelEn: 'Staff Attendance', labelAr: 'سجل دوام المعلمين', icon: Clock },
+      { href: '/dashboard/finance', labelEn: 'Finance & Treasury', labelAr: 'المالية والصندوق', icon: Wallet },
+      { href: '/dashboard/honors', labelEn: 'Honor Roll & Awards', labelAr: 'لوحة الشرف والمتفوقين', icon: Award },
+      { href: '/dashboard/announcements', labelEn: 'Announcements', labelAr: 'الإعلانات والتعاميم', icon: Megaphone },
+    ];
+
+    if (role === 'admin') {
+      adminItems.push(
+        { href: '/dashboard/forms', labelEn: 'Form Templates', labelAr: 'النماذج والتقارير', icon: FileText },
+        { href: '/dashboard/accounts', labelEn: 'User Accounts & Roles', labelAr: 'الحسابات والصلاحيات', icon: UserCog }
+      );
+    }
+
+    adminItems.push({ href: '/dashboard/profile', labelEn: 'My Profile', labelAr: 'الملف الشخصي', icon: User });
+    return adminItems;
+  };
+
+  const navItems = getNavItems();
 
   return (
     <div className="min-h-screen bg-[#f3efe6] flex flex-col font-sans text-slate-800">
@@ -114,14 +217,15 @@ export default function DashboardLayout({
 
           {/* Right: User Profile Avatar, Name, Role Badge, and Logout */}
           <div className="flex items-center space-x-3 sm:space-x-4">
-            {/* Sign Out Button in Arabic */}
+            {/* Sign Out Button (English First) */}
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-full transition-colors cursor-pointer shadow-2xs"
-              title="تسجيل الخروج"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-extrabold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-full transition-colors cursor-pointer shadow-2xs"
+              title="Sign Out / تسجيل الخروج"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline font-serif">تسجيل الخروج</span>
+              <span>Sign Out</span>
+              <span className="hidden sm:inline font-serif text-[11px] opacity-75">(خروج)</span>
             </button>
 
             {/* Profile Info & Avatar */}
@@ -130,15 +234,15 @@ export default function DashboardLayout({
                 <span className="text-sm font-extrabold text-slate-900 block leading-tight">
                   {currentUser.name}
                 </span>
-                <span className="text-[11px] font-bold text-emerald-800 font-serif block">
-                  {roleInfo.labelAr}
+                <span className="text-[11px] font-bold text-emerald-800 block">
+                  {roleInfo.titleEn} <span className="font-serif">({roleInfo.titleAr})</span>
                 </span>
               </div>
 
               <Link
                 href="/dashboard/profile"
                 className="w-10 h-10 rounded-full bg-[#126b38] ring-2 ring-amber-400/80 flex items-center justify-center text-white overflow-hidden shadow transition-all hover:scale-105"
-                title="الملف الشخصي"
+                title="Profile / الملف الشخصي"
               >
                 {currentUser.profilePic ? (
                   <img src={currentUser.profilePic} alt={currentUser.name} className="w-full h-full object-cover" />
@@ -175,8 +279,8 @@ export default function DashboardLayout({
           }`}
         >
           <div className="flex-1 flex flex-col overflow-y-auto">
-            {/* Sidebar Top: Crest Logo & Arabic Institution Title */}
-            <div className="p-5 border-b border-emerald-800/80 bg-emerald-950/20 text-center relative">
+            {/* Sidebar Top: Crest Logo & Institution Title */}
+            <div className="p-4 border-b border-emerald-800/80 bg-emerald-950/20 text-center relative">
               <button
                 onClick={() => setSidebarOpen(false)}
                 className="lg:hidden absolute top-4 left-4 p-1 text-emerald-200 hover:text-white"
@@ -185,7 +289,7 @@ export default function DashboardLayout({
               </button>
 
               {/* Crest Logo */}
-              <div className="w-20 h-20 mx-auto rounded-full bg-white/10 p-1.5 border-2 border-amber-400 shadow-md flex items-center justify-center overflow-hidden">
+              <div className="w-18 h-18 mx-auto rounded-full bg-white/10 p-1.5 border-2 border-amber-400 shadow-md flex items-center justify-center overflow-hidden">
                 <img
                   src="/logo.png"
                   alt="JMAA Emblem"
@@ -193,334 +297,69 @@ export default function DashboardLayout({
                 />
               </div>
 
-              {/* Institution Title in Arabic */}
-              <h2 className="mt-3 font-serif font-black text-lg text-white leading-tight">
-                جمعية منيب الكزبري العربية
+              {/* Institution Title */}
+              <h2 className="mt-2 font-black text-base text-white leading-tight font-sans tracking-tight">
+                Jamiatu Monib Alkuzbary
               </h2>
-              <p className="text-[11px] text-amber-200/90 font-sans mt-0.5 font-bold tracking-wider">
-                JAMIATU MONIB ALKUZBARY
+              <p className="text-[11px] text-amber-200/90 font-serif mt-0.5 font-bold" dir="rtl">
+                جامعة منيب الكزبري العربية
               </p>
+
+              {/* Dedicated Portal Badge */}
+              <div className="mt-2.5 mx-auto px-3 py-1 rounded-xl bg-amber-400/20 border border-amber-400/40 text-center">
+                <span className="block text-xs font-black uppercase tracking-wider text-amber-300 font-sans">
+                  {roleInfo.portalTitleEn}
+                </span>
+                <span className="block text-[10px] text-amber-200/80 font-serif" dir="rtl">
+                  {roleInfo.portalTitleAr}
+                </span>
+              </div>
             </div>
 
-            {/* Pill Navigation Buttons */}
-            <nav className="p-4 space-y-2.5 font-serif" dir="rtl">
-              {/* STUDENT NAVIGATION (Exact Mockup Match) */}
-              {role === 'student' ? (
-                <>
-                  {/* 1. الرئيسية (Home / Dashboard) */}
+            {/* Pill Navigation Buttons (English First) */}
+            <nav className="p-3.5 space-y-2">
+              {navItems.map((item, idx) => {
+                const active = isCurrent(item.href);
+                return (
                   <Link
-                    href="/dashboard"
+                    key={item.href + idx}
+                    href={item.href}
                     onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2.5 px-4 rounded-full text-center font-bold text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
+                    className={`block w-full py-2 px-3 rounded-2xl text-center transition-all shadow-xs ${
+                      active
+                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md font-bold'
+                        : 'bg-[#dfd3b7] hover:bg-[#d8cca9] text-slate-900 border border-[#cfc39f]'
                     }`}
                   >
-                    الرئيسية
+                    <span className="block font-black text-xs sm:text-[13px] tracking-wide leading-tight">
+                      {item.labelEn}
+                    </span>
+                    <span className="block text-[11px] font-serif opacity-80 leading-tight mt-0.5" dir="rtl">
+                      {item.labelAr}
+                    </span>
                   </Link>
-
-                  {/* 2. الملف الشخصي (Profile) */}
-                  <Link
-                    href="/dashboard/profile"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2.5 px-4 rounded-full text-center font-bold text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/profile')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    الملف الشخصي
-                  </Link>
-
-                  {/* 3. الدرجات الأكاديمية (Grades) */}
-                  <Link
-                    href="/dashboard/grades"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2.5 px-4 rounded-full text-center font-bold text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/grades')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    الدرجات الأكاديمية
-                  </Link>
-
-                  {/* 4. جدول الحصص (Class Schedule) */}
-                  <Link
-                    href="/dashboard/schedules"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2.5 px-4 rounded-full text-center font-bold text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/schedules')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    جدول الحصص
-                  </Link>
-
-                  {/* 5. المواد الدراسية (Subjects) */}
-                  <Link
-                    href="/dashboard/grades"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2.5 px-4 rounded-full text-center font-bold text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/grades') && false
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    المواد الدراسية
-                  </Link>
-
-                  {/* 6. الرسوم والمستحقات (Billings) */}
-                  <Link
-                    href="/dashboard/finance"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2.5 px-4 rounded-full text-center font-bold text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/finance')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    الرسوم والمستحقات
-                  </Link>
-
-                  {/* 7. لوحة الشرف والمتفوقين (Honors) */}
-                  <Link
-                    href="/dashboard/honors"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2.5 px-4 rounded-full text-center font-bold text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/honors')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    لوحة الشرف والمتفوقين
-                  </Link>
-
-                  {/* 8. الإعلانات والتعاميم */}
-                  <Link
-                    href="/dashboard/announcements"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2.5 px-4 rounded-full text-center font-bold text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/announcements')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    الإعلانات والتعاميم
-                  </Link>
-                </>
-              ) : (
-                /* FACULTY & ADMIN NAVIGATION (All translated into Arabic pill buttons) */
-                <>
-                  <Link
-                    href="/dashboard"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    لوحة التحكم العامة
-                  </Link>
-
-                  <Link
-                    href="/dashboard/schedules"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/schedules')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    جدول الحصص الأسبوعي
-                  </Link>
-
-                  <Link
-                    href="/dashboard/grades"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/grades')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    رصد الدرجات والتقييم (6 أدوار)
-                  </Link>
-
-                  <Link
-                    href="/dashboard/honors"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/honors')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    لوحة الشرف والمتفوقين
-                  </Link>
-
-                  <Link
-                    href="/dashboard/classes"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/classes')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    الأقسام والصفوف الدراسية
-                  </Link>
-
-                  <Link
-                    href="/dashboard/subjects"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/subjects')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    المواد والمناهج الدراسية
-                  </Link>
-
-                  {(role === 'admin' || role === 'mudir') && (
-                    <>
-                      <Link
-                        href="/dashboard/teachers"
-                        onClick={() => setSidebarOpen(false)}
-                        className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
-                          isCurrent('/dashboard/teachers')
-                            ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                            : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                        }`}
-                      >
-                        الكادر التعليمي والمعلمين
-                      </Link>
-
-                      <Link
-                        href="/dashboard/teachers/assignments"
-                        onClick={() => setSidebarOpen(false)}
-                        className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
-                          isCurrent('/dashboard/teachers/assignments')
-                            ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                            : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                        }`}
-                      >
-                        توزيع المواد والمعلمين
-                      </Link>
-                    </>
-                  )}
-
-                  <Link
-                    href="/dashboard/students"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/students')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    سجل وبيانات الطلاب
-                  </Link>
-
-                  <Link
-                    href="/dashboard/attendance"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/attendance')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    سجل الحضور والغياب
-                  </Link>
-
-                  <Link
-                    href="/dashboard/finance"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/finance')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    المالية والصندوق
-                  </Link>
-
-                  <Link
-                    href="/dashboard/announcements"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/announcements')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    الإعلانات والتعاميم
-                  </Link>
-
-                  {role === 'admin' && (
-                    <>
-                      <Link
-                        href="/dashboard/forms"
-                        onClick={() => setSidebarOpen(false)}
-                        className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
-                          isCurrent('/dashboard/forms')
-                            ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                            : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                        }`}
-                      >
-                        النماذج والتقارير
-                      </Link>
-
-                      <Link
-                        href="/dashboard/accounts"
-                        onClick={() => setSidebarOpen(false)}
-                        className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
-                          isCurrent('/dashboard/accounts')
-                            ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                            : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                        }`}
-                      >
-                        الحسابات والصلاحيات
-                      </Link>
-                    </>
-                  )}
-
-                  <Link
-                    href="/dashboard/profile"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`block w-full py-2 px-3 rounded-full text-center font-bold text-xs sm:text-sm transition-all shadow-xs ${
-                      isCurrent('/dashboard/profile')
-                        ? 'bg-[#9f7a28] text-white border border-[#7a5c1b] ring-2 ring-amber-300/40 shadow-md'
-                        : 'bg-[#dfd3b7] hover:bg-[#d4c6a4] text-slate-900 border border-[#cfc39f]'
-                    }`}
-                  >
-                    الملف الشخصي
-                  </Link>
-                </>
-              )}
+                );
+              })}
             </nav>
           </div>
 
           {/* Sidebar Footer */}
           <div className="p-3 border-t border-emerald-800/60 bg-emerald-950/40 text-center text-xs text-amber-200/80 font-mono">
-            <span>جامعة منيب الكزبري &bull; v2.0</span>
+            <span>جامعة منيب الكزبري &bull; v{toHindiNumerals('2.0')}</span>
           </div>
         </aside>
       </div>
 
-      {/* Bottom Footer Bar (Exact Mockup Match) */}
+      {/* Bottom Footer Bar (Exact Mockup Match with Hindi Numerals) */}
       <footer className="bg-[#dfd4b8] border-t-2 border-[#ccbf99] text-slate-800 py-2.5 px-4 sm:px-8 z-30 shadow-inner">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm font-bold font-serif" dir="rtl">
           {/* Office Hours */}
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-[#126b38]" />
             <span>أوقات الدوام:</span>
-            <span className="font-mono text-slate-950 font-black" dir="ltr">8:00 AM - 12:00 PM</span>
+            <span className="font-mono text-slate-950 font-black">
+              {toHindiNumerals('8:00')} ص - {toHindiNumerals('12:00')} م ({toHindiNumerals('8:00')} AM - {toHindiNumerals('12:00')} PM)
+            </span>
           </div>
 
           {/* Social Follow */}
@@ -534,7 +373,9 @@ export default function DashboardLayout({
           <div className="flex items-center gap-2">
             <Phone className="w-4 h-4 text-[#126b38]" />
             <span>اتصل بنا:</span>
-            <span className="font-mono text-slate-950 font-black" dir="ltr">09123456789</span>
+            <span className="font-mono text-slate-950 font-black" dir="ltr">
+              {toHindiNumerals('09123456789')}
+            </span>
           </div>
         </div>
       </footer>
