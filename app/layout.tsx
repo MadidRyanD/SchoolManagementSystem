@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Mithila English High School - Management System',
+  title: 'JMAA-MoritAko | Jamiatu Monib Alkuzbary Al-Arabia - School Management System',
   description: 'Comprehensive School Management System for Administration, Teachers, and Students',
 };
 
