@@ -125,14 +125,12 @@ export default function DashboardLayout({
   const getNavItems = () => {
     if (role === 'teacher') {
       return [
-        { href: '/dashboard', labelEn: 'Dashboard Overview', labelAr: 'لوحة المعلم الرئيسية', icon: LayoutDashboard },
-        { href: '/dashboard/schedules', labelEn: 'My Schedule & Timetable', labelAr: 'جدول الحصص الأسبوعي', icon: Calendar },
-        { href: '/dashboard/grades', labelEn: 'Grade Management (Excel)', labelAr: 'رصد وتعديل الدرجات', icon: ClipboardList },
-        { href: '/dashboard/classes', labelEn: 'My Classes & Subjects', labelAr: 'فصولي وموادي المكلف بها', icon: Building2 },
-        { href: '/dashboard/students/attendance', labelEn: 'Student Attendance', labelAr: 'سجل حضور الطلاب', icon: CalendarCheck },
-        { href: '/dashboard/honors', labelEn: 'Honor Roll & Top Students', labelAr: 'لوحة الشرف والمتفوقين', icon: Award },
-        { href: '/dashboard/announcements', labelEn: 'Announcements', labelAr: 'الإعلانات والتعاميم', icon: Megaphone },
-        { href: '/dashboard/profile', labelEn: 'Teacher Profile', labelAr: 'الملف الشخصي', icon: User },
+        { href: '/dashboard', labelEn: 'Home', labelAr: 'الرئيسية', icon: LayoutDashboard },
+        { href: '/dashboard/profile', labelEn: 'Profile', labelAr: 'الملف الشخصي', icon: User },
+        { href: '/dashboard/schedules', labelEn: 'Class Schedule', labelAr: 'جدول الحصص', icon: Calendar },
+        { href: '/dashboard/subjects', labelEn: 'Subjects', labelAr: 'المواد الدراسية', icon: BookOpen },
+        { href: '/dashboard/classes/advisee', labelEn: 'Class Advisee', labelAr: 'الفصل المشرف عليه', icon: UserCheck },
+        { href: '/dashboard/finance', labelEn: 'Billing', labelAr: 'الرسوم والمستحقات', icon: Wallet },
       ];
     }
 
