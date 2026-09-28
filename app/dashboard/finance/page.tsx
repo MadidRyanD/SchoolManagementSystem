@@ -28,6 +28,7 @@ import {
   X,
   CreditCard
 } from 'lucide-react';
+import StudentExamReceipt from './StudentExamReceipt';
 
 export default function FinancePage() {
   const [classes, setClasses] = useState<ClassItem[]>([]);
@@ -280,7 +281,7 @@ export default function FinancePage() {
             activeTab === 'payments' ? 'bg-emerald-800 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          {isStudent ? 'My Tuition Statement' : 'Student Payment Matrix (6 Dawr)'}
+          {isStudent ? 'Exam Receipt & Tuition (إيصال دخول الاختبار)' : 'Student Payment Matrix (6 Dawr)'}
         </button>
 
         {isCashierOrAdmin && (
@@ -320,9 +321,26 @@ export default function FinancePage() {
         )}
       </div>
 
-      {/* TAB 1: STUDENT PAYMENT MATRIX (6 DAWRS) */}
+      {/* TAB 1: STUDENT PAYMENT MATRIX OR EXAM RECEIPT */}
       {activeTab === 'payments' && (
-        <div className="space-y-4">
+        isStudent ? (
+          (() => {
+            const currentStudent = students.find(s => s.StudentID === currentUser?.linkedId) || students[0];
+            const currentEnrolledClass = classes.find(c => c.ClassID === currentStudent?.ClassID);
+            const currentLedger = payments.find(p => p.StudentID === currentStudent?.StudentID);
+            const currentFeeSetting = feesSettings.find(f => f.ClassID === currentStudent?.ClassID);
+
+            return currentStudent ? (
+              <StudentExamReceipt
+                student={currentStudent}
+                enrolledClass={currentEnrolledClass}
+                ledger={currentLedger}
+                feeSetting={currentFeeSetting}
+              />
+            ) : null;
+          })()
+        ) : (
+          <div className="space-y-4">
           {!isStudent && (
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -446,7 +464,7 @@ export default function FinancePage() {
             </div>
           </div>
         </div>
-      )}
+      ))}
 
       {/* Floating Hover Popover for Payment Auditor Details */}
       {hoveredPayment && (

@@ -145,6 +145,9 @@ export interface DawrPaymentRecord {
   amount: number;
   cashierName?: string;
   paidAt?: string;
+  dayOfWeek?: string;
+  balance?: number;
+  note?: string;
 }
 
 export interface StudentPaymentLedger {

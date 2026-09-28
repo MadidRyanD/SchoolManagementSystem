@@ -65,24 +65,35 @@ export const AuthService = {
 
     // 4. Teacher Verification
     const teachers = DataStore.getTeachers();
-    const matchedTeacher = teachers.find(
-      t =>
-        (t.Email && t.Email.toLowerCase() === cleanUser) ||
-        (t.Name && t.Name.toLowerCase() === cleanUser) ||
-        cleanUser === `teacher${t.TeacherID}` ||
-        cleanUser === 'teacher' ||
-        cleanUser === 'teacher@school.edu'
-    );
+    let matchedTeacher = undefined;
+
+    if (
+      cleanUser === 'teacher' ||
+      cleanUser === 'teacher@school.edu' ||
+      cleanUser === 'teacher@jmaa.edu' ||
+      cleanUser === 'ahmad.farouq@jmaa.edu'
+    ) {
+      // Specifically pick TeacherID 2 (Sheikh Ahmad Al-Farouq, Faculty)
+      matchedTeacher = teachers.find(t => t.TeacherID === 2) || teachers.find(t => !t.IsMudir);
+    } else {
+      matchedTeacher = teachers.find(
+        t =>
+          (t.Email && t.Email.toLowerCase() === cleanUser) ||
+          (t.Name && t.Name.toLowerCase() === cleanUser) ||
+          cleanUser === `teacher${t.TeacherID}`
+      );
+    }
 
     if (matchedTeacher) {
       const validPass = matchedTeacher.Password || 'teacher123';
       if (cleanPass === validPass || cleanPass === 'teacher123') {
+        const isMudirAccount = !!matchedTeacher.IsMudir && cleanUser !== 'teacher' && cleanUser !== 'teacher@school.edu';
         const teacherSession: UserSession = {
           id: `usr-teacher-${matchedTeacher.TeacherID}`,
           name: matchedTeacher.Name,
           nameArabic: matchedTeacher.NameArabic,
           email: matchedTeacher.Email || 'teacher@jmaa.edu',
-          role: matchedTeacher.IsMudir ? 'mudir' : 'teacher',
+          role: isMudirAccount ? 'mudir' : 'teacher',
           linkedId: matchedTeacher.TeacherID,
           profilePic: matchedTeacher.ProfilePic,
         };

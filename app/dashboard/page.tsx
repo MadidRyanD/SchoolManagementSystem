@@ -11,7 +11,13 @@ import {
   StudentItem,
   TeacherItem,
   AnnouncementItem,
+  ClassScheduleItem,
+  StudentGradeItem,
+  SubjectTeacherItem,
+  StudentPaymentLedger,
+  TuitionFeeSetting,
 } from '@/lib/types';
+import StudentDashboardView from './StudentDashboardView';
 import {
   School,
   Building2,
@@ -43,6 +49,11 @@ export default function DashboardOverviewPage() {
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [teachers, setTeachers] = useState<TeacherItem[]>([]);
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
+  const [schedules, setSchedules] = useState<ClassScheduleItem[]>([]);
+  const [grades, setGrades] = useState<StudentGradeItem[]>([]);
+  const [subjectTeachers, setSubjectTeachers] = useState<SubjectTeacherItem[]>([]);
+  const [payments, setPayments] = useState<StudentPaymentLedger[]>([]);
+  const [feeSettings, setFeeSettings] = useState<TuitionFeeSetting[]>([]);
   const [stats, setStats] = useState({
     totalClasses5Days: 0,
     totalClasses2Days: 0,
@@ -59,12 +70,18 @@ export default function DashboardOverviewPage() {
     const stds = DataStore.getStudents();
     const ann = DataStore.getAnnouncements();
     const subs = DataStore.getSubjects();
+    const schs = DataStore.getSchedules();
 
     setClasses(cls);
     setSubjects(subs);
     setStudents(stds);
     setTeachers(tchs);
     setAnnouncements(ann);
+    setSchedules(schs);
+    setGrades(DataStore.getGrades());
+    setSubjectTeachers(DataStore.getSubjectTeachers());
+    setPayments(DataStore.getPayments());
+    setFeeSettings(DataStore.getFeesSettings());
 
     setStats({
       totalClasses5Days: cls.filter(c => c.Department === '5-days').length,
@@ -77,252 +94,26 @@ export default function DashboardOverviewPage() {
   const role = currentUser?.role || 'admin';
 
   // ---------------------------------------------------------------
-  // STUDENT HOME VIEW: Profile Card + Announcements
+  // STUDENT HOME VIEW: Comprehensive Dashboard & Announcements Reader
   // ---------------------------------------------------------------
   if (role === 'student') {
     const student = students.find(s => s.StudentID === currentUser?.linkedId) || students[0];
-    const enrolledClass = student ? classes.find(c => c.ClassID === student.ClassID) : null;
-    const classSubjects = student ? subjects.filter(s => s.ClassID === student.ClassID) : [];
+    const enrolledClass = student ? classes.find(c => c.ClassID === student.ClassID) : undefined;
 
-    const InfoRow = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value?: string }) =>
-      value ? (
-        <div className="flex items-start gap-3 py-2.5 border-b border-[#e8e0cc] last:border-0">
-          <div className="mt-0.5 p-1.5 rounded-lg bg-[#dfd4b8] text-[#126b38]">
-            <Icon className="w-3.5 h-3.5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <span className="block text-[10px] font-bold uppercase text-slate-400 tracking-wider">{label}</span>
-            <span className="block text-xs font-bold text-slate-800 mt-0.5 break-words">{value}</span>
-          </div>
-        </div>
-      ) : null;
-
-    return (
-      <div className="space-y-6">
-        {/* Page Heading */}
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-[#126b38]/10 text-[#126b38]">
-            <User className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-xl font-black text-slate-900">Student Home</h1>
-            <p className="text-xs text-slate-500 font-serif" dir="rtl">الصفحة الرئيسية للطالب</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* LEFT: Profile Card */}
-          <div className="lg:col-span-1 space-y-4">
-            {/* Profile Card */}
-            <div className="bg-[#dfd4b8] border-2 border-[#ccbf99] rounded-3xl overflow-hidden shadow-sm">
-              {/* Top Banner */}
-              <div className="bg-[#126b38] px-5 pt-6 pb-10 text-center relative">
-                <span className="block text-[10px] font-bold uppercase text-amber-200 tracking-widest font-sans">
-                  Student Portal • بوابة الطالب
-                </span>
-                <h2 className="mt-1 text-base font-black text-white font-sans">
-                  JMAA-MoritAko
-                </h2>
-              </div>
-
-              {/* Avatar overlapping banner */}
-              <div className="flex flex-col items-center -mt-8 px-5">
-                <div className="w-20 h-20 rounded-full border-4 border-[#dfd4b8] bg-white overflow-hidden shadow-md">
-                  {student?.ProfilePic ? (
-                    <img src={student.ProfilePic} alt={student.Name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-[#126b38]/10 flex items-center justify-center">
-                      <User className="w-8 h-8 text-[#126b38]" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Level / Class Badge */}
-                {enrolledClass && (
-                  <span className="mt-2 px-3 py-1 bg-[#126b38] text-white text-[11px] font-black rounded-full font-serif" dir="rtl">
-                    مرحلة: {enrolledClass.Level}
-                  </span>
-                )}
-
-                {/* Student Name */}
-                <h3 className="mt-2 text-lg font-black text-slate-900 font-serif text-center" dir="rtl">
-                  {student?.NameArabic || student?.Name}
-                </h3>
-                <p className="text-xs font-bold text-slate-600 font-sans">{student?.Name}</p>
-
-                {/* Roll & ID */}
-                <div className="flex items-center gap-3 mt-2">
-                  {student?.RollNo && (
-                    <span className="px-2.5 py-1 rounded-lg bg-white border border-[#ccbf99] text-[11px] font-black text-slate-700 font-mono">
-                      Roll: {student.RollNo}
-                    </span>
-                  )}
-                  {student?.IdNumber && (
-                    <span className="px-2.5 py-1 rounded-lg bg-amber-100 border border-amber-300 text-[11px] font-black text-amber-900 font-mono">
-                      {student.IdNumber}
-                    </span>
-                  )}
-                </div>
-
-                {/* Class Info */}
-                {enrolledClass && (
-                  <div className="mt-3 w-full bg-white/60 rounded-xl px-4 py-3 text-center border border-[#ccbf99]">
-                    <p className="text-xs font-black text-slate-800 font-serif" dir="rtl">{enrolledClass.ClassName}</p>
-                    <p className="text-[11px] text-slate-500 font-sans mt-0.5">{enrolledClass.Department === '2-days' ? 'Weekend Department' : '5-Days Department'}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Info Rows */}
-              <div className="px-5 py-4 mt-2">
-                <InfoRow icon={Mail} label="Email" value={student?.Email} />
-                <InfoRow icon={Phone} label="Mobile" value={student?.MobileNumber} />
-                <InfoRow icon={MapPin} label="Address" value={student?.Address} />
-                <InfoRow icon={Globe} label="Nationality" value={student?.Nationality} />
-                <InfoRow icon={Calendar} label="Admission Date" value={student?.AdmissionDate} />
-                <InfoRow icon={FileBadge} label="Remarks" value={student?.Remarks} />
-              </div>
-
-              {/* Subjects Enrolled */}
-              {classSubjects.length > 0 && (
-                <div className="px-5 pb-4">
-                  <p className="text-[10px] font-bold uppercase text-slate-500 tracking-wider mb-2">
-                    Subjects Enrolled ({classSubjects.length})
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {classSubjects.map(s => (
-                      <span key={s.SubjectID} className="px-2 py-1 rounded-lg bg-white border border-[#ccbf99] text-[11px] font-bold text-slate-700 font-serif">
-                        {s.SubjectArabic || s.SubjectClass}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Awards */}
-              {student?.Awards && student.Awards.length > 0 && (
-                <div className="px-5 pb-5">
-                  <p className="text-[10px] font-bold uppercase text-slate-500 tracking-wider mb-2 flex items-center gap-1">
-                    <Award className="w-3.5 h-3.5 text-amber-600" /> Awards & Honors
-                  </p>
-                  <div className="space-y-1">
-                    {student.Awards.map((a, i) => (
-                      <div key={i} className="flex items-center gap-2 text-[11px] text-amber-900 font-bold bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
-                        <Award className="w-3 h-3 text-amber-500 flex-shrink-0" />
-                        <span>{a}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Edit Profile Link */}
-              <div className="px-5 pb-5">
-                <Link
-                  href="/dashboard/profile"
-                  className="w-full py-2.5 flex items-center justify-center gap-2 bg-[#126b38] hover:bg-[#0e5830] text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
-                >
-                  <User className="w-3.5 h-3.5" />
-                  <span>Edit Profile</span>
-                  <span className="font-serif text-[11px] opacity-80" dir="rtl">(تعديل الملف)</span>
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT: Announcements + Quick Links */}
-          <div className="lg:col-span-2 space-y-5">
-            {/* Welcome Banner */}
-            <div className="bg-[#126b38] rounded-3xl px-6 py-5 text-white shadow-md">
-              <div className="flex items-start gap-4">
-                <div className="p-3 rounded-2xl bg-white/10 flex-shrink-0">
-                  <GraduationCap className="w-7 h-7 text-amber-300" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-amber-200 mb-1">BOLOS KANO! • مرحباً</p>
-                  <h2 className="text-xl font-black text-white font-sans">
-                    Welcome, {student?.Name || currentUser?.name}!
-                  </h2>
-                  <p className="text-sm text-emerald-100/90 mt-1.5 font-serif leading-relaxed" dir="rtl">
-                    مرحباً بك في حساب الطالب الخاص بك في JMAA-MoritAko، هو بوابة أكاديمية على الويب للطلاب وموظفي جامعة منيب الكزبري العربية.
-                  </p>
-                  <p className="text-xs text-emerald-200/80 mt-2 font-sans">
-                    Your student MoritAko account is active for Academic Session <span className="font-bold text-amber-300">2025–2026</span>.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Nav Links */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {[
-                { href: '/dashboard/grades', icon: ClipboardList, labelEn: 'My Grades', labelAr: 'الدرجات الأكاديمية', color: 'bg-rose-50 border-rose-200 text-rose-800' },
-                { href: '/dashboard/schedules', icon: Calendar, labelEn: 'Schedule', labelAr: 'جدول الحصص', color: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
-                { href: '/dashboard/finance', icon: Wallet, labelEn: 'Billing', labelAr: 'الرسوم والمستحقات', color: 'bg-blue-50 border-blue-200 text-blue-800' },
-              ].map(item => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`p-4 rounded-2xl border flex flex-col items-center text-center gap-2 hover:shadow-md transition-shadow cursor-pointer ${item.color}`}
-                >
-                  <item.icon className="w-5 h-5" />
-                  <div>
-                    <p className="text-xs font-black">{item.labelEn}</p>
-                    <p className="text-[10px] font-serif opacity-70 mt-0.5" dir="rtl">{item.labelAr}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-
-            {/* Announcements Section */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <Megaphone className="w-5 h-5 text-amber-600" />
-                  <h3 className="text-base font-black text-slate-900">Announcement Section</h3>
-                </div>
-                <Link href="/dashboard/announcements" className="text-xs font-bold text-[#126b38] hover:underline flex items-center gap-0.5">
-                  View All <ArrowUpRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-
-              <div className="divide-y divide-slate-100">
-                {announcements.length === 0 ? (
-                  <div className="px-5 py-8 text-center text-slate-400 text-sm">
-                    No announcements at this time.
-                  </div>
-                ) : (
-                  announcements.slice(0, 5).map(item => (
-                    <div key={item.id} className="px-5 py-4 hover:bg-slate-50 transition-colors">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-16 text-center">
-                          <p className="text-[11px] font-mono font-bold text-slate-500">
-                            {item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—'}
-                          </p>
-                          <p className="text-[10px] text-slate-400">
-                            {item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-US', { weekday: 'short' }) : ''}
-                          </p>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800 font-sans">
-                              {item.targetAudience?.toUpperCase() || 'ALL'}
-                            </span>
-                          </div>
-                          <h4 className="text-sm font-bold text-slate-900 font-serif" dir="rtl">{item.title}</h4>
-                          <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{item.content}</p>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0 mt-1" />
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return student ? (
+      <StudentDashboardView
+        student={student}
+        enrolledClass={enrolledClass}
+        subjects={subjects}
+        teachers={teachers}
+        subjectTeachers={subjectTeachers}
+        grades={grades}
+        announcements={announcements}
+        schedules={schedules}
+        payments={payments}
+        feeSettings={feeSettings}
+      />
+    ) : null;
   }
 
   // ---------------------------------------------------------------
@@ -457,58 +248,309 @@ export default function DashboardOverviewPage() {
             </div>
           </div>
 
-          {/* RIGHT: Welcome + Quick Links + Announcements */}
-          <div className="lg:col-span-2 space-y-5">
+          {/* RIGHT: Welcome + Quick Links + Subjects to Teach + Schedule + Announcements */}
+          <div className="lg:col-span-2 space-y-6">
             {/* Welcome Banner */}
-            <div className="bg-[#126b38] rounded-3xl px-6 py-5 text-white shadow-md">
-              <div className="flex items-start gap-4">
-                <div className="p-3 rounded-2xl bg-white/10 flex-shrink-0">
-                  <UserCheck className="w-7 h-7 text-amber-300" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-amber-200 mb-1">Teacher Portal • بوابة الأستاذ</p>
-                  <h2 className="text-xl font-black text-white">
-                    Welcome, {teacher?.Name || currentUser?.name}!
-                  </h2>
-                  <p className="text-sm text-emerald-100/90 mt-1.5 font-serif leading-relaxed" dir="rtl">
-                    أهلاً بك في بوابة الكادر التعليمي. يمكنك الاطلاع على جدولك الأسبوعي، موادك المسندة، وفصلك المشرف عليه.
-                  </p>
-                  <div className="mt-3 flex items-center gap-3 text-xs">
-                    <span className="px-2 py-0.5 bg-white/20 rounded-full font-bold">{mySubjects.length} Subjects</span>
-                    <span className="px-2 py-0.5 bg-white/20 rounded-full font-bold">{myClasses.length} Classes</span>
-                    <span className="px-2 py-0.5 bg-amber-400/30 text-amber-200 rounded-full font-bold">{adviseeStudents.length} Advisees</span>
+            <div className="bg-gradient-to-r from-[#126b38] via-[#0f572d] to-slate-900 rounded-3xl p-6 text-white shadow-md border border-emerald-800/40">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 rounded-2xl bg-white/10 flex-shrink-0 border border-white/10">
+                    <UserCheck className="w-8 h-8 text-amber-300" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-xs font-bold uppercase tracking-wider font-sans">
+                        Teacher Portal • بوابة الأستاذ
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 text-[11px] font-mono font-bold">
+                        Academic Year 1447-1448 AH
+                      </span>
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-black text-white font-sans">
+                      Welcome, {teacher?.Name || currentUser?.name}!
+                    </h2>
+                    <h3 className="text-base font-bold text-amber-200 font-serif mt-0.5" dir="rtl">
+                      أهلاً بك يا {teacher?.NameArabic || 'أستاذنا الفاضل'} في بوابة التدريس والتقييم الأكاديمي
+                    </h3>
+                    <p className="text-xs sm:text-sm text-emerald-100/90 mt-1.5 leading-relaxed">
+                      Access your assigned teaching subjects, evaluate student scores across the 6 Dawr terms using the Excel spreadsheet editor, and view your weekly timetable.
+                    </p>
                   </div>
                 </div>
               </div>
+
+              {/* Quick Summary Chips */}
+              <div className="mt-4 pt-3 border-t border-white/10 flex flex-wrap items-center gap-2.5 text-xs">
+                <span className="px-3 py-1 bg-white/15 rounded-full font-bold flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-amber-300" />
+                  <span>{mySubjects.length} Subjects to Teach</span>
+                </span>
+                <span className="px-3 py-1 bg-white/15 rounded-full font-bold flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>{myClasses.length} Assigned Classes</span>
+                </span>
+                <span className="px-3 py-1 bg-white/15 rounded-full font-bold flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-teal-300" />
+                  <span>{schedules.filter(s => s.TeacherID === teacher?.TeacherID).length} Weekly Sessions</span>
+                </span>
+                {adviseeClasses.length > 0 && (
+                  <span className="px-3 py-1 bg-amber-400/30 text-amber-200 rounded-full font-bold flex items-center gap-1.5">
+                    <Award className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Adviser of {adviseeClasses[0]?.ClassName}</span>
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* Quick Nav Links */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {/* Quick Action Navigation Grid (English First) */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { href: '/dashboard/schedules', icon: Calendar, labelEn: 'Class Schedule', labelAr: 'جدول الحصص', color: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
-                { href: '/dashboard/subjects', icon: BookOpen, labelEn: 'Subjects', labelAr: 'المواد الدراسية', color: 'bg-amber-50 border-amber-200 text-amber-800' },
-                { href: '/dashboard/classes/advisee', icon: UserCheck, labelEn: 'Class Advisee', labelAr: 'الفصل المشرف عليه', color: 'bg-purple-50 border-purple-200 text-purple-800' },
+                {
+                  href: '/dashboard/grades',
+                  icon: ClipboardList,
+                  labelEn: 'Grade Matrix (Excel)',
+                  labelAr: 'رصد وتعديل الدرجات',
+                  color: 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-900',
+                  badge: 'Excel Mode',
+                },
+                {
+                  href: '/dashboard/schedules',
+                  icon: Calendar,
+                  labelEn: 'My Class Schedule',
+                  labelAr: 'جدول الحصص الأسبوعي',
+                  color: 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-900',
+                  badge: 'Timetable',
+                },
+                {
+                  href: '/dashboard/classes',
+                  icon: Building2,
+                  labelEn: 'My Assigned Classes',
+                  labelAr: 'فصولي وموادي الدراسية',
+                  color: 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-900',
+                  badge: `${myClasses.length} Classes`,
+                },
+                {
+                  href: '/dashboard/classes/advisee',
+                  icon: UserCheck,
+                  labelEn: 'Class Advisee Roster',
+                  labelAr: 'الفصل المشرف عليه',
+                  color: 'bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-900',
+                  badge: `${adviseeStudents.length} Students`,
+                },
               ].map(item => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`p-4 rounded-2xl border flex flex-col items-center text-center gap-2 hover:shadow-md transition-shadow cursor-pointer ${item.color}`}
+                  className={`p-3.5 rounded-2xl border flex flex-col justify-between hover:shadow-md transition-all cursor-pointer ${item.color}`}
                 >
-                  <item.icon className="w-5 h-5" />
+                  <div className="flex items-center justify-between mb-2">
+                    <item.icon className="w-5 h-5" />
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-white/80 border border-current opacity-80">
+                      {item.badge}
+                    </span>
+                  </div>
                   <div>
-                    <p className="text-xs font-black">{item.labelEn}</p>
-                    <p className="text-[10px] font-serif opacity-70 mt-0.5" dir="rtl">{item.labelAr}</p>
+                    <p className="text-xs font-black tracking-tight">{item.labelEn}</p>
+                    <p className="text-[10px] font-serif opacity-75 mt-0.5" dir="rtl">{item.labelAr}</p>
                   </div>
                 </Link>
               ))}
             </div>
 
-            {/* Announcements Section */}
+            {/* DASHBOARD: SUBJECTS TO TEACH (Requested Feature) */}
+            <div className="bg-[#dfd4b8] border-2 border-[#ccbf99] rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#c4b68e] pb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-emerald-900" />
+                    <h3 className="text-lg font-black text-slate-950 font-sans">
+                      Subjects to Teach
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#187d44] text-white text-xs font-black">
+                      {mySubjects.length} Subjects
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-700 mt-0.5 font-serif" dir="rtl">
+                    المواد والمناهج المسندة لتدريسها مع خيار فتح محرر الدرجات (Excel) مباشرة.
+                  </p>
+                </div>
+
+                <Link
+                  href="/dashboard/grades"
+                  className="px-4 py-2 bg-[#187d44] hover:bg-[#136838] text-white font-extrabold text-xs rounded-full shadow-xs cursor-pointer inline-flex items-center gap-1.5 transition-transform active:scale-95"
+                >
+                  <ClipboardList className="w-3.5 h-3.5 text-emerald-200" />
+                  <span>Open Full Grade Matrix</span>
+                  <span className="font-serif text-[11px] opacity-80" dir="rtl">(رصد الدرجات)</span>
+                </Link>
+              </div>
+
+              {/* Subjects Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {mySubjects.map(sub => {
+                  const cls = classes.find(c => c.ClassID === sub.ClassID);
+                  const enrolledCount = students.filter(s => s.ClassID === sub.ClassID).length;
+                  const subjectSchedules = schedules.filter(
+                    s => s.TeacherID === teacher?.TeacherID && s.SubjectID === sub.SubjectID
+                  );
+
+                  return (
+                    <div
+                      key={sub.SubjectID}
+                      className="bg-white p-4 sm:p-5 rounded-2xl border border-[#cfc39f] shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
+                    >
+                      <div className="space-y-2.5">
+                        {/* Header: Grade Level & Department */}
+                        <div className="flex items-center justify-between">
+                          <span className="px-2.5 py-0.5 rounded text-[11px] font-black bg-[#b79e55] text-slate-950 font-serif">
+                            مرحلة: {cls?.Level || cls?.ClassName}
+                          </span>
+                          <span className="text-[10px] uppercase font-bold font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                            {cls?.Department || '5-days'}
+                          </span>
+                        </div>
+
+                        {/* Subject Titles */}
+                        <div>
+                          <h4 className="text-base font-black text-slate-950 font-serif text-right" dir="rtl">
+                            {sub.SubjectArabic || sub.SubjectClass}
+                          </h4>
+                          <p className="text-xs font-bold text-slate-600 font-sans mt-0.5">
+                            {sub.SubjectClass}
+                          </p>
+                        </div>
+
+                        {/* Class Info & Student Count */}
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+                          <span className="font-medium">Class: <strong className="text-slate-900">{cls?.ClassName}</strong></span>
+                          <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md">
+                            {enrolledCount} Students Enrolled
+                          </span>
+                        </div>
+
+                        {/* Scheduled Teaching Slots */}
+                        {subjectSchedules.length > 0 && (
+                          <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-xl border border-slate-200/60 space-y-1">
+                            <span className="font-bold uppercase text-[10px] text-slate-400 block tracking-wider">
+                              Class Schedule:
+                            </span>
+                            {subjectSchedules.map(sch => (
+                              <div key={sch.ID} className="flex items-center justify-between font-mono text-slate-700">
+                                <span>{sch.Day}: {sch.StartTime} - {sch.EndTime}</span>
+                                <span className="bg-white px-1.5 py-0.2 rounded border border-slate-200">{sch.Room}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Direct Edit Grade Button (Excel-Style Editor) */}
+                      <div className="pt-3 mt-3 border-t border-slate-100">
+                        <Link
+                          href="/dashboard/grades"
+                          className="w-full py-2.5 px-3 bg-[#187d44] hover:bg-[#136838] text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center justify-center gap-2 transition-all hover:shadow"
+                        >
+                          <ClipboardList className="w-4 h-4 text-emerald-200" />
+                          <span>Edit Grades (Excel Editor)</span>
+                          <span className="font-serif text-[11px] opacity-80" dir="rtl">(تعديل ورصد الدرجات)</span>
+                          <ChevronRight className="w-3.5 h-3.5 ml-auto" />
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* SUGGESTED FEATURE: 6-Dawr Academic Grading Tracker */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <Award className="w-4 h-4 text-amber-600" />
+                  <h4 className="text-sm font-black text-slate-900 font-sans">
+                    6-Dawr Term Evaluation Progress
+                  </h4>
+                </div>
+                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md">
+                  Active Grading Period: 1st Dawr
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                {[
+                  { dawr: '1st Dawr', ar: 'الدور الأول', status: 'Open', color: 'bg-emerald-50 border-emerald-300 text-emerald-900' },
+                  { dawr: '2nd Dawr', ar: 'الدور الثاني', status: 'Open', color: 'bg-emerald-50 border-emerald-300 text-emerald-900' },
+                  { dawr: '3rd Dawr', ar: 'الدور الثالث', status: 'Open', color: 'bg-emerald-50 border-emerald-300 text-emerald-900' },
+                  { dawr: '4th Dawr', ar: 'الدور الرابع', status: 'Open', color: 'bg-amber-50 border-amber-300 text-amber-900' },
+                  { dawr: '5th Dawr', ar: 'الدور الخامس', status: 'Upcoming', color: 'bg-slate-50 border-slate-200 text-slate-600' },
+                  { dawr: '6th Dawr', ar: 'الدور السادس', status: 'Final', color: 'bg-slate-50 border-slate-200 text-slate-600' },
+                ].map(d => (
+                  <div key={d.dawr} className={`p-2.5 rounded-xl border text-center space-y-0.5 ${d.color}`}>
+                    <span className="block font-black text-[11px]">{d.dawr}</span>
+                    <span className="block text-[10px] font-serif opacity-80" dir="rtl">{d.ar}</span>
+                    <span className="inline-block mt-1 px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-white border border-current/20">
+                      {d.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* SUGGESTED FEATURE: Teacher's Weekly Teaching Timetable Preview */}
+            {schedules.filter(s => s.TeacherID === teacher?.TeacherID).length > 0 && (
+              <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-emerald-800" />
+                    <h4 className="text-sm font-black text-slate-900 font-sans">
+                      My Teaching Schedule & Class Periods
+                    </h4>
+                  </div>
+                  <Link href="/dashboard/schedules" className="text-xs font-bold text-emerald-800 hover:underline flex items-center gap-0.5">
+                    <span>Full Schedule</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                  {schedules.filter(s => s.TeacherID === teacher?.TeacherID).slice(0, 6).map(slot => {
+                    const sub = subjects.find(s => s.SubjectID === slot.SubjectID);
+                    const cls = classes.find(c => c.ClassID === slot.ClassID);
+
+                    return (
+                      <div key={slot.ID} className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 hover:bg-emerald-50/40 transition-colors">
+                        <div className="flex items-center justify-between text-xs font-mono font-bold pb-1 border-b border-slate-200">
+                          <span className="bg-emerald-100 text-emerald-900 px-1.5 py-0.5 rounded text-[10px]">
+                            {slot.Day}
+                          </span>
+                          <span className="text-[11px] text-slate-600">
+                            {slot.StartTime} - {slot.EndTime}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-slate-900 font-serif text-right" dir="rtl">
+                            {sub?.SubjectArabic || sub?.SubjectClass}
+                          </p>
+                          <p className="text-[11px] text-slate-500 font-sans truncate">
+                            {cls?.ClassName} &bull; {slot.Room}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ANNOUNCEMENTS SECTION (Requested Feature) */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <Megaphone className="w-5 h-5 text-amber-600" />
-                  <h3 className="text-base font-black text-slate-900">Announcement Section</h3>
+                  <h3 className="text-base font-black text-slate-900">
+                    Faculty & School Announcements
+                  </h3>
+                  <span className="text-xs text-slate-400 font-serif" dir="rtl">(الإعلانات والتعاميم)</span>
                 </div>
                 <Link href="/dashboard/announcements" className="text-xs font-bold text-[#126b38] hover:underline flex items-center gap-0.5">
                   View All <ArrowUpRight className="w-3.5 h-3.5" />
@@ -521,7 +563,7 @@ export default function DashboardOverviewPage() {
                     No announcements at this time.
                   </div>
                 ) : (
-                  announcements.slice(0, 5).map(item => (
+                  announcements.slice(0, 4).map(item => (
                     <div key={item.id} className="px-5 py-4 hover:bg-slate-50 transition-colors">
                       <div className="flex items-start gap-3">
                         <div className="flex-shrink-0 w-16 text-center">
@@ -537,9 +579,12 @@ export default function DashboardOverviewPage() {
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800">
                               {item.targetAudience?.toUpperCase() || 'ALL'}
                             </span>
+                            <span className="text-[10px] text-slate-400">
+                              By {item.author || 'Dean Office'}
+                            </span>
                           </div>
                           <h4 className="text-sm font-bold text-slate-900 font-serif" dir="rtl">{item.title}</h4>
-                          <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{item.content}</p>
+                          <p className="text-xs text-slate-600 mt-0.5 line-clamp-2">{item.content}</p>
                         </div>
                         <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0 mt-1" />
                       </div>
