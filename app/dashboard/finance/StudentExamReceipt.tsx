@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StudentItem,
   ClassItem,
@@ -8,6 +8,7 @@ import {
   TuitionFeeSetting,
   GradingPeriod,
 } from '@/lib/types';
+import { DataStore } from '@/lib/store';
 import { toHindiNumerals } from '@/lib/numerals';
 import {
   Printer,
@@ -22,6 +23,13 @@ import {
   Clock,
   Sparkles,
   Download,
+  RotateCcw,
+  History,
+  CheckCircle2,
+  PlusCircle,
+  ArrowRight,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 
 interface StudentExamReceiptProps {
@@ -29,6 +37,8 @@ interface StudentExamReceiptProps {
   enrolledClass?: ClassItem;
   ledger?: StudentPaymentLedger;
   feeSetting?: TuitionFeeSetting;
+  onPaymentChange?: () => void;
+  canRenew?: boolean;
 }
 
 interface QuarterConfig {
@@ -53,26 +63,99 @@ export default function StudentExamReceipt({
   enrolledClass,
   ledger,
   feeSetting,
+  onPaymentChange,
+  canRenew = true,
 }: StudentExamReceiptProps) {
+  const [allLedgers, setAllLedgers] = useState<StudentPaymentLedger[]>([]);
+  const [selectedLedgerId, setSelectedLedgerId] = useState<string>('');
   const [selectedReceipt, setSelectedReceipt] = useState<QuarterConfig | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [showRenewModal, setShowRenewModal] = useState(false);
+  const [newYearInput, setNewYearInput] = useState('SY 2026-2027');
+  const [renewSuccessMsg, setRenewSuccessMsg] = useState<string | null>(null);
 
-  // Compute totals
+  // Load all payment ledgers (current + history) for this student
+  const refreshLedgers = () => {
+    const list = DataStore.getStudentPaymentLedgers(student.StudentID);
+    setAllLedgers(list);
+    if (list.length > 0 && !selectedLedgerId) {
+      const active = list.find(l => l.IsActive !== false) || list[0];
+      setSelectedLedgerId(active.id);
+    }
+  };
+
+  useEffect(() => {
+    refreshLedgers();
+  }, [student.StudentID]);
+
+  // Determine current active ledger vs historical ledger
+  const currentLedger = useMemo(() => {
+    if (selectedLedgerId) {
+      const found = allLedgers.find(l => l.id === selectedLedgerId);
+      if (found) return found;
+    }
+    return allLedgers.find(l => l.IsActive !== false) || allLedgers[0] || ledger;
+  }, [allLedgers, selectedLedgerId, ledger]);
+
+  const isHistorical = currentLedger?.IsActive === false;
+
+  // Compute totals for currently viewed ledger
   const totalDue = QUARTERS.reduce((sum, q) => {
     return sum + (feeSetting?.DawrAmount[q.period] || 300);
   }, 0);
 
   const totalPaid = QUARTERS.reduce((sum, q) => {
-    const rec = ledger?.Payments[q.period];
+    const rec = currentLedger?.Payments[q.period];
     if (rec?.isPaid) return sum + (rec.amount || 0);
     return sum;
   }, 0);
 
   const remainingBalance = Math.max(0, totalDue - totalPaid);
-  const paidCount = QUARTERS.filter(q => ledger?.Payments[q.period]?.isPaid).length;
+  const paidCount = QUARTERS.filter(q => currentLedger?.Payments[q.period]?.isPaid).length;
+
+  // Renew for new enrollment session back to zero
+  const handleRenewEnrollment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newYearInput.trim()) return;
+
+    const created = DataStore.renewStudentEnrollment(
+      student.StudentID,
+      student.ClassID,
+      newYearInput.trim(),
+      'New Enrollment Renewal'
+    );
+
+    const updatedList = DataStore.getStudentPaymentLedgers(student.StudentID);
+    setAllLedgers(updatedList);
+    setSelectedLedgerId(created.id);
+    setShowRenewModal(false);
+    setRenewSuccessMsg(
+      `Enrollment renewed successfully for ${newYearInput}! Payments have been reset to zero while preserving your previous transactions.`
+    );
+
+    if (onPaymentChange) onPaymentChange();
+    setTimeout(() => setRenewSuccessMsg(null), 5000);
+  };
 
   return (
     <div className="space-y-6">
+      {/* Renewal Success Notification */}
+      {renewSuccessMsg && (
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 flex items-center justify-between text-xs font-bold animate-in fade-in shadow-xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+            <span>{renewSuccessMsg}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setRenewSuccessMsg(null)}
+            className="text-emerald-700 hover:text-emerald-950"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Top Overview & Action Banner */}
       <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -92,31 +175,91 @@ export default function StudentExamReceipt({
               Official Tuition & Exam Clearance
             </h1>
             <p className="text-xs text-slate-500 font-serif" dir="rtl">
-              كشف سداد الرسوم وإيصالات دخول الاختبارات الأكاديمية للأدوار الستة.
+              كشف سداد الرسوم وإيصالات دخول الاختبارات الأكاديمية للأدوار الستة مع سجل الدورات السابقة.
             </p>
           </div>
         </div>
 
-        {/* Print Action */}
-        <div className="flex items-center gap-3">
+        {/* Actions: Print & Renew */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {canRenew && (
+            <button
+              type="button"
+              onClick={() => setShowRenewModal(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-2xl text-xs font-black shadow transition-all cursor-pointer hover:scale-102"
+              title="Renew enrollment for a new academic year back to zero while preserving previous transactions"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Renew New Enrollment</span>
+              <span className="font-serif text-[11px] opacity-80" dir="rtl">(تجديد قيد)</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setShowPrintModal(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#126b38] hover:bg-[#0e582e] text-white rounded-2xl text-xs font-bold shadow transition-all cursor-pointer hover:scale-102"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#126b38] hover:bg-[#0e582e] text-white rounded-2xl text-xs font-bold shadow transition-all cursor-pointer hover:scale-102"
           >
             <Printer className="w-4 h-4 text-amber-300" />
-            <span>Print Official Exam Slip</span>
-            <span className="font-serif text-[11px] opacity-80" dir="rtl">(طباعة الإشعار)</span>
+            <span>Print Official Slip</span>
+            <span className="font-serif text-[11px] opacity-80" dir="rtl">(طباعة)</span>
           </button>
         </div>
       </div>
 
-      {/* KPI Stats Row for Finance */}
+      {/* =============================================================== */}
+      {/* ENROLLMENT SESSION SWITCHER & TRANSACTION HISTORY SELECTOR      */}
+      {/* "Renewed back to zero after new enrollment while preserving..."  */}
+      {/* =============================================================== */}
+      <div className="bg-[#f7f4eb] border-2 border-[#ccbf99] rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-[#126b38]/10 text-[#126b38]">
+            <History className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider block font-sans">
+              Enrollment Session / Transaction History
+            </span>
+            <span className="text-xs font-black text-slate-900 font-serif" dir="rtl">
+              السجل المالي والأكاديمي للجلسات المقيدة
+            </span>
+          </div>
+        </div>
+
+        {/* Dropdown / Switcher */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-bold text-slate-600 font-sans">Viewing Session:</span>
+          <div className="relative">
+            <select
+              value={currentLedger?.id || ''}
+              onChange={(e) => setSelectedLedgerId(e.target.value)}
+              className="pl-3.5 pr-8 py-2 text-xs font-black border-2 border-[#126b38] rounded-xl bg-white text-slate-900 shadow-xs cursor-pointer appearance-none focus:outline-none"
+            >
+              {allLedgers.map(l => (
+                <option key={l.id} value={l.id}>
+                  {l.AcademicYear || 'SY 2025-2026'} ({l.IsActive !== false ? 'Current Session' : 'Previous Transactions'})
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-4 h-4 text-[#126b38] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+
+          {isHistorical && (
+            <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 font-sans">
+              Archived Record
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* KPI Stats Row for Currently Selected Session */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Annual Tuition */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-          <span className="text-xs font-bold uppercase text-slate-400 block font-sans">Total Annual Tuition</span>
-          <span className="text-[11px] text-slate-500 font-serif block">إجمالي الرسوم السنوية</span>
+          <span className="text-xs font-bold uppercase text-slate-400 block font-sans">
+            Session Assessment ({currentLedger?.AcademicYear || 'Current'})
+          </span>
+          <span className="text-[11px] text-slate-500 font-serif block">إجمالي الرسوم المقررة</span>
           <div className="mt-2 flex items-baseline justify-between">
             <span className="text-2xl font-black text-slate-900 font-sans">{totalDue.toLocaleString()} pesos</span>
             <span className="text-xs font-mono text-emerald-800 font-bold">({toHindiNumerals(totalDue)} بيسو)</span>
@@ -153,7 +296,13 @@ export default function StudentExamReceipt({
           <div className="mt-2 flex items-center gap-2">
             <ShieldCheck className={`w-5 h-5 ${paidCount > 0 ? 'text-emerald-600' : 'text-slate-400'}`} />
             <span className="text-sm font-extrabold text-slate-900">
-              {paidCount >= 2 ? 'Cleared for Exams' : paidCount === 1 ? '1st Quarter Cleared' : 'Payment Required'}
+              {paidCount >= 6
+                ? 'All Exams Cleared'
+                : paidCount >= 2
+                ? 'Cleared for Exams'
+                : paidCount === 1
+                ? '1st Quarter Cleared'
+                : 'Payment Required'}
             </span>
           </div>
           <span className="text-[11px] text-emerald-700 font-bold mt-1 block font-serif" dir="rtl">
@@ -164,23 +313,31 @@ export default function StudentExamReceipt({
 
       {/* =============================================================== */}
       {/* EXACT MOCKUP REPLICATION: "Exam Receipt" Card                    */}
-      {/* Matching attached media_1790597347079.png                         */}
+      {/* Matching attached media_1790598194672.png                         */}
       {/* =============================================================== */}
       <div className="bg-[#dfd4b8] border-2 border-[#ccbf99] rounded-3xl p-6 sm:p-8 shadow-sm">
         {/* Title matching screenshot */}
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl sm:text-2xl font-black text-slate-950 font-sans tracking-tight">
-            Exam Receipt
-          </h2>
-          <span className="text-xs font-serif font-bold text-slate-800" dir="rtl">
-            إيصالات دخول الامتحانات الأكاديمية
-          </span>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-950 font-sans tracking-tight">
+              Exam Receipt
+            </h2>
+            <span className="text-xs font-serif font-bold text-slate-800" dir="rtl">
+              إيصالات دخول الامتحانات الأكاديمية — {currentLedger?.AcademicYear || 'SY 2025-2026'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-white/70 border border-[#ccbf99] text-slate-800">
+              {currentLedger?.AcademicYear || 'SY 2025-2026'}
+            </span>
+          </div>
         </div>
 
         {/* List of Receipt Rows */}
         <div className="space-y-3.5">
           {QUARTERS.map(q => {
-            const rec = ledger?.Payments[q.period];
+            const rec = currentLedger?.Payments[q.period];
             const isPaid = rec?.isPaid ?? false;
             const amount = rec?.amount || feeSetting?.DawrAmount[q.period] || 300;
             const balance = rec?.balance;
@@ -243,7 +400,7 @@ export default function StudentExamReceipt({
                   )}
                 </div>
 
-                {/* 4. Status Checkbox Icon (Far Right) */}
+                {/* 4. Status Checkbox Icon (Far Right matching mockup) */}
                 <div className="flex-shrink-0 pl-2">
                   {isPaid && !balance && !note ? (
                     /* Green Checkmark in rounded square (Paid in full) */
@@ -297,6 +454,82 @@ export default function StudentExamReceipt({
       </div>
 
       {/* =============================================================== */}
+      {/* RENEW ENROLLMENT MODAL (Renew back to zero, preserve history)    */}
+      {/* =============================================================== */}
+      {showRenewModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-100 text-amber-800 font-bold">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-900 text-base">
+                    Renew New Enrollment
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-serif" dir="rtl">
+                    تجديد القيد للعام الأكاديمي الجديد
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRenewModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleRenewEnrollment} className="space-y-4 text-xs">
+              <div className="p-3.5 bg-[#dfd4b8] border border-[#ccbf99] rounded-2xl text-slate-800 leading-relaxed font-sans">
+                <p className="font-bold">
+                  How New Enrollment Renewal Works:
+                </p>
+                <ul className="list-disc list-inside mt-1 space-y-1 text-[11px] text-slate-700">
+                  <li>Payment records for all 6 Quarters will be <strong>renewed back to zero (unpaid)</strong> for the new term.</li>
+                  <li><strong>All previous transactions</strong> from prior enrollments will remain safely archived and viewable anytime in your history.</li>
+                </ul>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Target Academic Session / School Year <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newYearInput}
+                  onChange={(e) => setNewYearInput(e.target.value)}
+                  placeholder="e.g. SY 2026-2027"
+                  className="w-full px-3.5 py-2.5 border-2 border-slate-300 rounded-xl text-sm bg-white font-mono font-bold focus:border-[#126b38] outline-none"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowRenewModal(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#126b38] hover:bg-[#0e582e] text-white rounded-xl text-xs font-black shadow cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <RotateCcw className="w-4 h-4 text-amber-300" />
+                  <span>Confirm Renewal</span>
+                  <span className="font-serif text-[11px] opacity-80" dir="rtl">(تأكيد التجديد)</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =============================================================== */}
       {/* RECEIPT DETAIL MODAL                                             */}
       {/* =============================================================== */}
       {selectedReceipt && (
@@ -319,7 +552,7 @@ export default function StudentExamReceipt({
             </div>
 
             {(() => {
-              const rec = ledger?.Payments[selectedReceipt.period];
+              const rec = currentLedger?.Payments[selectedReceipt.period];
               const isPaid = rec?.isPaid ?? false;
               const amount = rec?.amount || feeSetting?.DawrAmount[selectedReceipt.period] || 300;
               const balance = rec?.balance;
@@ -402,7 +635,7 @@ export default function StudentExamReceipt({
                     Jamiatu Monib Alkuzbary Al-Arabia
                   </p>
                   <p className="text-[10px] text-emerald-800 font-mono uppercase tracking-wider">
-                    Official Examination Entrance Permit
+                    Official Examination Entrance Permit — {currentLedger?.AcademicYear || 'SY 2025-2026'}
                   </p>
                 </div>
               </div>
@@ -440,7 +673,7 @@ export default function StudentExamReceipt({
               </h4>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 {QUARTERS.map(q => {
-                  const rec = ledger?.Payments[q.period];
+                  const rec = currentLedger?.Payments[q.period];
                   const isPaid = rec?.isPaid ?? false;
                   return (
                     <div

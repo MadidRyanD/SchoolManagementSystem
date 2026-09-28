@@ -26,9 +26,11 @@ import {
   FileSpreadsheet,
   Check,
   X,
-  CreditCard
+  CreditCard,
+  FileCheck2
 } from 'lucide-react';
 import StudentExamReceipt from './StudentExamReceipt';
+import StaffPayrollSlip from './StaffPayrollSlip';
 
 export default function FinancePage() {
   const [classes, setClasses] = useState<ClassItem[]>([]);
@@ -40,6 +42,8 @@ export default function FinancePage() {
 
   const [activeTab, setActiveTab] = useState<'payments' | 'fees' | 'payroll' | 'enrollment'>('payments');
   const [selectedClassId, setSelectedClassId] = useState<number>(0);
+  const [selectedStudentForReceipt, setSelectedStudentForReceipt] = useState<number | null>(null);
+  const [paymentViewMode, setPaymentViewMode] = useState<'receipt' | 'table'>('receipt');
 
   // Hover popover for cashier payment info
   const [hoveredPayment, setHoveredPayment] = useState<{
@@ -81,9 +85,10 @@ export default function FinancePage() {
 
   const currentUser = AuthService.getSession();
   const role = currentUser?.role;
-  const isCashierOrAdmin = role === 'cashier' || role === 'admin' || role === 'mudir';
+  const isCashierOrAdmin = role === 'cashier' || role === 'admin';
   const isStudent = role === 'student';
   const isTeacher = role === 'teacher';
+  const isStaffSalary = role === 'teacher' || role === 'mudir';
 
   const gradingPeriods: GradingPeriod[] = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
 
@@ -228,6 +233,55 @@ export default function FinancePage() {
     ? payroll.filter(p => p.TeacherID === currentUser?.linkedId)
     : payroll;
 
+  // 1. Staff Salary & Payroll Statement View (for Principal / Mudir and Teachers)
+  if (isStaffSalary) {
+    const staffMember =
+      teachers.find((t) => t.TeacherID === currentUser?.linkedId) ||
+      teachers.find((t) => t.Email === currentUser?.email) ||
+      (role === 'mudir' ? teachers.find((t) => t.IsMudir) : null) ||
+      teachers[0];
+    const staffPayrollRecords = payroll.filter(
+      (p) => p.TeacherID === staffMember?.TeacherID
+    );
+
+    return staffMember ? (
+      <StaffPayrollSlip
+        staffMember={staffMember}
+        payrollRecords={staffPayrollRecords}
+        role={role as 'mudir' | 'teacher'}
+      />
+    ) : (
+      <div className="p-8 text-center text-slate-400">Loading payroll details...</div>
+    );
+  }
+
+  // 2. Student Billing & Exam Permit View
+  if (isStudent) {
+    const currentStudent =
+      students.find((s) => s.StudentID === currentUser?.linkedId) || students[0];
+    const currentEnrolledClass = classes.find(
+      (c) => c.ClassID === currentStudent?.ClassID
+    );
+    const currentLedger = payments.find(
+      (p) => p.StudentID === currentStudent?.StudentID
+    );
+    const currentFeeSetting = feesSettings.find(
+      (f) => f.ClassID === currentStudent?.ClassID
+    );
+
+    return currentStudent ? (
+      <StudentExamReceipt
+        student={currentStudent}
+        enrolledClass={currentEnrolledClass}
+        ledger={currentLedger}
+        feeSetting={currentFeeSetting}
+      />
+    ) : (
+      <div className="p-8 text-center text-slate-400">Loading billing details...</div>
+    );
+  }
+
+  // 3. Cashier & Finance Directorate (Admin & Cashier)
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -235,9 +289,7 @@ export default function FinancePage() {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
             <Wallet className="w-6 h-6 text-emerald-800" />
-            <span>
-              {isStudent ? 'My Billings & Receipts' : isTeacher ? 'Staff Payroll & Finances' : 'Cashier & Finance Directorate'}
-            </span>
+            <span>Cashier & Finance Directorate</span>
           </h1>
           <p className="text-sm text-slate-500">
             6-Dawr student tuition matrix, cashier audit logs, salary allocations, and Excel import/export.
@@ -281,190 +333,253 @@ export default function FinancePage() {
             activeTab === 'payments' ? 'bg-emerald-800 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          {isStudent ? 'Exam Receipt & Tuition (إيصال دخول الاختبار)' : 'Student Payment Matrix (6 Dawr)'}
+          Student Payment Matrix (6 Dawr)
         </button>
 
-        {isCashierOrAdmin && (
-          <>
-            <button
-              type="button"
-              onClick={() => setActiveTab('fees')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'fees' ? 'bg-emerald-800 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              Tuition Fee Configuration
-            </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('fees')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'fees' ? 'bg-emerald-800 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          Tuition Fee Configuration
+        </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('enrollment')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'enrollment' ? 'bg-emerald-800 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              Student Enrollment Module
-            </button>
-          </>
-        )}
+        <button
+          type="button"
+          onClick={() => setActiveTab('enrollment')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'enrollment' ? 'bg-emerald-800 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          Student Enrollment Module
+        </button>
 
-        {(isCashierOrAdmin || isTeacher) && (
-          <button
-            type="button"
-            onClick={() => setActiveTab('payroll')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'payroll' ? 'bg-emerald-800 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            {isTeacher ? 'My Salary Slips' : 'Faculty Payroll Allocation'}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setActiveTab('payroll')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'payroll' ? 'bg-emerald-800 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          Faculty Payroll Allocation
+        </button>
       </div>
 
-      {/* TAB 1: STUDENT PAYMENT MATRIX OR EXAM RECEIPT */}
+      {/* TAB 1: STUDENT PAYMENT MATRIX OR EXAM RECEIPT CARDS */}
       {activeTab === 'payments' && (
-        isStudent ? (
-          (() => {
-            const currentStudent = students.find(s => s.StudentID === currentUser?.linkedId) || students[0];
-            const currentEnrolledClass = classes.find(c => c.ClassID === currentStudent?.ClassID);
-            const currentLedger = payments.find(p => p.StudentID === currentStudent?.StudentID);
-            const currentFeeSetting = feesSettings.find(f => f.ClassID === currentStudent?.ClassID);
-
-            return currentStudent ? (
-              <StudentExamReceipt
-                student={currentStudent}
-                enrolledClass={currentEnrolledClass}
-                ledger={currentLedger}
-                feeSetting={currentFeeSetting}
-              />
-            ) : null;
-          })()
-        ) : (
-          <div className="space-y-4">
-          {!isStudent && (
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold uppercase text-slate-500">Filter By Class:</span>
-                <select
-                  value={selectedClassId}
-                  onChange={(e) => handleClassChange(Number(e.target.value))}
-                  className="px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold bg-white"
-                >
-                  <option value={0}>All Classes</option>
-                  {classes.map(c => (
-                    <option key={c.ClassID} value={c.ClassID}>
-                      [{c.Department.toUpperCase()}] {c.ClassName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <span className="text-xs text-slate-500">
-                Hover over any payment to see Cashier identity & timestamp
-              </span>
-            </div>
-          )}
-
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-            <div className="p-4 border-b border-slate-200 flex justify-between items-center">
-              <h2 className="text-base font-extrabold text-slate-900">
-                Tuition Payment Status & Cashier Ledger
-              </h2>
-              <span className="text-xs text-slate-500 font-bold">
-                {filteredStudents.length} Students
-              </span>
+        <div className="space-y-4">
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold uppercase text-slate-500">Filter By Class:</span>
+              <select
+                value={selectedClassId}
+                onChange={(e) => handleClassChange(Number(e.target.value))}
+                className="px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold bg-white"
+              >
+                <option value={0}>All Classes</option>
+                {classes.map(c => (
+                  <option key={c.ClassID} value={c.ClassID}>
+                    [{c.Department.toUpperCase()}] {c.ClassName}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50 text-slate-500 font-bold text-xs uppercase tracking-wider border-b border-slate-200">
-                  <tr>
-                    <th className="py-3 px-4">Roll No</th>
-                    <th className="py-3 px-4">Student Name</th>
-                    {gradingPeriods.map(p => (
-                      <th key={p} className="py-3 px-3 text-center">
-                        {p} Dawr
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredStudents.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="text-center py-8 text-slate-400">
-                        No students found for this selection.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredStudents.map(s => {
-                      const ledger = payments.find(p => p.StudentID === s.StudentID);
-                      const fs = feesSettings.find(f => f.ClassID === s.ClassID);
-
-                      return (
-                        <tr key={s.StudentID} className="hover:bg-slate-50/60 transition-colors">
-                          <td className="py-3 px-4 font-mono font-bold text-xs text-slate-700">{s.RollNo}</td>
-                          <td className="py-3 px-4 font-bold text-slate-900">
-                            {s.Name}
-                            {s.NameArabic && <span className="text-xs text-amber-700 font-serif block font-normal">{s.NameArabic}</span>}
-                          </td>
-
-                          {gradingPeriods.map(period => {
-                            const rec = ledger?.Payments[period];
-                            const isPaid = rec ? rec.isPaid : false;
-                            const amount = fs ? fs.DawrAmount[period] || 300 : 300;
-
-                            return (
-                              <td key={period} className="py-3 px-3 text-center">
-                                <button
-                                  type="button"
-                                  disabled={!isCashierOrAdmin}
-                                  onClick={() => handleTogglePayment(s, period, isPaid)}
-                                  onMouseEnter={(e) => {
-                                    if (isPaid && rec) {
-                                      const rect = e.currentTarget.getBoundingClientRect();
-                                      setHoveredPayment({
-                                        cashierName: rec.cashierName,
-                                        paidAt: rec.paidAt,
-                                        amount: rec.amount || amount,
-                                        studentName: s.Name,
-                                        period: `${period} Dawr`,
-                                        x: rect.left,
-                                        y: rect.bottom + 8,
-                                      });
-                                    }
-                                  }}
-                                  onMouseLeave={() => setHoveredPayment(null)}
-                                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
-                                    isPaid
-                                      ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 cursor-pointer shadow-xs'
-                                      : 'bg-rose-50 text-rose-700 hover:bg-rose-100 cursor-pointer'
-                                  } ${!isCashierOrAdmin ? 'cursor-default' : ''}`}
-                                >
-                                  {isPaid ? (
-                                    <>
-                                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                      <span>Paid (${rec?.amount || amount})</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <XCircle className="w-3.5 h-3.5 text-rose-500" />
-                                      <span>Unpaid (${amount})</span>
-                                    </>
-                                  )}
-                                </button>
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+            {/* View Mode Switcher: Receipt Card (Mockup) vs Table */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPaymentViewMode('receipt')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  paymentViewMode === 'receipt'
+                    ? 'bg-[#126b38] text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Exam Receipt Card View (إيصال الفحص)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentViewMode('table')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  paymentViewMode === 'table'
+                    ? 'bg-[#126b38] text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Matrix Table View (كشف الجدول)
+              </button>
             </div>
           </div>
+
+          {paymentViewMode === 'receipt' ? (
+            (() => {
+              const currentInspected =
+                filteredStudents.find(s => s.StudentID === selectedStudentForReceipt) ||
+                filteredStudents[0] ||
+                students[0];
+              const inspectedClass = classes.find(c => c.ClassID === currentInspected?.ClassID);
+              const inspectedLedger = payments.find(p => p.StudentID === currentInspected?.StudentID);
+              const inspectedFeeSetting = feesSettings.find(f => f.ClassID === currentInspected?.ClassID);
+
+              return (
+                <div className="space-y-4">
+                  {/* Student Switcher for Cashier */}
+                  <div className="bg-[#f7f4eb] p-4 rounded-2xl border border-[#ccbf99] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xs font-black text-slate-700 uppercase tracking-wider font-sans">
+                        Select Student:
+                      </span>
+                      <select
+                        value={currentInspected?.StudentID || 0}
+                        onChange={(e) => setSelectedStudentForReceipt(Number(e.target.value))}
+                        className="px-3 py-1.5 border border-[#126b38] rounded-xl text-xs font-bold bg-white text-slate-900 shadow-2xs"
+                      >
+                        {filteredStudents.map(s => (
+                          <option key={s.StudentID} value={s.StudentID}>
+                            {s.Name} ({s.RollNo}) {s.NameArabic ? `· ${s.NameArabic}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <span className="text-xs text-slate-600 font-serif" dir="rtl">
+                      بطاقة دخول الامتحان مع سجل التجديد والدورات السابقة
+                    </span>
+                  </div>
+
+                  {currentInspected && (
+                    <StudentExamReceipt
+                      student={currentInspected}
+                      enrolledClass={inspectedClass}
+                      ledger={inspectedLedger}
+                      feeSetting={inspectedFeeSetting}
+                      onPaymentChange={loadData}
+                      canRenew={true}
+                    />
+                  )}
+                </div>
+              );
+            })()
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+              <div className="p-4 border-b border-slate-200 flex justify-between items-center">
+                <h2 className="text-base font-extrabold text-slate-900">
+                  Tuition Payment Status & Cashier Ledger
+                </h2>
+                <span className="text-xs text-slate-500 font-bold">
+                  {filteredStudents.length} Students
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 text-slate-500 font-bold text-xs uppercase tracking-wider border-b border-slate-200">
+                    <tr>
+                      <th className="py-3 px-4">Roll No</th>
+                      <th className="py-3 px-4">Student Name</th>
+                      {gradingPeriods.map(p => (
+                        <th key={p} className="py-3 px-3 text-center">
+                          {p} Dawr
+                        </th>
+                      ))}
+                      <th className="py-3 px-4 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredStudents.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="text-center py-8 text-slate-400">
+                          No students found for this selection.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredStudents.map(s => {
+                        const ledger = payments.find(p => p.StudentID === s.StudentID);
+                        const fs = feesSettings.find(f => f.ClassID === s.ClassID);
+
+                        return (
+                          <tr key={s.StudentID} className="hover:bg-slate-50/60 transition-colors">
+                            <td className="py-3 px-4 font-mono font-bold text-xs text-slate-700">{s.RollNo}</td>
+                            <td className="py-3 px-4 font-bold text-slate-900">
+                              {s.Name}
+                              {s.NameArabic && <span className="text-xs text-amber-700 font-serif block font-normal">{s.NameArabic}</span>}
+                            </td>
+
+                            {gradingPeriods.map(period => {
+                              const rec = ledger?.Payments[period];
+                              const isPaid = rec ? rec.isPaid : false;
+                              const amount = fs ? fs.DawrAmount[period] || 300 : 300;
+
+                              return (
+                                <td key={period} className="py-3 px-3 text-center">
+                                  <button
+                                    type="button"
+                                    disabled={!isCashierOrAdmin}
+                                    onClick={() => handleTogglePayment(s, period, isPaid)}
+                                    onMouseEnter={(e) => {
+                                      if (isPaid && rec) {
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        setHoveredPayment({
+                                          cashierName: rec.cashierName,
+                                          paidAt: rec.paidAt,
+                                          amount: rec.amount || amount,
+                                          studentName: s.Name,
+                                          period: `${period} Dawr`,
+                                          x: rect.left,
+                                          y: rect.bottom + 8,
+                                        });
+                                      }
+                                    }}
+                                    onMouseLeave={() => setHoveredPayment(null)}
+                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
+                                      isPaid
+                                        ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 cursor-pointer shadow-xs'
+                                        : 'bg-rose-50 text-rose-700 hover:bg-rose-100 cursor-pointer'
+                                    } ${!isCashierOrAdmin ? 'cursor-default' : ''}`}
+                                  >
+                                    {isPaid ? (
+                                      <>
+                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                        <span>Paid (${rec?.amount || amount})</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                                        <span>Unpaid (${amount})</span>
+                                      </>
+                                    )}
+                                  </button>
+                                </td>
+                              );
+                            })}
+
+                            <td className="py-3 px-4 text-center">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedStudentForReceipt(s.StudentID);
+                                  setPaymentViewMode('receipt');
+                                }}
+                                className="px-3 py-1 rounded-xl text-xs font-bold bg-[#dfd4b8] hover:bg-[#d0c39f] text-slate-900 border border-[#ccbf99] cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                              >
+                                <FileCheck2 className="w-3.5 h-3.5 text-[#126b38]" />
+                                <span>Exam Receipt</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
-      ))}
+      )}
 
       {/* Floating Hover Popover for Payment Auditor Details */}
       {hoveredPayment && (

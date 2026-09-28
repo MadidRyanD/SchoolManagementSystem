@@ -642,6 +642,10 @@ export const initialPayments: StudentPaymentLedger[] = [
     id: 'pay-1',
     StudentID: 1,
     ClassID: 1,
+    AcademicYear: 'SY 2025-2026',
+    EnrollmentTerm: 'Current Academic Session',
+    IsActive: true,
+    CreatedAt: '2025-08-15',
     Payments: {
       '1st': { isPaid: true, amount: 300, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Feb. 3, 2025', dayOfWeek: 'Tuesday' },
       '2nd': { isPaid: true, amount: 200, balance: 100, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Feb. 10, 2025', dayOfWeek: 'Tuesday' },
@@ -649,6 +653,23 @@ export const initialPayments: StudentPaymentLedger[] = [
       '4th': { isPaid: false, amount: 300, cashierName: 'Finance Office', paidAt: 'Feb. 24, 2025', dayOfWeek: 'Tuesday' },
       '5th': { isPaid: false, amount: 300 },
       '6th': { isPaid: false, amount: 300 },
+    },
+  },
+  {
+    id: 'pay-1-prev',
+    StudentID: 1,
+    ClassID: 1,
+    AcademicYear: 'SY 2024-2025',
+    EnrollmentTerm: 'Previous Enrollment (Completed)',
+    IsActive: false,
+    CreatedAt: '2024-08-10',
+    Payments: {
+      '1st': { isPaid: true, amount: 300, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Feb. 5, 2024', dayOfWeek: 'Monday' },
+      '2nd': { isPaid: true, amount: 300, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Mar. 12, 2024', dayOfWeek: 'Tuesday' },
+      '3rd': { isPaid: true, amount: 300, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Apr. 18, 2024', dayOfWeek: 'Thursday' },
+      '4th': { isPaid: true, amount: 300, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'May. 22, 2024', dayOfWeek: 'Wednesday' },
+      '5th': { isPaid: true, amount: 300, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Jun. 19, 2024', dayOfWeek: 'Wednesday' },
+      '6th': { isPaid: true, amount: 300, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Jul. 25, 2024', dayOfWeek: 'Thursday' },
     },
   },
   {
@@ -1198,14 +1219,57 @@ export const DataStore = {
   getPayments(): StudentPaymentLedger[] {
     return getItem<StudentPaymentLedger[]>(KEYS.PAYMENTS, initialPayments);
   },
-  markDawrPayment(studentId: number, classId: number, period: GradingPeriod, isPaid: boolean, cashierName: string, amount: number): void {
+  getStudentPaymentLedgers(studentId: number): StudentPaymentLedger[] {
     const list = this.getPayments();
-    let ledger = list.find(p => p.StudentID === studentId && p.ClassID === classId);
+    return list.filter(p => p.StudentID === studentId);
+  },
+  renewStudentEnrollment(studentId: number, classId: number, newAcademicYear?: string, semesterTerm?: string): StudentPaymentLedger {
+    const list = this.getPayments();
+    // 1. Mark existing active ledger for this student as previous/archived
+    list.forEach(p => {
+      if (p.StudentID === studentId && (p.IsActive === undefined || p.IsActive === true)) {
+        p.IsActive = false;
+      }
+    });
+
+    // 2. Create brand-new active ledger with all 6 Quarters renewed back to zero
+    const yr = newAcademicYear || 'SY 2026-2027';
+    const term = semesterTerm || 'New Enrollment Session';
+    const newLedger: StudentPaymentLedger = {
+      id: `pay-${Date.now()}-${studentId}`,
+      StudentID: studentId,
+      ClassID: classId,
+      AcademicYear: yr,
+      EnrollmentTerm: term,
+      IsActive: true,
+      CreatedAt: new Date().toISOString().split('T')[0],
+      Payments: {
+        '1st': { isPaid: false, amount: 300 },
+        '2nd': { isPaid: false, amount: 300 },
+        '3rd': { isPaid: false, amount: 300 },
+        '4th': { isPaid: false, amount: 300 },
+        '5th': { isPaid: false, amount: 300 },
+        '6th': { isPaid: false, amount: 300 },
+      },
+    };
+
+    list.unshift(newLedger);
+    setItem(KEYS.PAYMENTS, list);
+    return newLedger;
+  },
+  markDawrPayment(studentId: number, classId: number, period: GradingPeriod, isPaid: boolean, cashierName: string, amount: number, academicYear?: string): void {
+    const list = this.getPayments();
+    let ledger = list.find(p => p.StudentID === studentId && (academicYear ? p.AcademicYear === academicYear : (p.IsActive !== false)));
+    if (!ledger) {
+      ledger = list.find(p => p.StudentID === studentId);
+    }
     if (!ledger) {
       ledger = {
         id: `pay-${Date.now()}-${studentId}`,
         StudentID: studentId,
         ClassID: classId,
+        AcademicYear: academicYear || 'SY 2025-2026',
+        IsActive: true,
         Payments: {
           '1st': { isPaid: false, amount: 0 },
           '2nd': { isPaid: false, amount: 0 },
@@ -1222,7 +1286,8 @@ export const DataStore = {
       isPaid,
       amount,
       cashierName: isPaid ? cashierName : undefined,
-      paidAt: isPaid ? new Date().toLocaleString() : undefined,
+      paidAt: isPaid ? new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : undefined,
+      dayOfWeek: isPaid ? new Date().toLocaleDateString('en-US', { weekday: 'long' }) : undefined,
     };
 
     setItem(KEYS.PAYMENTS, list);

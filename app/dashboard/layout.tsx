@@ -130,7 +130,7 @@ export default function DashboardLayout({
         { href: '/dashboard/schedules', labelEn: 'Class Schedule', labelAr: 'جدول الحصص', icon: Calendar },
         { href: '/dashboard/subjects', labelEn: 'Subjects', labelAr: 'المواد الدراسية', icon: BookOpen },
         { href: '/dashboard/classes/advisee', labelEn: 'Class Advisee', labelAr: 'الفصل المشرف عليه', icon: UserCheck },
-        { href: '/dashboard/finance', labelEn: 'Billing', labelAr: 'الرسوم والمستحقات', icon: Wallet },
+        { href: '/dashboard/finance', labelEn: 'My Salary & Payroll', labelAr: 'كشف الراتب والمستحقات', icon: Wallet },
       ];
     }
 
@@ -168,7 +168,12 @@ export default function DashboardLayout({
       { href: '/dashboard/students', labelEn: 'Student Directory', labelAr: 'سجل وبيانات الطلاب', icon: GraduationCap },
       { href: '/dashboard/students/attendance', labelEn: 'Student Attendance', labelAr: 'سجل حضور الطلاب', icon: CalendarCheck },
       { href: '/dashboard/attendance', labelEn: 'Staff Attendance', labelAr: 'سجل دوام المعلمين', icon: Clock },
-      { href: '/dashboard/finance', labelEn: 'Finance & Treasury', labelAr: 'المالية والصندوق', icon: Wallet },
+      { 
+        href: '/dashboard/finance', 
+        labelEn: role === 'mudir' ? 'My Salary & Payroll' : 'Finance & Treasury', 
+        labelAr: role === 'mudir' ? 'كشف الراتب والمستحقات' : 'المالية والصندوق', 
+        icon: Wallet 
+      },
       { href: '/dashboard/honors', labelEn: 'Honor Roll & Awards', labelAr: 'لوحة الشرف والمتفوقين', icon: Award },
       { href: '/dashboard/announcements', labelEn: 'Announcements', labelAr: 'الإعلانات والتعاميم', icon: Megaphone },
     ];

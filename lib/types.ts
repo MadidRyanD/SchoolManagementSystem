@@ -154,6 +154,10 @@ export interface StudentPaymentLedger {
   id: string;
   StudentID: number;
   ClassID: number;
+  AcademicYear?: string;
+  EnrollmentTerm?: string;
+  IsActive?: boolean;
+  CreatedAt?: string;
   Payments: Record<GradingPeriod, DawrPaymentRecord>;
 }
 
