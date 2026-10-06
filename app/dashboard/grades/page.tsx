@@ -40,7 +40,11 @@ import {
   School,
   Sparkles,
   UserCheck,
+  ShieldAlert,
+  ShieldCheck,
+  Hourglass,
 } from 'lucide-react';
+import { toHindiNumerals } from '@/lib/numerals';
 
 export default function GradesPage() {
   const [classes, setClasses] = useState<ClassItem[]>([]);
@@ -287,15 +291,97 @@ export default function GradesPage() {
     setTimeout(() => setMsg(null), 3000);
   };
 
-  const handleGrantUnlock = (gradeId: string, grant: boolean) => {
-    DataStore.grantGradeUnlock(gradeId, grant);
+  const handleGrantUnlock = (gradeId: string, grant: boolean, hours?: number) => {
+    DataStore.grantGradeUnlock(gradeId, grant, hours);
     loadData();
     setMsg({
       type: 'success',
-      text: grant ? 'Teacher granted permission to edit grade.' : 'Edit request denied.',
+      text: grant
+        ? `تم منح تمديد مهلة التعديل للأستاذ (${toHindiNumerals(hours || 24)} ساعة) بنجاح.`
+        : 'تم رفض طلب تعديل الدرجة.',
     });
-    setTimeout(() => setMsg(null), 3000);
+    setTimeout(() => setMsg(null), 3500);
   };
+
+  const handleGrantSubjectUnlock = (
+    classId: number,
+    subjectId: number,
+    period: GradingPeriod,
+    hours: number,
+    grant: boolean
+  ) => {
+    if (grant) {
+      DataStore.grantSubjectUnlock(classId, subjectId, period, hours);
+      setMsg({
+        type: 'success',
+        text: `تمت الموافقة وتمديد مهلة التعديل لجميع درجات المادة لمدة (${toHindiNumerals(hours)} ساعة) بنجاح!`,
+      });
+    } else {
+      DataStore.lockSubjectNow(classId, subjectId, period);
+      setMsg({
+        type: 'error',
+        text: 'تم رفض طلب التمديد وقفل سجل المادة.',
+      });
+    }
+    loadData();
+    setTimeout(() => setMsg(null), 3500);
+  };
+
+  // Pending Unlock Requests from Teachers
+  const pendingUnlockRequests = useMemo(() => {
+    const map = new Map<
+      string,
+      { classId: number; subjectId: number; period: GradingPeriod; teacherId: number; count: number }
+    >();
+
+    grades
+      .filter(g => g.UnlockRequested)
+      .forEach(g => {
+        const key = `${g.ClassID}-${g.SubjectID}-${g.Period}`;
+        if (!map.has(key)) {
+          map.set(key, {
+            classId: g.ClassID,
+            subjectId: g.SubjectID,
+            period: g.Period,
+            teacherId: g.TeacherID,
+            count: 1,
+          });
+        } else {
+          map.get(key)!.count++;
+        }
+      });
+
+    const list: {
+      key: string;
+      classId: number;
+      subjectId: number;
+      period: GradingPeriod;
+      teacherId: number;
+      count: number;
+      className: string;
+      subjectName: string;
+      teacherName: string;
+    }[] = [];
+
+    map.forEach(val => {
+      const cls = classes.find(c => c.ClassID === val.classId);
+      const sub = subjects.find(s => s.SubjectID === val.subjectId);
+      const tch = teachers.find(t => t.TeacherID === val.teacherId);
+      list.push({
+        key: `${val.classId}-${val.subjectId}-${val.period}`,
+        classId: val.classId,
+        subjectId: val.subjectId,
+        period: val.period,
+        teacherId: val.teacherId,
+        count: val.count,
+        className: cls?.ClassName || `الصف ${val.classId}`,
+        subjectName: sub?.SubjectArabic || sub?.SubjectClass || `المادة ${val.subjectId}`,
+        teacherName: tch?.NameArabic || tch?.Name || `أستاذ #${val.teacherId}`,
+      });
+    });
+
+    return list;
+  }, [grades, classes, subjects, teachers]);
 
   // Criteria Management
   const handleAddCriteria = (e: React.FormEvent) => {
@@ -676,22 +762,90 @@ export default function GradesPage() {
                           <div className="flex items-center justify-between">
                             <span className="text-slate-500 font-medium">حالة الرصد (دور 1):</span>
                             <span className={`font-bold ${gradedCount === enrolledCount && enrolledCount > 0 ? 'text-emerald-700' : 'text-amber-800'}`}>
-                              {gradedCount} / {enrolledCount} مرصود
+                              {toHindiNumerals(gradedCount)} / {toHindiNumerals(enrolledCount)} مرصود
                             </span>
                           </div>
+                          {(() => {
+                            const d1Grades = grades.filter(
+                              g =>
+                                g.SubjectID === subject.SubjectID &&
+                                g.ClassID === classItem.ClassID &&
+                                g.Period === '1st' &&
+                                g.FinalGrade !== undefined &&
+                                g.FinalGrade !== null
+                            );
+                            const defHours = DataStore.getGradeEditWindowHours();
+                            let cStatus: 'unsubmitted' | 'editable' | 'locked' = 'unsubmitted';
+                            let cHoursLeft = 0;
+                            if (d1Grades.length > 0) {
+                              const check = DataStore.checkGradeLock(d1Grades[0]);
+                              if (check.isLocked) {
+                                cStatus = 'locked';
+                              } else {
+                                cStatus = 'editable';
+                                cHoursLeft = Math.ceil(check.remainingMs / 3600000);
+                              }
+                            }
+
+                            return (
+                              <div className="flex items-center justify-between pt-0.5 border-t border-slate-100">
+                                <span className="text-slate-500 font-medium">مهلة التعديل (دور 1):</span>
+                                {cStatus === 'locked' ? (
+                                  <span className="font-bold text-red-700 inline-flex items-center gap-1 bg-red-50 px-2 py-0.5 rounded-md">
+                                    <Lock className="w-3 h-3 text-red-600" /> مقفل (انتهت المهلة)
+                                  </span>
+                                ) : cStatus === 'editable' ? (
+                                  <span className="font-bold text-emerald-700 inline-flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-md">
+                                    <Unlock className="w-3 h-3 text-emerald-600" /> متاح ({toHindiNumerals(cHoursLeft)}س)
+                                  </span>
+                                ) : (
+                                  <span className="font-bold text-amber-800 inline-flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-md">
+                                    <Clock className="w-3 h-3 text-amber-600" /> {toHindiNumerals(defHours)}س بعد الحفظ
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
 
                       {/* Prominent Action Button: Option to Edit Grade (Matches Green Pill Button in Screenshot) */}
                       <div className="pt-2 border-t border-[#c4b68e]/80 flex items-center justify-between">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedEditSubject({ subject, classItem })}
-                          className="w-full py-2.5 px-5 bg-[#187d44] hover:bg-[#136838] text-white font-extrabold text-sm rounded-full shadow-xs cursor-pointer flex items-center justify-center gap-2 transition-transform active:scale-95 group-hover:shadow-md"
-                        >
-                          <Edit className="w-4 h-4 text-emerald-200" />
-                          <span>تعديل الدرجات (Edit Grade)</span>
-                        </button>
+                        {(() => {
+                          const d1Grades = grades.filter(
+                            g =>
+                              g.SubjectID === subject.SubjectID &&
+                              g.ClassID === classItem.ClassID &&
+                              g.Period === '1st' &&
+                              g.FinalGrade !== undefined &&
+                              g.FinalGrade !== null
+                          );
+                          const isSubjectLocked = d1Grades.length > 0 && DataStore.checkGradeLock(d1Grades[0]).isLocked;
+
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedEditSubject({ subject, classItem })}
+                              className={`w-full py-2.5 px-5 text-white font-extrabold text-sm rounded-full shadow-xs cursor-pointer flex items-center justify-center gap-2 transition-transform active:scale-95 group-hover:shadow-md ${
+                                isSubjectLocked
+                                  ? 'bg-[#832626] hover:bg-[#6c1d1d]'
+                                  : 'bg-[#187d44] hover:bg-[#136838]'
+                              }`}
+                            >
+                              {isSubjectLocked ? (
+                                <>
+                                  <Lock className="w-4 h-4 text-red-200" />
+                                  <span>معاينة وطلب تمديد (Locked)</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Edit className="w-4 h-4 text-emerald-200" />
+                                  <span>تعديل الدرجات (Edit Grade)</span>
+                                </>
+                              )}
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
                   );
@@ -772,6 +926,118 @@ export default function GradesPage() {
             >
               {msg.type === 'success' ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : <AlertCircle className="w-5 h-5 text-red-600" />}
               <span>{msg.text}</span>
+            </div>
+          )}
+
+          {/* Principal / Admin Grade Lock Controls & Settings Bar */}
+          <div className="bg-slate-900 text-white p-5 rounded-2xl border border-slate-800 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400 flex items-center justify-center flex-shrink-0 text-amber-300 mt-0.5">
+                <Clock className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
+                  <span>إعدادات مهلة تعديل الدرجات المسموحة (Grade Edit Window Settings)</span>
+                  <span className="text-[11px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/40 px-2 py-0.5 rounded-full">
+                    صلاحية الإدارة العليا
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  المهلة الزمنية الممنوحة تلقائياً للأساتذة للتعديل بعد أول اعتماد وحفظ للدرجات. يُقفل السجل آلياً عند انقضاء الوقت.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 bg-slate-800 p-2 rounded-xl border border-slate-700 flex-shrink-0">
+              <span className="text-xs font-bold text-slate-300">المهلة الافتراضية:</span>
+              <select
+                value={DataStore.getGradeEditWindowHours()}
+                onChange={e => {
+                  const h = Number(e.target.value);
+                  DataStore.setGradeEditWindowHours(h);
+                  loadData();
+                  setMsg({
+                    type: 'success',
+                    text: `تم تحديث مهلة تعديل الدرجات الافتراضية لتصبح (${toHindiNumerals(h)} ساعة) بنجاح.`,
+                  });
+                  setTimeout(() => setMsg(null), 3000);
+                }}
+                className="px-3 py-1.5 bg-slate-900 border border-slate-600 rounded-lg text-xs font-bold text-amber-300 focus:outline-none cursor-pointer"
+              >
+                <option value={6}>{toHindiNumerals(6)} ساعات (6 Hours)</option>
+                <option value={12}>{toHindiNumerals(12)} ساعة (12 Hours)</option>
+                <option value={24}>{toHindiNumerals(24)} ساعة (24 Hours - Default)</option>
+                <option value={48}>{toHindiNumerals(48)} ساعة (48 Hours - 2 Days)</option>
+                <option value={72}>{toHindiNumerals(72)} ساعة (72 Hours - 3 Days)</option>
+                <option value={168}>{toHindiNumerals(168)} ساعة (7 Days - 1 Week)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Pending Unlock Requests Panel */}
+          {pendingUnlockRequests.length > 0 && (
+            <div className="bg-gradient-to-r from-amber-950 via-amber-900 to-slate-900 border-2 border-amber-500 rounded-2xl p-5 shadow-lg text-white space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Clock className="w-5 h-5 text-amber-400 animate-pulse" />
+                  <h3 className="font-extrabold text-sm sm:text-base text-amber-200">
+                    طلبات فتح مهلة تعديل الدرجات المعلقة من الأساتذة ({toHindiNumerals(pendingUnlockRequests.length)} طلب)
+                  </h3>
+                </div>
+                <span className="text-xs font-bold bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded-full">
+                  بانتظار قرار المدير
+                </span>
+              </div>
+              <p className="text-xs text-amber-200/80">
+                طلب الأساتذة التالية أسماؤهم تمديد مهلة التعديل لدرجات الصفوف والمواد المقفلة:
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+                {pendingUnlockRequests.map(req => (
+                  <div
+                    key={req.key}
+                    className="bg-slate-900/90 border border-amber-600/50 rounded-xl p-3 flex flex-col justify-between gap-3 text-right"
+                    dir="rtl"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between text-xs font-bold text-amber-300">
+                        <span>{req.teacherName}</span>
+                        <span className="bg-slate-800 px-2 py-0.5 rounded text-[11px] text-slate-300">{req.period} Dawr</span>
+                      </div>
+                      <div className="text-sm font-extrabold text-white mt-1">
+                        {req.subjectName} &bull; {req.className}
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        عدد الدرجات المقفلة المطلوب فتحها: {toHindiNumerals(req.count)} درجات
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 pt-2 border-t border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => handleGrantSubjectUnlock(req.classId, req.subjectId, req.period, 24, true)}
+                        className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                      >
+                        تمديد ٢٤ ساعة
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleGrantSubjectUnlock(req.classId, req.subjectId, req.period, 48, true)}
+                        className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                      >
+                        ٤٨ س
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleGrantSubjectUnlock(req.classId, req.subjectId, req.period, 0, false)}
+                        className="px-2.5 py-1.5 bg-red-800 hover:bg-red-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                      >
+                        رفض
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -873,7 +1139,8 @@ export default function GradesPage() {
                   ) : (
                     classStudents.map(s => {
                       const g = getStudentGrade(s.StudentID);
-                      const isLocked = g ? g.IsLocked && !g.UnlockGranted && g.FinalGrade !== 'INC' : false;
+                      const lockCheck = DataStore.checkGradeLock(g);
+                      const isLocked = lockCheck.isLocked;
 
                       return (
                         <tr key={s.StudentID} className="hover:bg-slate-50/60 transition-colors">
@@ -912,12 +1179,16 @@ export default function GradesPage() {
                           <td className="py-3 px-4 text-center text-xs">
                             {g ? (
                               isLocked ? (
-                                <span className="inline-flex items-center gap-1 text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-full">
-                                  <Lock className="w-3 h-3" /> Locked
+                                <span className="inline-flex items-center gap-1 text-red-700 font-bold bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
+                                  <Lock className="w-3 h-3 text-red-600" /> مقفل (انتهت المهلة)
+                                </span>
+                              ) : lockCheck.remainingMs > 0 ? (
+                                <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                  <Unlock className="w-3 h-3 text-emerald-600" /> متاح ({toHindiNumerals(Math.ceil(lockCheck.remainingMs / 3600000))}س)
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
-                                  <Unlock className="w-3 h-3" /> Editable
+                                <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                  <Unlock className="w-3 h-3 text-emerald-600" /> متاح للتعديل
                                 </span>
                               )
                             ) : (
@@ -927,13 +1198,36 @@ export default function GradesPage() {
 
                           <td className="py-3 px-4 text-right space-x-2">
                             {isMudir ? (
-                              <button
-                                type="button"
-                                onClick={() => openGradeModal(s)}
-                                className="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
-                              >
-                                Inspect
-                              </button>
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => openGradeModal(s)}
+                                  className="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                                >
+                                  Inspect
+                                </button>
+                                {g && (isLocked || g.UnlockRequested) ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleGrantUnlock(g.id, true, 24)}
+                                    className="px-2.5 py-1 text-xs font-bold rounded bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer inline-flex items-center gap-1 transition-colors"
+                                    title="منح تمديد ٢٤ ساعة للمدرس"
+                                  >
+                                    <Unlock className="w-3 h-3" />
+                                    <span>تمديد ٢٤س</span>
+                                  </button>
+                                ) : g && !isLocked ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleGrantUnlock(g.id, false)}
+                                    className="px-2 py-1 text-xs font-bold rounded bg-slate-200 hover:bg-red-100 text-slate-700 hover:text-red-700 cursor-pointer inline-flex items-center gap-1 transition-colors"
+                                    title="قفل الدرجة فوراً"
+                                  >
+                                    <Lock className="w-3 h-3" />
+                                    <span>قفل</span>
+                                  </button>
+                                ) : null}
+                              </div>
                             ) : (
                               <>
                                 {isLocked ? (

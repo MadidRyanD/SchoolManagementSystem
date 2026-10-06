@@ -34,6 +34,8 @@ import {
   FileBadge,
   ChevronRight,
   UserCheck,
+  CalendarCheck,
+  Sparkles,
 } from 'lucide-react';
 
 export default function DashboardOverviewPage() {
@@ -427,24 +429,8 @@ export default function DashboardOverviewPage() {
                 <InfoRow icon={FileBadge} label="Remarks" value={teacher?.Remarks} />
               </div>
 
-              {/* Subjects Teaching */}
-              {mySubjects.length > 0 && (
-                <div className="px-5 pb-4">
-                  <p className="text-[10px] font-bold uppercase text-slate-500 tracking-wider mb-2">
-                    Teaching Subjects ({mySubjects.length})
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {mySubjects.map(s => (
-                      <span key={s.SubjectID} className="px-2 py-1 rounded-lg bg-white border border-[#ccbf99] text-[11px] font-bold text-slate-700 font-serif">
-                        {s.SubjectArabic || s.SubjectClass}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Edit Profile */}
-              <div className="px-5 pb-5">
+              <div className="px-5 py-4">
                 <Link
                   href="/dashboard/profile"
                   className="w-full py-2.5 flex items-center justify-center gap-2 bg-[#126b38] hover:bg-[#0e5830] text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
@@ -457,75 +443,59 @@ export default function DashboardOverviewPage() {
             </div>
           </div>
 
-          {/* RIGHT: Welcome + Quick Links + Announcements */}
+          {/* RIGHT: Welcome + Announcements (At Beginning) + Features */}
           <div className="lg:col-span-2 space-y-5">
-            {/* Welcome Banner */}
+            {/* 1. Welcome Banner */}
             <div className="bg-[#126b38] rounded-3xl px-6 py-5 text-white shadow-md">
               <div className="flex items-start gap-4">
                 <div className="p-3 rounded-2xl bg-white/10 flex-shrink-0">
                   <UserCheck className="w-7 h-7 text-amber-300" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-amber-200 mb-1">Teacher Portal • بوابة الأستاذ</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-amber-200 mb-1 font-serif">Teacher Portal • بوابة الأستاذ الأكاديمية</p>
                   <h2 className="text-xl font-black text-white">
                     Welcome, {teacher?.Name || currentUser?.name}!
                   </h2>
                   <p className="text-sm text-emerald-100/90 mt-1.5 font-serif leading-relaxed" dir="rtl">
-                    أهلاً بك في بوابة الكادر التعليمي. يمكنك الاطلاع على جدولك الأسبوعي، موادك المسندة، وفصلك المشرف عليه.
+                    أهلاً بك في بوابة الكادر التعليمي لجامعة منيب الكزبري العربية. يمكنك الاطلاع على التعاميم الرسمية، جدول الحصص، رصد الدرجات، ومتابعة سجل الحضور.
                   </p>
                   <div className="mt-3 flex items-center gap-3 text-xs">
-                    <span className="px-2 py-0.5 bg-white/20 rounded-full font-bold">{mySubjects.length} Subjects</span>
-                    <span className="px-2 py-0.5 bg-white/20 rounded-full font-bold">{myClasses.length} Classes</span>
-                    <span className="px-2 py-0.5 bg-amber-400/30 text-amber-200 rounded-full font-bold">{adviseeStudents.length} Advisees</span>
+                    <span className="px-2.5 py-0.5 bg-white/20 rounded-full font-bold">{mySubjects.length} Subjects to Teach</span>
+                    <span className="px-2.5 py-0.5 bg-white/20 rounded-full font-bold">{myClasses.length} Classes</span>
+                    <span className="px-2.5 py-0.5 bg-amber-400/30 text-amber-200 rounded-full font-bold">{adviseeStudents.length} Advisees</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Quick Nav Links */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {[
-                { href: '/dashboard/schedules', icon: Calendar, labelEn: 'Class Schedule', labelAr: 'جدول الحصص', color: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
-                { href: '/dashboard/subjects', icon: BookOpen, labelEn: 'Subjects', labelAr: 'المواد الدراسية', color: 'bg-amber-50 border-amber-200 text-amber-800' },
-                { href: '/dashboard/classes/advisee', icon: UserCheck, labelEn: 'Class Advisee', labelAr: 'الفصل المشرف عليه', color: 'bg-purple-50 border-purple-200 text-purple-800' },
-              ].map(item => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`p-4 rounded-2xl border flex flex-col items-center text-center gap-2 hover:shadow-md transition-shadow cursor-pointer ${item.color}`}
-                >
-                  <item.icon className="w-5 h-5" />
-                  <div>
-                    <p className="text-xs font-black">{item.labelEn}</p>
-                    <p className="text-[10px] font-serif opacity-70 mt-0.5" dir="rtl">{item.labelAr}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-
-            {/* Announcements Section */}
+            {/* 2. Announcements Section (Placed at the beginning per user request) */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <Megaphone className="w-5 h-5 text-amber-600" />
-                  <h3 className="text-base font-black text-slate-900">Announcement Section</h3>
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-amber-50/50">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
+                    <Megaphone className="w-5 h-5 text-amber-700" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900 font-sans">Official Announcements</h3>
+                    <p className="text-xs text-slate-500 font-serif" dir="rtl">التعاميم والإعلانات الأكاديمية الرسمية</p>
+                  </div>
                 </div>
-                <Link href="/dashboard/announcements" className="text-xs font-bold text-[#126b38] hover:underline flex items-center gap-0.5">
-                  View All <ArrowUpRight className="w-3.5 h-3.5" />
+                <Link href="/dashboard/announcements" className="text-xs font-bold text-[#126b38] hover:underline flex items-center gap-0.5 font-serif">
+                  عرض كافة التعاميم <ArrowUpRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
 
               <div className="divide-y divide-slate-100">
                 {announcements.length === 0 ? (
-                  <div className="px-5 py-8 text-center text-slate-400 text-sm">
-                    No announcements at this time.
+                  <div className="px-5 py-8 text-center text-slate-400 text-sm font-serif">
+                    لا توجد تعاميم جديدة في الوقت الحالي.
                   </div>
                 ) : (
-                  announcements.slice(0, 5).map(item => (
-                    <div key={item.id} className="px-5 py-4 hover:bg-slate-50 transition-colors">
+                  announcements.slice(0, 4).map(item => (
+                    <div key={item.id} className="px-5 py-4 hover:bg-slate-50/80 transition-colors">
                       <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-16 text-center">
-                          <p className="text-[11px] font-mono font-bold text-slate-500">
+                        <div className="flex-shrink-0 w-16 text-center pt-1">
+                          <p className="text-[11px] font-mono font-bold text-slate-600">
                             {item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : '—'}
                           </p>
                           <p className="text-[10px] text-slate-400">
@@ -534,18 +504,113 @@ export default function DashboardOverviewPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-900 border border-amber-200">
                               {item.targetAudience?.toUpperCase() || 'ALL'}
                             </span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              By {item.author || 'Admin Office'}
+                            </span>
                           </div>
-                          <h4 className="text-sm font-bold text-slate-900 font-serif" dir="rtl">{item.title}</h4>
-                          <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{item.content}</p>
+                          <h4 className="text-sm font-bold text-slate-900 font-serif leading-snug" dir="rtl">{item.title}</h4>
+                          <p className="text-xs text-slate-600 mt-1 line-clamp-2 leading-relaxed">{item.content}</p>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0 mt-1" />
+                        <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0 mt-2" />
                       </div>
                     </div>
                   ))
                 )}
+              </div>
+            </div>
+
+            {/* 3. Teacher Features & Portals ("these can be shown to features") */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-emerald-700" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">Teacher Features & Services</h3>
+                    <p className="text-xs text-slate-500 font-serif" dir="rtl">ميزات وخدمات البوابة الأكاديمية للأستاذ</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                {[
+                  {
+                    href: '/dashboard/subjects',
+                    icon: BookOpen,
+                    labelEn: 'Subjects & Syllabi',
+                    labelAr: 'المواد والمناهج المسندة',
+                    desc: `${mySubjects.length} Assigned subjects to teach`,
+                    color: 'hover:border-emerald-500 bg-emerald-50/50 text-emerald-950',
+                    iconColor: 'bg-emerald-700 text-white',
+                  },
+                  {
+                    href: '/dashboard/grades',
+                    icon: ClipboardList,
+                    labelEn: 'Edit Grades (Excel)',
+                    labelAr: 'رصد وتعديل الدرجات Excel',
+                    desc: 'Input marks across all 6 Dawr terms',
+                    color: 'hover:border-amber-500 bg-amber-50/50 text-amber-950',
+                    iconColor: 'bg-amber-600 text-white',
+                  },
+                  {
+                    href: '/dashboard/schedules',
+                    icon: Calendar,
+                    labelEn: 'Class Schedule',
+                    labelAr: 'جدول الحصص الأسبوعي',
+                    desc: 'Weekly teaching timetable & periods',
+                    color: 'hover:border-blue-500 bg-blue-50/50 text-blue-950',
+                    iconColor: 'bg-blue-600 text-white',
+                  },
+                  {
+                    href: '/dashboard/classes/advisee',
+                    icon: UserCheck,
+                    labelEn: 'Class Advisee',
+                    labelAr: 'الفصل المشرف عليه والطلاب',
+                    desc: `${adviseeStudents.length} Students under supervision`,
+                    color: 'hover:border-purple-500 bg-purple-50/50 text-purple-950',
+                    iconColor: 'bg-purple-600 text-white',
+                  },
+                  {
+                    href: '/dashboard/attendance',
+                    icon: CalendarCheck,
+                    labelEn: 'My Attendance',
+                    labelAr: 'سجل الحضور والدوام',
+                    desc: 'Personal presence & audit records',
+                    color: 'hover:border-teal-500 bg-teal-50/50 text-teal-950',
+                    iconColor: 'bg-teal-700 text-white',
+                  },
+                  {
+                    href: '/dashboard/finance',
+                    icon: Wallet,
+                    labelEn: 'Payroll & Salary',
+                    labelAr: 'الرواتب والمستحقات المالية',
+                    desc: 'Disbursement status & pay slips',
+                    color: 'hover:border-rose-500 bg-rose-50/50 text-rose-950',
+                    iconColor: 'bg-rose-700 text-white',
+                  },
+                ].map(item => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`p-4 rounded-2xl border border-slate-200/80 flex flex-col justify-between gap-3 hover:shadow-md transition-all cursor-pointer ${item.color}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className={`p-2.5 rounded-xl shadow-xs ${item.iconColor}`}>
+                        <item.icon className="w-4 h-4" />
+                      </div>
+                      <ArrowUpRight className="w-4 h-4 opacity-40 hover:opacity-100" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black">{item.labelEn}</p>
+                      <p className="text-[11px] font-serif font-bold text-slate-800 mt-0.5" dir="rtl">{item.labelAr}</p>
+                      <p className="text-[10px] text-slate-500 mt-1 font-sans">{item.desc}</p>
+                    </div>
+                  </Link>
+                ))}
               </div>
             </div>
           </div>
@@ -699,7 +764,13 @@ export default function DashboardOverviewPage() {
               { href: '/dashboard/classes', icon: Building2, color: 'bg-emerald-100 text-emerald-800', title: '5-Days & 2-Days Divisions', desc: 'Ibtidaiyyah, Mutawassit, Thanawi, and Kulliyah programs.' },
               { href: '/dashboard/schedules', icon: Calendar, color: 'bg-amber-100 text-amber-800', title: 'Class Timetable & Conflicts', desc: 'Interactive schedule slots with teacher hover cards.' },
               { href: '/dashboard/grades', icon: ClipboardList, color: 'bg-rose-100 text-rose-800', title: '6 Dawr Examination Matrix', desc: 'Quizzes, attendance, exams criteria, and Excel export.' },
-              { href: '/dashboard/finance', icon: Wallet, color: 'bg-blue-100 text-blue-800', title: 'Cashier & Tuition Matrix', desc: '6-period fee collection with cashier timestamps.' },
+              { 
+                href: '/dashboard/finance', 
+                icon: Wallet, 
+                color: 'bg-blue-100 text-blue-800', 
+                title: role === 'mudir' ? 'My Salary & Payroll' : 'Cashier & Tuition Matrix', 
+                desc: role === 'mudir' ? 'Personal monthly salary slips, earnings breakdown, and vouchers.' : '6-period fee collection with cashier timestamps.' 
+              },
             ].map(item => (
               <Link
                 key={item.href}

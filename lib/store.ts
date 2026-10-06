@@ -27,6 +27,7 @@ export const initialSettings: SystemSettings = {
   schoolNameAr: 'جامعة منيب الكزبري العربية',
   systemName: 'JMAA-MoritAko',
   gradeLockDays: 7,
+  gradeEditWindowHours: 24, // Default allowed editing time given by principal/admin after submission
 };
 
 // 1. Classes across 5-Days and 2-Days departments
@@ -712,7 +713,7 @@ export const initialPayroll: TeacherPayrollItem[] = [
     NetSalary: 5000,
     Status: 'Paid',
     PaidAt: '2026-08-28 15:00:00',
-    CashierName: 'Finance Department',
+    CashierName: 'Ustadh Kamal Al-Maliki (Chief Cashier)',
   },
   {
     id: 'pr-2',
@@ -724,7 +725,7 @@ export const initialPayroll: TeacherPayrollItem[] = [
     NetSalary: 3450,
     Status: 'Paid',
     PaidAt: '2026-08-28 15:10:00',
-    CashierName: 'Finance Department',
+    CashierName: 'Ustadh Kamal Al-Maliki (Chief Cashier)',
   },
   {
     id: 'pr-3',
@@ -736,7 +737,7 @@ export const initialPayroll: TeacherPayrollItem[] = [
     NetSalary: 3600,
     Status: 'Paid',
     PaidAt: '2026-08-28 15:15:00',
-    CashierName: 'Finance Department',
+    CashierName: 'Ustadh Kamal Al-Maliki (Chief Cashier)',
   },
   {
     id: 'pr-4',
@@ -748,7 +749,7 @@ export const initialPayroll: TeacherPayrollItem[] = [
     NetSalary: 3300,
     Status: 'Paid',
     PaidAt: '2026-08-28 15:20:00',
-    CashierName: 'Finance Department',
+    CashierName: 'Ustadh Kamal Al-Maliki (Chief Cashier)',
   },
   {
     id: 'pr-5',
@@ -760,7 +761,7 @@ export const initialPayroll: TeacherPayrollItem[] = [
     NetSalary: 4200,
     Status: 'Paid',
     PaidAt: '2026-08-28 15:25:00',
-    CashierName: 'Finance Department',
+    CashierName: 'Ustadh Kamal Al-Maliki (Chief Cashier)',
   },
 ];
 
@@ -1125,8 +1126,115 @@ export const DataStore = {
     if (updated) setItem(KEYS.GRADES, list);
     return list;
   },
+  // Grade Edit Time Window & Lock Controls
+  getGradeEditWindowHours(): number {
+    const s = this.getSettings();
+    return s.gradeEditWindowHours || 24;
+  },
+  setGradeEditWindowHours(hours: number): void {
+    this.updateSettings({ gradeEditWindowHours: hours });
+  },
+  checkGradeLock(grade: StudentGradeItem | undefined | null): {
+    isLocked: boolean;
+    remainingMs: number;
+    expiresAt?: string;
+    submittedAt?: string;
+    allowedHours: number;
+    status: 'unsubmitted' | 'editable_grace_period' | 'unlocked_by_admin' | 'expired_locked' | 'manually_locked';
+  } {
+    const defaultHours = this.getGradeEditWindowHours();
+    if (!grade || grade.FinalGrade === undefined || grade.FinalGrade === null) {
+      return {
+        isLocked: false,
+        remainingMs: 0,
+        allowedHours: defaultHours,
+        status: 'unsubmitted',
+      };
+    }
+
+    const allowedHours = grade.AllowedEditHours || defaultHours;
+
+    // Check if Mudir/Admin explicitly granted unlock
+    if (grade.UnlockGranted) {
+      if (grade.LockExpiresAt) {
+        const remaining = new Date(grade.LockExpiresAt).getTime() - Date.now();
+        if (remaining > 0) {
+          return {
+            isLocked: false,
+            remainingMs: remaining,
+            expiresAt: grade.LockExpiresAt,
+            submittedAt: grade.SubmittedAt || grade.GradedAt,
+            allowedHours,
+            status: 'unlocked_by_admin',
+          };
+        }
+      } else {
+        return {
+          isLocked: false,
+          remainingMs: 86400000,
+          allowedHours,
+          status: 'unlocked_by_admin',
+        };
+      }
+    }
+
+    // If marked locked manually without a future expiration
+    if (grade.IsLocked && !grade.LockExpiresAt) {
+      return {
+        isLocked: true,
+        remainingMs: 0,
+        allowedHours,
+        status: 'manually_locked',
+      };
+    }
+
+    // Calculate expiration based on LockExpiresAt, SubmittedAt, or GradedAt
+    let expiresAtTime: number | null = null;
+    if (grade.LockExpiresAt) {
+      expiresAtTime = new Date(grade.LockExpiresAt).getTime();
+    } else if (grade.SubmittedAt || grade.GradedAt) {
+      const baseTime = new Date(grade.SubmittedAt || grade.GradedAt).getTime();
+      if (!isNaN(baseTime)) {
+        expiresAtTime = baseTime + allowedHours * 3600 * 1000;
+      }
+    }
+
+    if (expiresAtTime !== null) {
+      const remainingMs = expiresAtTime - Date.now();
+      if (remainingMs > 0) {
+        return {
+          isLocked: false,
+          remainingMs,
+          expiresAt: new Date(expiresAtTime).toISOString(),
+          submittedAt: grade.SubmittedAt || grade.GradedAt,
+          allowedHours,
+          status: 'editable_grace_period',
+        };
+      } else {
+        return {
+          isLocked: true,
+          remainingMs: 0,
+          expiresAt: new Date(expiresAtTime).toISOString(),
+          submittedAt: grade.SubmittedAt || grade.GradedAt,
+          allowedHours,
+          status: 'expired_locked',
+        };
+      }
+    }
+
+    return {
+      isLocked: Boolean(grade.IsLocked),
+      remainingMs: 0,
+      allowedHours,
+      status: grade.IsLocked ? 'manually_locked' : 'unsubmitted',
+    };
+  },
+
   saveGrade(item: StudentGradeItem): { success: boolean; error?: string } {
     const list = this.getGrades();
+    const defaultHours = this.getGradeEditWindowHours();
+    const nowIso = new Date().toISOString();
+
     const existingIdx = list.findIndex(
       g =>
         g.StudentID === item.StudentID &&
@@ -1137,22 +1245,50 @@ export const DataStore = {
 
     if (existingIdx >= 0) {
       const existing = list[existingIdx];
-      // Check if locked and not granted unlock
-      if (existing.IsLocked && !existing.UnlockGranted && existing.FinalGrade !== 'INC') {
+      const lockCheck = this.checkGradeLock(existing);
+
+      if (lockCheck.isLocked && existing.FinalGrade !== 'INC') {
         return {
           success: false,
-          error: 'This grade is locked! The submission period has expired. Please request an unlock from the Principal (Mudir).',
+          error: 'انتهت مهلة التعديل المحددة من الإدارة! الدرجة مقفلة حالياً. يرجى طلب فتح مهلة جديدة من المدير العام.',
         };
       }
-      list[existingIdx] = { ...item, id: existing.id, UnlockGranted: false };
+
+      // Preserve or set submission time and lock expiration
+      const allowedHours = existing.AllowedEditHours || defaultHours;
+      const lockExpiresAt = existing.LockExpiresAt || new Date(Date.now() + allowedHours * 3600 * 1000).toISOString();
+
+      list[existingIdx] = {
+        ...item,
+        id: existing.id,
+        SubmittedAt: existing.SubmittedAt || nowIso,
+        AllowedEditHours: allowedHours,
+        LockExpiresAt: lockExpiresAt,
+        IsLocked: false,
+        UnlockGranted: existing.UnlockGranted ?? false,
+      };
     } else {
-      list.push(item);
+      const allowedHours = defaultHours;
+      const lockExpiresAt = new Date(Date.now() + allowedHours * 3600 * 1000).toISOString();
+
+      list.push({
+        ...item,
+        SubmittedAt: nowIso,
+        AllowedEditHours: allowedHours,
+        LockExpiresAt: lockExpiresAt,
+        IsLocked: false,
+        UnlockGranted: false,
+      });
     }
+
     setItem(KEYS.GRADES, list);
     return { success: true };
   },
+
   saveMultipleGrades(items: StudentGradeItem[]): { success: boolean; savedCount: number; errors?: string[] } {
     const list = this.getGrades();
+    const defaultHours = this.getGradeEditWindowHours();
+    const nowIso = new Date().toISOString();
     let savedCount = 0;
     const errors: string[] = [];
 
@@ -1167,13 +1303,37 @@ export const DataStore = {
 
       if (existingIdx >= 0) {
         const existing = list[existingIdx];
-        if (existing.IsLocked && !existing.UnlockGranted && existing.FinalGrade !== 'INC') {
-          errors.push(`Grade for student #${item.StudentID} is locked.`);
+        const lockCheck = this.checkGradeLock(existing);
+
+        if (lockCheck.isLocked && existing.FinalGrade !== 'INC') {
+          errors.push(`طالب #${item.StudentID}: انتهت مهلة التعديل والدرجة مقفلة.`);
           continue;
         }
-        list[existingIdx] = { ...item, id: existing.id, UnlockGranted: false };
+
+        const allowedHours = existing.AllowedEditHours || defaultHours;
+        const lockExpiresAt = existing.LockExpiresAt || new Date(Date.now() + allowedHours * 3600 * 1000).toISOString();
+
+        list[existingIdx] = {
+          ...item,
+          id: existing.id,
+          SubmittedAt: existing.SubmittedAt || nowIso,
+          AllowedEditHours: allowedHours,
+          LockExpiresAt: lockExpiresAt,
+          IsLocked: false,
+          UnlockGranted: existing.UnlockGranted ?? false,
+        };
       } else {
-        list.push(item);
+        const allowedHours = defaultHours;
+        const lockExpiresAt = new Date(Date.now() + allowedHours * 3600 * 1000).toISOString();
+
+        list.push({
+          ...item,
+          SubmittedAt: nowIso,
+          AllowedEditHours: allowedHours,
+          LockExpiresAt: lockExpiresAt,
+          IsLocked: false,
+          UnlockGranted: false,
+        });
       }
       savedCount++;
     }
@@ -1181,6 +1341,7 @@ export const DataStore = {
     setItem(KEYS.GRADES, list);
     return { success: errors.length === 0, savedCount, errors: errors.length > 0 ? errors : undefined };
   },
+
   requestGradeUnlock(gradeId: string): void {
     const list = this.getGrades();
     const item = list.find(g => g.id === gradeId);
@@ -1189,15 +1350,72 @@ export const DataStore = {
       setItem(KEYS.GRADES, list);
     }
   },
-  grantGradeUnlock(gradeId: string, grant: boolean): void {
+
+  requestSubjectUnlock(classId: number, subjectId: number, period: GradingPeriod): void {
+    const list = this.getGrades();
+    let updated = false;
+    list.forEach(g => {
+      if (g.ClassID === classId && g.SubjectID === subjectId && g.Period === period) {
+        g.UnlockRequested = true;
+        updated = true;
+      }
+    });
+    if (updated) setItem(KEYS.GRADES, list);
+  },
+
+  grantGradeUnlock(gradeId: string, grant: boolean, hours?: number): void {
     const list = this.getGrades();
     const item = list.find(g => g.id === gradeId);
     if (item) {
       item.UnlockRequested = false;
       item.UnlockGranted = grant;
-      if (grant) item.IsLocked = false;
+      if (grant) {
+        item.IsLocked = false;
+        const grantedHours = hours || this.getGradeEditWindowHours();
+        item.AllowedEditHours = grantedHours;
+        item.LockExpiresAt = new Date(Date.now() + grantedHours * 3600 * 1000).toISOString();
+      } else {
+        item.IsLocked = true;
+        item.LockExpiresAt = new Date().toISOString();
+      }
       setItem(KEYS.GRADES, list);
     }
+  },
+
+  grantSubjectUnlock(classId: number, subjectId: number, period: GradingPeriod, hours?: number): void {
+    const list = this.getGrades();
+    const grantedHours = hours || this.getGradeEditWindowHours();
+    const lockExpiresAt = new Date(Date.now() + grantedHours * 3600 * 1000).toISOString();
+    let updated = false;
+
+    list.forEach(g => {
+      if (g.ClassID === classId && g.SubjectID === subjectId && g.Period === period) {
+        g.IsLocked = false;
+        g.UnlockRequested = false;
+        g.UnlockGranted = true;
+        g.AllowedEditHours = grantedHours;
+        g.LockExpiresAt = lockExpiresAt;
+        updated = true;
+      }
+    });
+
+    if (updated) setItem(KEYS.GRADES, list);
+  },
+
+  lockSubjectNow(classId: number, subjectId: number, period: GradingPeriod): void {
+    const list = this.getGrades();
+    let updated = false;
+
+    list.forEach(g => {
+      if (g.ClassID === classId && g.SubjectID === subjectId && g.Period === period) {
+        g.IsLocked = true;
+        g.UnlockGranted = false;
+        g.LockExpiresAt = new Date().toISOString();
+        updated = true;
+      }
+    });
+
+    if (updated) setItem(KEYS.GRADES, list);
   },
 
   // Tuition Fees per Dawr (1st to 6th)

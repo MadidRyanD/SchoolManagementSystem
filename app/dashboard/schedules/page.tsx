@@ -15,6 +15,7 @@ import {
 } from '@/lib/types';
 import StudentScheduleView from './StudentScheduleView';
 import TeacherScheduleView from './TeacherScheduleView';
+import PrincipalMasterScheduleView from './PrincipalMasterScheduleView';
 import {
   Calendar,
   Clock,
@@ -56,9 +57,9 @@ export default function SchedulesPage() {
   const isMudir = currentUser?.role === 'mudir';
   const canManage = isAdmin || isMudir;
 
-  // View mode: 'my-schedule' | 'all-classes' | 'student-preview'
-  const [viewMode, setViewMode] = useState<'my-schedule' | 'all-classes' | 'student-preview'>(
-    isStudent ? 'student-preview' : isTeacher ? 'my-schedule' : 'all-classes'
+  // View mode: 'master-parchment' | 'my-schedule' | 'all-classes' | 'student-preview'
+  const [viewMode, setViewMode] = useState<'master-parchment' | 'my-schedule' | 'all-classes' | 'student-preview'>(
+    isStudent ? 'student-preview' : isTeacher ? 'my-schedule' : 'master-parchment'
   );
 
   // Selected teacher for Admin/Mudir inspector
@@ -306,86 +307,24 @@ export default function SchedulesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Top Header & Navigation Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Dashboard</span>
-            </Link>
-          </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
-            <Calendar className="w-6 h-6 text-emerald-800" />
-            <span>Class Timetable & Teacher Schedules</span>
-          </h1>
-          <p className="text-sm text-slate-500">
-            View assigned weekly schedules, corresponding teaching subjects, and academic grade levels.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Link to Grades tab */}
-          <Link
-            href="/dashboard/grades"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-extrabold shadow-sm transition-all cursor-pointer"
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>Go to Grades (رصد الدرجات)</span>
-          </Link>
-
-          {canManage && (
-            <button
-              type="button"
-              onClick={() => {
-                setConflictError(null);
-                setIsAdding(true);
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Schedule Slot</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Success Notification */}
-      {successMsg && (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-sm flex items-center gap-2 font-medium">
-          <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-          <span>{successMsg}</span>
-        </div>
-      )}
-
-      {/* Real-time Conflict Alert Banner */}
-      {activeConflicts.length > 0 && (
-        <div className="p-4 bg-amber-50 border-l-4 border-amber-500 rounded-xl shadow-xs space-y-2">
-          <div className="flex items-center gap-2 text-amber-900 font-extrabold text-sm">
-            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-            <span>Schedule Overlap Conflict Warning ({activeConflicts.length} Detected)</span>
-          </div>
-          <p className="text-xs text-amber-800">
-            The system detected simultaneous teaching assignments for faculty members:
-          </p>
-          <div className="space-y-1 pl-6 text-xs text-amber-900">
-            {activeConflicts.map((c, i) => (
-              <div key={i} className="list-disc">
-                &bull; <span className="font-bold">{c.teacher.Name}</span> scheduled concurrently on{' '}
-                <span className="font-semibold">{c.day} at {c.time}</span> across: {c.classes.join(' and ')}.
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* View Switcher: Teacher's Personal Schedule vs All Classes */}
+      {/* View Switcher: Master Timetable vs Teacher's Personal Schedule vs Student View */}
       <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
-          {/* Tab 1: Teacher's Personal Schedule */}
+          {/* Tab 1: Master Timetable (Student Schedule style with All Schedules option) */}
+          <button
+            type="button"
+            onClick={() => setViewMode('master-parchment')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+              viewMode === 'master-parchment' || viewMode === 'all-classes'
+                ? 'bg-emerald-800 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+            }`}
+          >
+            <Calendar className="w-4 h-4 text-emerald-300" />
+            <span>الجدول الدراسي العام (Master Timetable)</span>
+          </button>
+
+          {/* Tab 2: Teacher's Personal Schedule */}
           <button
             type="button"
             onClick={() => setViewMode('my-schedule')}
@@ -395,26 +334,12 @@ export default function SchedulesPage() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
             }`}
           >
-            <UserCheck className="w-4 h-4 text-emerald-300" />
+            <UserCheck className="w-4 h-4 text-amber-300" />
             <span>
               {isTeacher
                 ? 'جدولي الشخصي وموادي (My Schedule & Subjects)'
                 : 'جدول الأستاذ المختار (Teacher Schedule)'}
             </span>
-          </button>
-
-          {/* Tab 2: All Classes Timetable */}
-          <button
-            type="button"
-            onClick={() => setViewMode('all-classes')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
-              viewMode === 'all-classes'
-                ? 'bg-emerald-800 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-            }`}
-          >
-            <Building2 className="w-4 h-4 text-blue-400" />
-            <span>جدول كافة الصفوف (All Classes Timetable)</span>
           </button>
 
           {/* Tab 3: Student View Preview */}
@@ -427,7 +352,7 @@ export default function SchedulesPage() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
             }`}
           >
-            <Eye className="w-4 h-4 text-amber-400" />
+            <Eye className="w-4 h-4 text-blue-400" />
             <span>معاينة جدول الطالب (Student View)</span>
           </button>
         </div>
@@ -449,8 +374,63 @@ export default function SchedulesPage() {
             </select>
           </div>
         )}
-
       </div>
+
+      {/* Top Header & Navigation Bar (Shown on Teacher Inspector Mode) */}
+      {viewMode === 'my-schedule' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Dashboard</span>
+                </Link>
+              </div>
+              <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
+                <Calendar className="w-6 h-6 text-emerald-800" />
+                <span>Class Timetable & Teacher Schedules</span>
+              </h1>
+              <p className="text-sm text-slate-500">
+                View assigned weekly schedules, corresponding teaching subjects, and academic grade levels.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Link
+                href="/dashboard/grades"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-extrabold shadow-sm transition-all cursor-pointer"
+              >
+                <BookOpen className="w-4 h-4" />
+                <span>Go to Grades (رصد الدرجات)</span>
+              </Link>
+            </div>
+          </div>
+
+          {activeConflicts.length > 0 && (
+            <div className="p-4 bg-amber-50 border-l-4 border-amber-500 rounded-xl shadow-xs space-y-2">
+              <div className="flex items-center gap-2 text-amber-900 font-extrabold text-sm">
+                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                <span>Schedule Overlap Conflict Warning ({activeConflicts.length} Detected)</span>
+              </div>
+              <p className="text-xs text-amber-800">
+                The system detected simultaneous teaching assignments for faculty members:
+              </p>
+              <div className="space-y-1 pl-6 text-xs text-amber-900">
+                {activeConflicts.map((c, i) => (
+                  <div key={i} className="list-disc">
+                    &bull; <span className="font-bold">{c.teacher.Name}</span> scheduled concurrently on{' '}
+                    <span className="font-semibold">{c.day} at {c.time}</span> across: {c.classes.join(' and ')}.
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* SECTION A: TEACHER'S PERSONAL SCHEDULE (STUDENT-STYLE UI)                 */}
@@ -466,171 +446,18 @@ export default function SchedulesPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* SECTION B: ALL CLASSES TIMETABLE                                          */}
+      {/* SECTION B: PRINCIPAL & ADMIN MASTER SCHEDULE VIEW (WARM PARCHMENT AESTHETIC) */}
       {/* ========================================================================= */}
-      {viewMode === 'all-classes' && (
-        <div className="space-y-6">
-          {/* Filter / Selector Bar */}
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Filter By Class:</span>
-              <select
-                value={selectedClassId}
-                onChange={(e) => setSelectedClassId(Number(e.target.value))}
-                className="px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold bg-white max-w-xs"
-              >
-                <option value={0}>All Classes (All Departments)</option>
-                {classes.map(c => (
-                  <option key={c.ClassID} value={c.ClassID}>
-                    [{c.Department.toUpperCase()}] {c.ClassName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <span className="text-xs text-slate-500 font-bold font-mono">
-              Showing {displayedClassSchedules.length} scheduled periods
-            </span>
-          </div>
-
-          {/* Weekly Schedule Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3">
-            {daysList.map(day => {
-              const daySlots = displayedClassSchedules.filter(s => s.Day === day);
-              daySlots.sort((a, b) => a.StartTime.localeCompare(b.StartTime));
-
-              return (
-                <div key={day} className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col shadow-xs">
-                  <div className="bg-slate-900 text-white p-3 text-center">
-                    <span className="font-bold text-xs uppercase tracking-wider block">{day}</span>
-                    <span className="text-[10px] text-amber-300 font-serif">{daysArabic[day].split(' ')[0]}</span>
-                  </div>
-
-                  <div className="p-2 space-y-2 flex-1 min-h-[160px] bg-slate-50/50">
-                    {daySlots.length === 0 ? (
-                      <div className="h-full flex items-center justify-center text-center text-slate-400 text-xs italic py-8">
-                        No classes
-                      </div>
-                    ) : (
-                      daySlots.map(slot => {
-                        const sub = getSubject(slot.SubjectID);
-                        const tch = getTeacher(slot.TeacherID);
-                        const cls = getClass(slot.ClassID);
-
-                        return (
-                          <div
-                            key={slot.ID}
-                            onMouseEnter={(e) => {
-                              if (tch && sub) {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                setHoveredTeacher({
-                                  teacher: tch,
-                                  subject: sub,
-                                  schedule: slot,
-                                  x: rect.right + 10,
-                                  y: rect.top,
-                                });
-                              }
-                            }}
-                            onMouseLeave={() => setHoveredTeacher(null)}
-                            className="bg-white p-3 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer relative group"
-                          >
-                            <div className="flex items-center justify-between text-[10px] font-mono text-emerald-800 font-bold mb-1">
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {slot.StartTime} - {slot.EndTime}
-                              </span>
-                              <span className="text-slate-400 truncate max-w-[60px]">{slot.Room}</span>
-                            </div>
-
-                            <h5 className="text-xs font-bold text-slate-900 line-clamp-2">
-                              {sub ? sub.SubjectArabic || sub.SubjectClass : 'Subject'}
-                            </h5>
-
-                            <div className="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                              <span className="truncate font-medium text-slate-700">
-                                {tch ? tch.NameArabic || tch.Name : 'Teacher'}
-                              </span>
-                              {canManage && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDelete(slot.ID);
-                                  }}
-                                  className="text-slate-300 hover:text-red-600 transition-colors p-0.5"
-                                  title="Delete Slot"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                            </div>
-
-                            {cls && (
-                              <div className="mt-1 text-[9px] font-bold text-amber-800 bg-amber-50 px-1 py-0.5 rounded truncate">
-                                {cls.ClassName}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Floating Interactive Hover Tooltip for Teacher Details */}
-      {hoveredTeacher && (
-        <div
-          className="fixed z-50 pointer-events-none transition-all"
-          style={{
-            top: Math.min(hoveredTeacher.y, window.innerHeight - 250),
-            left: Math.min(hoveredTeacher.x, window.innerWidth - 320),
-          }}
-        >
-          <div className="w-72 bg-slate-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-emerald-500/40 space-y-3">
-            <div className="flex items-start space-x-3">
-              <div className="w-12 h-12 rounded-xl overflow-hidden bg-emerald-800 flex-shrink-0 flex items-center justify-center font-bold text-white text-base">
-                {hoveredTeacher.teacher.ProfilePic ? (
-                  <img src={hoveredTeacher.teacher.ProfilePic} alt={hoveredTeacher.teacher.Name} className="w-full h-full object-cover" />
-                ) : (
-                  hoveredTeacher.teacher.Name[0]
-                )}
-              </div>
-              <div className="overflow-hidden">
-                <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wide">
-                  Assigned Faculty
-                </span>
-                <h6 className="font-extrabold text-sm text-white truncate">
-                  {hoveredTeacher.teacher.Name}
-                </h6>
-                {hoveredTeacher.teacher.NameArabic && (
-                  <p className="text-xs text-amber-200 font-serif truncate">
-                    {hoveredTeacher.teacher.NameArabic}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-1.5 text-xs border-t border-slate-800 pt-2.5 text-slate-300">
-              <p><span className="text-slate-400 font-semibold">Subject:</span> {hoveredTeacher.subject.SubjectArabic || hoveredTeacher.subject.SubjectClass}</p>
-              <p><span className="text-slate-400 font-semibold">Degree:</span> {hoveredTeacher.teacher.Degree}</p>
-              <p><span className="text-slate-400 font-semibold">Faculty ID:</span> {hoveredTeacher.teacher.IdNumber}</p>
-              {hoveredTeacher.teacher.MobileNumber && (
-                <p className="flex items-center gap-1 text-[11px] text-emerald-400">
-                  <Phone className="w-3 h-3" /> {hoveredTeacher.teacher.MobileNumber}
-                </p>
-              )}
-            </div>
-
-            <div className="text-[10px] text-amber-400/90 italic bg-slate-950/60 p-1.5 rounded-lg border border-slate-800">
-              &bull; {hoveredTeacher.schedule.Day} from {hoveredTeacher.schedule.StartTime} to {hoveredTeacher.schedule.EndTime} ({hoveredTeacher.schedule.Room})
-            </div>
-          </div>
-        </div>
+      {(viewMode === 'master-parchment' || viewMode === 'all-classes') && (
+        <PrincipalMasterScheduleView
+          classes={classes}
+          subjects={subjects}
+          teachers={teachers}
+          schedules={schedules}
+          onRefresh={loadData}
+          canManage={canManage}
+          initialClassId={selectedClassId}
+        />
       )}
 
       {/* ========================================================================= */}

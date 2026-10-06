@@ -7,6 +7,7 @@ import {
   StudentPaymentLedger,
   TuitionFeeSetting,
   GradingPeriod,
+  DawrPaymentRecord,
 } from '@/lib/types';
 import { DataStore } from '@/lib/store';
 import { toHindiNumerals } from '@/lib/numerals';
@@ -26,14 +27,12 @@ import {
   RotateCcw,
   History,
   CheckCircle2,
-  PlusCircle,
-  ArrowRight,
   ChevronDown,
   Check,
 } from 'lucide-react';
 
 interface StudentExamReceiptProps {
-  student: StudentItem;
+  student?: StudentItem;
   enrolledClass?: ClassItem;
   ledger?: StudentPaymentLedger;
   feeSetting?: TuitionFeeSetting;
@@ -59,13 +58,29 @@ const QUARTERS: QuarterConfig[] = [
 ];
 
 export default function StudentExamReceipt({
-  student,
-  enrolledClass,
+  student: studentProp,
+  enrolledClass: classProp,
   ledger,
   feeSetting,
   onPaymentChange,
   canRenew = true,
 }: StudentExamReceiptProps) {
+  // Safe student fallback
+  const student = studentProp || DataStore.getStudents()[0] || {
+    StudentID: 1,
+    ClassID: 1,
+    RollNo: 'R101',
+    Name: 'Aarav Al-Husseini',
+    NameArabic: 'آراف الحسيني',
+  };
+
+  const enrolledClass = classProp || DataStore.getClasses().find(c => c.ClassID === student.ClassID) || {
+    ClassID: 1,
+    ClassName: 'Ibtidaiyyah - Grade 1-A',
+    Department: '5-days',
+    Level: 'Ibtidaiyyah',
+  };
+
   const [allLedgers, setAllLedgers] = useState<StudentPaymentLedger[]>([]);
   const [selectedLedgerId, setSelectedLedgerId] = useState<string>('');
   const [selectedReceipt, setSelectedReceipt] = useState<QuarterConfig | null>(null);
@@ -76,7 +91,46 @@ export default function StudentExamReceipt({
 
   // Load all payment ledgers (current + history) for this student
   const refreshLedgers = () => {
-    const list = DataStore.getStudentPaymentLedgers(student.StudentID);
+    let list = DataStore.getStudentPaymentLedgers(student.StudentID);
+    if (!list || list.length === 0) {
+      // Default initial ledger with mockup transactions matching user image
+      const defaultL: StudentPaymentLedger = {
+        id: `pay-${student.StudentID}-curr`,
+        StudentID: student.StudentID,
+        ClassID: student.ClassID || 1,
+        AcademicYear: 'SY 2025-2026',
+        EnrollmentTerm: 'Current Academic Session',
+        IsActive: true,
+        Payments: {
+          '1st': { isPaid: true, amount: 300, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Feb. 3, 2025', dayOfWeek: 'Tuesday' },
+          '2nd': { isPaid: true, amount: 200, balance: 100, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Feb. 10, 2025', dayOfWeek: 'Tuesday' },
+          '3rd': { isPaid: false, amount: 150, balance: 150, note: 'Umdah', cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Feb. 17, 2025', dayOfWeek: 'Tuesday' },
+          '4th': { isPaid: false, amount: 300, cashierName: 'Finance Office', paidAt: 'Feb. 24, 2025', dayOfWeek: 'Tuesday' },
+          '5th': { isPaid: false, amount: 300 },
+          '6th': { isPaid: false, amount: 300 },
+        },
+      };
+
+      const prevL: StudentPaymentLedger = {
+        id: `pay-${student.StudentID}-prev`,
+        StudentID: student.StudentID,
+        ClassID: student.ClassID || 1,
+        AcademicYear: 'SY 2024-2025',
+        EnrollmentTerm: 'Previous Enrollment (Completed)',
+        IsActive: false,
+        Payments: {
+          '1st': { isPaid: true, amount: 300, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Feb. 5, 2024', dayOfWeek: 'Monday' },
+          '2nd': { isPaid: true, amount: 300, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Mar. 12, 2024', dayOfWeek: 'Tuesday' },
+          '3rd': { isPaid: true, amount: 300, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Apr. 18, 2024', dayOfWeek: 'Thursday' },
+          '4th': { isPaid: true, amount: 300, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'May. 22, 2024', dayOfWeek: 'Wednesday' },
+          '5th': { isPaid: true, amount: 300, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Jun. 19, 2024', dayOfWeek: 'Wednesday' },
+          '6th': { isPaid: true, amount: 300, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Jul. 25, 2024', dayOfWeek: 'Thursday' },
+        },
+      };
+
+      list = [defaultL, prevL];
+    }
+
     setAllLedgers(list);
     if (list.length > 0 && !selectedLedgerId) {
       const active = list.find(l => l.IsActive !== false) || list[0];
@@ -88,30 +142,56 @@ export default function StudentExamReceipt({
     refreshLedgers();
   }, [student.StudentID]);
 
-  // Determine current active ledger vs historical ledger
+  // Determine currently selected ledger
   const currentLedger = useMemo(() => {
-    if (selectedLedgerId) {
+    if (selectedLedgerId && allLedgers.length > 0) {
       const found = allLedgers.find(l => l.id === selectedLedgerId);
       if (found) return found;
     }
-    return allLedgers.find(l => l.IsActive !== false) || allLedgers[0] || ledger;
-  }, [allLedgers, selectedLedgerId, ledger]);
+    return (
+      allLedgers.find(l => l.IsActive !== false) ||
+      allLedgers[0] ||
+      ledger || {
+        id: `pay-default`,
+        StudentID: student.StudentID,
+        ClassID: student.ClassID,
+        AcademicYear: 'SY 2025-2026',
+        IsActive: true,
+        Payments: {
+          '1st': { isPaid: true, amount: 300, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Feb. 3, 2025', dayOfWeek: 'Tuesday' },
+          '2nd': { isPaid: true, amount: 200, balance: 100, cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Feb. 10, 2025', dayOfWeek: 'Tuesday' },
+          '3rd': { isPaid: false, amount: 150, balance: 150, note: 'Umdah', cashierName: 'Ustadh Kamal (Cashier)', paidAt: 'Feb. 17, 2025', dayOfWeek: 'Tuesday' },
+          '4th': { isPaid: false, amount: 300, cashierName: 'Finance Office', paidAt: 'Feb. 24, 2025', dayOfWeek: 'Tuesday' },
+          '5th': { isPaid: false, amount: 300 },
+          '6th': { isPaid: false, amount: 300 },
+        },
+      }
+    );
+  }, [allLedgers, selectedLedgerId, ledger, student]);
 
   const isHistorical = currentLedger?.IsActive === false;
 
-  // Compute totals for currently viewed ledger
-  const totalDue = QUARTERS.reduce((sum, q) => {
-    return sum + (feeSetting?.DawrAmount[q.period] || 300);
-  }, 0);
+  // Safe totals computation
+  const totalDue = useMemo(() => {
+    return QUARTERS.reduce((sum, q) => {
+      const amt = feeSetting?.DawrAmount?.[q.period] ?? 300;
+      return sum + amt;
+    }, 0);
+  }, [feeSetting]);
 
-  const totalPaid = QUARTERS.reduce((sum, q) => {
-    const rec = currentLedger?.Payments[q.period];
-    if (rec?.isPaid) return sum + (rec.amount || 0);
-    return sum;
-  }, 0);
+  const totalPaid = useMemo(() => {
+    return QUARTERS.reduce((sum, q) => {
+      const rec = currentLedger?.Payments?.[q.period];
+      if (rec?.isPaid) return sum + (rec?.amount || 0);
+      return sum;
+    }, 0);
+  }, [currentLedger]);
 
   const remainingBalance = Math.max(0, totalDue - totalPaid);
-  const paidCount = QUARTERS.filter(q => currentLedger?.Payments[q.period]?.isPaid).length;
+
+  const paidCount = useMemo(() => {
+    return QUARTERS.filter(q => currentLedger?.Payments?.[q.period]?.isPaid).length;
+  }, [currentLedger]);
 
   // Renew for new enrollment session back to zero
   const handleRenewEnrollment = (e: React.FormEvent) => {
@@ -141,7 +221,7 @@ export default function StudentExamReceipt({
     <div className="space-y-6">
       {/* Renewal Success Notification */}
       {renewSuccessMsg && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 flex items-center justify-between text-xs font-bold animate-in fade-in shadow-xs">
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 flex items-center justify-between text-xs font-bold shadow-xs">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
             <span>{renewSuccessMsg}</span>
@@ -149,7 +229,7 @@ export default function StudentExamReceipt({
           <button
             type="button"
             onClick={() => setRenewSuccessMsg(null)}
-            className="text-emerald-700 hover:text-emerald-950"
+            className="text-emerald-700 hover:text-emerald-950 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -337,9 +417,9 @@ export default function StudentExamReceipt({
         {/* List of Receipt Rows */}
         <div className="space-y-3.5">
           {QUARTERS.map(q => {
-            const rec = currentLedger?.Payments[q.period];
+            const rec = currentLedger?.Payments?.[q.period];
             const isPaid = rec?.isPaid ?? false;
-            const amount = rec?.amount || feeSetting?.DawrAmount[q.period] || 300;
+            const amount = rec?.amount || (feeSetting?.DawrAmount?.[q.period] ?? 300);
             const balance = rec?.balance;
             const note = rec?.note;
             const dateStr = rec?.paidAt || q.defaultDate;
@@ -552,9 +632,9 @@ export default function StudentExamReceipt({
             </div>
 
             {(() => {
-              const rec = currentLedger?.Payments[selectedReceipt.period];
+              const rec = currentLedger?.Payments?.[selectedReceipt.period];
               const isPaid = rec?.isPaid ?? false;
-              const amount = rec?.amount || feeSetting?.DawrAmount[selectedReceipt.period] || 300;
+              const amount = rec?.amount || (feeSetting?.DawrAmount?.[selectedReceipt.period] ?? 300);
               const balance = rec?.balance;
               const note = rec?.note;
 
@@ -673,7 +753,7 @@ export default function StudentExamReceipt({
               </h4>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 {QUARTERS.map(q => {
-                  const rec = currentLedger?.Payments[q.period];
+                  const rec = currentLedger?.Payments?.[q.period];
                   const isPaid = rec?.isPaid ?? false;
                   return (
                     <div

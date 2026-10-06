@@ -113,6 +113,9 @@ export interface StudentGradeItem {
   IsLocked: boolean;
   UnlockRequested?: boolean;
   UnlockGranted?: boolean;
+  SubmittedAt?: string;
+  LockExpiresAt?: string;
+  AllowedEditHours?: number;
 }
 
 export interface TeacherAttendanceItem {
@@ -197,6 +200,7 @@ export interface SystemSettings {
   schoolNameAr: string;
   systemName: string;
   gradeLockDays: number;
+  gradeEditWindowHours?: number; // Allowed hours set by principal/admin for editing grades after submission
 }
 
 // Backward-compatible types for legacy secondary routes

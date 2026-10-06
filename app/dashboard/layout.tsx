@@ -130,7 +130,8 @@ export default function DashboardLayout({
         { href: '/dashboard/schedules', labelEn: 'Class Schedule', labelAr: 'جدول الحصص', icon: Calendar },
         { href: '/dashboard/subjects', labelEn: 'Subjects', labelAr: 'المواد الدراسية', icon: BookOpen },
         { href: '/dashboard/classes/advisee', labelEn: 'Class Advisee', labelAr: 'الفصل المشرف عليه', icon: UserCheck },
-        { href: '/dashboard/finance', labelEn: 'My Salary & Payroll', labelAr: 'كشف الراتب والمستحقات', icon: Wallet },
+        { href: '/dashboard/attendance', labelEn: 'Attendance', labelAr: 'سجل الحضور والدوام', icon: CalendarCheck },
+        { href: '/dashboard/finance', labelEn: 'Payroll', labelAr: 'الرواتب والمستحقات', icon: Wallet },
       ];
     }
 
@@ -158,7 +159,12 @@ export default function DashboardLayout({
 
     // Mudir / Admin Navigation
     const adminItems = [
-      { href: '/dashboard', labelEn: 'Admin Dashboard', labelAr: 'لوحة التحكم العامة', icon: LayoutDashboard },
+      { 
+        href: '/dashboard', 
+        labelEn: role === 'mudir' ? 'Principal Dashboard' : 'Admin Dashboard', 
+        labelAr: role === 'mudir' ? 'لوحة قيادة المدير والعميد' : 'لوحة التحكم العامة', 
+        icon: LayoutDashboard 
+      },
       { href: '/dashboard/schedules', labelEn: 'Master Schedules', labelAr: 'جدول الحصص العام', icon: Calendar },
       { href: '/dashboard/grades', labelEn: 'Master Grades Matrix', labelAr: 'سجل الدرجات (6 أدوار)', icon: ClipboardList },
       { href: '/dashboard/classes', labelEn: 'Classes & Departments', labelAr: 'الأقسام والصفوف الدراسية', icon: Building2 },
@@ -178,7 +184,7 @@ export default function DashboardLayout({
       { href: '/dashboard/announcements', labelEn: 'Announcements', labelAr: 'الإعلانات والتعاميم', icon: Megaphone },
     ];
 
-    if (role === 'admin') {
+    if (role === 'admin' || role === 'mudir') {
       adminItems.push(
         { href: '/dashboard/forms', labelEn: 'Form Templates', labelAr: 'النماذج والتقارير', icon: FileText },
         { href: '/dashboard/accounts', labelEn: 'User Accounts & Roles', labelAr: 'الحسابات والصلاحيات', icon: UserCog }
