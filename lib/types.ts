@@ -30,6 +30,8 @@ export interface SubjectItem {
   SubjectCode?: string;
   SubjectArabic?: string;
   Semester?: '1st' | '2nd' | 'Both';
+  BookDriveUrl?: string;
+  BookTitle?: string;
 }
 
 export interface TeacherItem {
@@ -201,6 +203,7 @@ export interface SystemSettings {
   systemName: string;
   gradeLockDays: number;
   gradeEditWindowHours?: number; // Allowed hours set by principal/admin for editing grades after submission
+  libraryDriveFolderUrl?: string; // Google Drive Central Library folder URL
 }
 
 // Backward-compatible types for legacy secondary routes
