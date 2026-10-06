@@ -15,6 +15,7 @@ import {
   ArrowRight,
   Lock,
   User,
+  Award,
 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -61,6 +62,9 @@ export default function LoginPage() {
     } else if (role === 'teacher') {
       setUsername('teacher@school.edu');
       setPassword('teacher123');
+    } else if (role === 'ssg') {
+      setUsername('ssg');
+      setPassword('ssg123');
     } else {
       setUsername('R101');
       setPassword('student123');
@@ -88,15 +92,15 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <div className="mt-7 sm:mx-auto sm:w-full sm:max-w-md">
+      <div className="mt-7 sm:mx-auto sm:w-full sm:max-w-xl">
         <div className="bg-white/95 backdrop-blur-md py-8 px-6 shadow-2xl rounded-2xl sm:px-10 border border-white/20">
           
-          {/* 5-Role Fast Switcher */}
+          {/* 6-Role Fast Switcher */}
           <div className="mb-6">
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-              Select Demo Role
+              Select Demo Role (الحسابات التجريبية)
             </label>
-            <div className="grid grid-cols-5 gap-1 p-1 bg-slate-100 rounded-xl">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 p-1.5 bg-slate-100 rounded-xl">
               <button
                 type="button"
                 onClick={() => fillDemoAccount('admin')}
@@ -165,6 +169,20 @@ export default function LoginPage() {
               >
                 <GraduationCap className="w-4 h-4" />
                 <span>Student</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fillDemoAccount('ssg')}
+                className={`py-2 px-1 text-[11px] font-bold rounded-lg transition-all flex flex-col items-center gap-1 ${
+                  selectedRole === 'ssg'
+                    ? 'bg-rose-700 text-white shadow'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+                title="SSG Student Council (مجلس الطلبة / رصد النشاط)"
+              >
+                <Award className="w-4 h-4" />
+                <span>مجلس الطلبة</span>
               </button>
             </div>
           </div>

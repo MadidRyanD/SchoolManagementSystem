@@ -79,10 +79,11 @@ export default function DashboardOverviewPage() {
   const role = currentUser?.role || 'admin';
 
   // ---------------------------------------------------------------
-  // STUDENT HOME VIEW: Profile Card + Announcements
+  // STUDENT / SSG HOME VIEW: Profile Card + Announcements
   // ---------------------------------------------------------------
-  if (role === 'student') {
-    const student = students.find(s => s.StudentID === currentUser?.linkedId) || students[0];
+  if (role === 'student' || role === 'ssg') {
+    const isSSG = role === 'ssg';
+    const student = students.find(s => s.StudentID === currentUser?.linkedId || (isSSG && s.IsSSG)) || students[0];
     const enrolledClass = student ? classes.find(c => c.ClassID === student.ClassID) : null;
     const classSubjects = student ? subjects.filter(s => s.ClassID === student.ClassID) : [];
 
@@ -103,12 +104,16 @@ export default function DashboardOverviewPage() {
       <div className="space-y-6">
         {/* Page Heading */}
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-[#126b38]/10 text-[#126b38]">
-            <User className="w-5 h-5" />
+          <div className={`p-2.5 rounded-xl ${isSSG ? 'bg-rose-100 text-rose-800' : 'bg-[#126b38]/10 text-[#126b38]'}`}>
+            {isSSG ? <Award className="w-5 h-5 text-rose-700" /> : <User className="w-5 h-5" />}
           </div>
           <div>
-            <h1 className="text-xl font-black text-slate-900">Student Home</h1>
-            <p className="text-xs text-slate-500 font-serif" dir="rtl">الصفحة الرئيسية للطالب</p>
+            <h1 className="text-xl font-black text-slate-900">
+              {isSSG ? 'SSG Student Council Portal' : 'Student Home'}
+            </h1>
+            <p className="text-xs text-slate-500 font-serif" dir="rtl">
+              {isSSG ? 'الصفحة الرئيسية لمجلس الطلبة ورصد النشاط' : 'الصفحة الرئيسية للطالب'}
+            </p>
           </div>
         </div>
 
@@ -235,33 +240,50 @@ export default function DashboardOverviewPage() {
           {/* RIGHT: Announcements + Quick Links */}
           <div className="lg:col-span-2 space-y-5">
             {/* Welcome Banner */}
-            <div className="bg-[#126b38] rounded-3xl px-6 py-5 text-white shadow-md">
+            <div className={`rounded-3xl px-6 py-5 text-white shadow-md ${
+              isSSG ? 'bg-gradient-to-r from-rose-950 via-rose-900 to-slate-900 border border-rose-700/60' : 'bg-[#126b38]'
+            }`}>
               <div className="flex items-start gap-4">
-                <div className="p-3 rounded-2xl bg-white/10 flex-shrink-0">
-                  <GraduationCap className="w-7 h-7 text-amber-300" />
+                <div className={`p-3 rounded-2xl flex-shrink-0 ${isSSG ? 'bg-rose-500/20 text-rose-300' : 'bg-white/10 text-amber-300'}`}>
+                  {isSSG ? <Award className="w-7 h-7" /> : <GraduationCap className="w-7 h-7" />}
                 </div>
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-amber-200 mb-1">BOLOS KANO! • مرحباً</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-amber-200 mb-1">
+                    {isSSG ? 'SSG STUDENT COUNCIL • مجلس الطلبة والأنشطة' : 'BOLOS KANO! • مرحباً'}
+                  </p>
                   <h2 className="text-xl font-black text-white font-sans">
                     Welcome, {student?.Name || currentUser?.name}!
                   </h2>
                   <p className="text-sm text-emerald-100/90 mt-1.5 font-serif leading-relaxed" dir="rtl">
-                    مرحباً بك في حساب الطالب الخاص بك في JMAA-MoritAko، هو بوابة أكاديمية على الويب للطلاب وموظفي جامعة منيب الكزبري العربية.
+                    {isSSG
+                      ? 'مرحباً بك في بوابة مجلس الطلبة (SSG) في JMAA-MoritAko. بصفتك مسؤولاً في مجلس الطلبة، يمكنك تقييم ورصد درجات مقرر النشاط (Nashat) حصرياً لجميع الصفوف والأدوار.'
+                      : 'مرحباً بك في حساب الطالب الخاص بك في JMAA-MoritAko، هو بوابة أكاديمية على الويب للطلاب وموظفي جامعة منيب الكزبري العربية.'}
                   </p>
                   <p className="text-xs text-emerald-200/80 mt-2 font-sans">
-                    Your student MoritAko account is active for Academic Session <span className="font-bold text-amber-300">2025–2026</span>.
+                    {isSSG
+                      ? 'Your SSG Officer permissions allow direct Nashat grade evaluation and spreadsheet entry.'
+                      : <>Your student MoritAko account is active for Academic Session <span className="font-bold text-amber-300">2025–2026</span>.</>}
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Quick Nav Links */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {[
-                { href: '/dashboard/grades', icon: ClipboardList, labelEn: 'My Grades', labelAr: 'الدرجات الأكاديمية', color: 'bg-rose-50 border-rose-200 text-rose-800' },
-                { href: '/dashboard/schedules', icon: Calendar, labelEn: 'Schedule', labelAr: 'جدول الحصص', color: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
-                { href: '/dashboard/finance', icon: Wallet, labelEn: 'Billing', labelAr: 'الرسوم والمستحقات', color: 'bg-blue-50 border-blue-200 text-blue-800' },
-              ].map(item => (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {(isSSG
+                ? [
+                    { href: '/dashboard/grades', icon: Award, labelEn: 'Nashat Grades', labelAr: 'رصد درجات النشاط', color: 'bg-rose-50 border-rose-300 text-rose-900 ring-2 ring-rose-400/40 shadow-xs' },
+                    { href: '/dashboard/schedules', icon: Calendar, labelEn: 'Activities Schedule', labelAr: 'جدول الأنشطة', color: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
+                    { href: '/dashboard/students', icon: GraduationCap, labelEn: 'Student Directory', labelAr: 'دليل وبيانات الطلاب', color: 'bg-amber-50 border-amber-200 text-amber-900' },
+                    { href: '/dashboard/announcements', icon: Megaphone, labelEn: 'Announcements', labelAr: 'الإعلانات والأنشطة', color: 'bg-blue-50 border-blue-200 text-blue-800' },
+                  ]
+                : [
+                    { href: '/dashboard/grades', icon: ClipboardList, labelEn: 'My Grades', labelAr: 'الدرجات الأكاديمية', color: 'bg-rose-50 border-rose-200 text-rose-800' },
+                    { href: '/dashboard/schedules', icon: Calendar, labelEn: 'Schedule', labelAr: 'جدول الحصص', color: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
+                    { href: '/dashboard/subjects', icon: BookOpen, labelEn: 'Books & E-Library', labelAr: 'المناهج والكتب الدراسية', color: 'bg-amber-50 border-amber-200 text-amber-900' },
+                    { href: '/dashboard/finance', icon: Wallet, labelEn: 'Billing', labelAr: 'الرسوم والمستحقات', color: 'bg-blue-50 border-blue-200 text-blue-800' },
+                  ]
+              ).map(item => (
                 <Link
                   key={item.href}
                   href={item.href}

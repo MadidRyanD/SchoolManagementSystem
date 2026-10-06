@@ -245,6 +245,13 @@ export const initialSubjects: SubjectItem[] = [
   { SubjectID: 18, ClassID: 25, SubjectClass: 'Tawheed (Monotheism)', SubjectCode: 'TWH-101-W', SubjectArabic: 'توحيد', Semester: 'Both' },
   { SubjectID: 19, ClassID: 25, SubjectClass: 'Quran & Tajweed', SubjectCode: 'QUR-101-W', SubjectArabic: 'قرآن', Semester: 'Both' },
   { SubjectID: 20, ClassID: 25, SubjectClass: 'Islamic Morals (Adab & Akhlaq)', SubjectCode: 'ADB-101-W', SubjectArabic: 'آداب وأخلاق', Semester: 'Both' },
+  // Nashat (Student Activity) Subjects - Managed exclusively by SSG (مجلس الطلبة)
+  { SubjectID: 21, ClassID: 1, SubjectClass: 'Nashat (Student Activity)', SubjectCode: 'NST-101', SubjectArabic: 'نشاط', Semester: 'Both', IsNashat: true },
+  { SubjectID: 22, ClassID: 7, SubjectClass: 'Nashat (Student Activity)', SubjectCode: 'NST-201', SubjectArabic: 'نشاط', Semester: 'Both', IsNashat: true },
+  { SubjectID: 23, ClassID: 10, SubjectClass: 'Nashat (Student Activity)', SubjectCode: 'NST-301', SubjectArabic: 'نشاط', Semester: 'Both', IsNashat: true },
+  { SubjectID: 24, ClassID: 13, SubjectClass: 'Nashat (Student Activity)', SubjectCode: 'NST-401', SubjectArabic: 'نشاط', Semester: 'Both', IsNashat: true },
+  { SubjectID: 25, ClassID: 15, SubjectClass: 'Nashat (Student Activity)', SubjectCode: 'NST-501', SubjectArabic: 'نشاط', Semester: 'Both', IsNashat: true },
+  { SubjectID: 26, ClassID: 25, SubjectClass: 'Nashat (Student Activity)', SubjectCode: 'NST-101-W', SubjectArabic: 'نشاط', Semester: 'Both', IsNashat: true },
 ];
 
 // 4. Subject-Teacher Mappings
@@ -270,6 +277,13 @@ export const initialSubjectTeachers: SubjectTeacherItem[] = [
   { ID: 18, ClassID: 25, SubjectID: 18, TeacherID: 7 }, // ريان (Tawheed)
   { ID: 19, ClassID: 25, SubjectID: 19, TeacherID: 2 }, // الشيخ أحمد (Quran)
   { ID: 20, ClassID: 25, SubjectID: 20, TeacherID: 3 }, // فاطمة (Adab)
+  // SSG Nashat Mappings
+  { ID: 21, ClassID: 1, SubjectID: 21, TeacherID: 88 },
+  { ID: 22, ClassID: 7, SubjectID: 22, TeacherID: 88 },
+  { ID: 23, ClassID: 10, SubjectID: 23, TeacherID: 88 },
+  { ID: 24, ClassID: 13, SubjectID: 24, TeacherID: 88 },
+  { ID: 25, ClassID: 15, SubjectID: 25, TeacherID: 88 },
+  { ID: 26, ClassID: 25, SubjectID: 26, TeacherID: 88 },
 ];
 
 // 5. Weekly Class Schedules
@@ -554,6 +568,28 @@ export const initialStudents: StudentItem[] = [
     AdmissionDate: '2023-09-01',
     Remarks: 'Research Assistant in Usul Al-Fiqh',
   },
+  {
+    StudentID: 12,
+    RollNo: 'SSG101',
+    Name: 'Tariq Al-Mansoor (SSG Officer)',
+    NameArabic: 'طارق المنصور (رئيس مجلس الطلبة / النشاط)',
+    Gender: 'Male',
+    Tribe: 'Tamim',
+    Nationality: 'Saudi Arabia',
+    BirthDate: '2005-03-15',
+    BirthPlace: 'Riyadh',
+    Address: 'Student Council Headquarters, Wing B',
+    MobileNumber: '+966 50 999 0011',
+    Email: 'ssg@student.jmaa.edu',
+    ClassID: 1,
+    IdNumber: 'SSG-2026-001',
+    AdmissionDate: '2024-09-01',
+    Remarks: 'President of Supreme Student Council (SSG) - Oversees student Nashat and co-curricular grades',
+    ProfilePic: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    Awards: ['Student Leadership Excellence 2025', 'Community Service Ribbon'],
+    IsSSG: true,
+    SSGPosition: 'رئيس مجلس الطلبة ومسؤول النشاط',
+  },
 ];
 
 // 7. Default Grading Criteria
@@ -607,12 +643,17 @@ export const initialGrades: StudentGradeItem[] = [
   { id: 'grd-s1-sub5-p5', StudentID: 1, ClassID: 1, SubjectID: 5, TeacherID: 4, Period: '5th', CriteriaScores: { 'crit-att': 64, 'crit-quiz': 59, 'crit-mid': 60, 'crit-final': 59 }, FinalGrade: 59, GradedAt: '2026-09-20T11:00:00Z', IsLocked: false },
   { id: 'grd-s1-sub5-p6', StudentID: 1, ClassID: 1, SubjectID: 5, TeacherID: 4, Period: '6th', CriteriaScores: { 'crit-att': 66, 'crit-quiz': 62, 'crit-mid': 63, 'crit-final': 62 }, FinalGrade: 62, GradedAt: '2026-09-25T11:00:00Z', IsLocked: false },
 
+  // Subject 21: نشاط (Nashat - Student Activity / مجلس الطلبة) -> ممتاز
+  { id: 'grd-s1-sub21-p1', StudentID: 1, ClassID: 1, SubjectID: 21, TeacherID: 88, Period: '1st', CriteriaScores: { 'crit-att': 98, 'crit-quiz': 95, 'crit-mid': 94, 'crit-final': 96 }, FinalGrade: 96, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
+  { id: 'grd-s1-sub21-p2', StudentID: 1, ClassID: 1, SubjectID: 21, TeacherID: 88, Period: '2nd', CriteriaScores: { 'crit-att': 96, 'crit-quiz': 94, 'crit-mid': 95, 'crit-final': 95 }, FinalGrade: 95, GradedAt: '2026-09-05T11:00:00Z', IsLocked: false },
+
   // Student 2 (Priya Al-Kindi - Class 1)
   { id: 'grd-s2-sub1-p1', StudentID: 2, ClassID: 1, SubjectID: 1, TeacherID: 1, Period: '1st', CriteriaScores: { 'crit-att': 100, 'crit-quiz': 97, 'crit-mid': 98, 'crit-final': 99 }, FinalGrade: 98, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
   { id: 'grd-s2-sub2-p1', StudentID: 2, ClassID: 1, SubjectID: 2, TeacherID: 2, Period: '1st', CriteriaScores: { 'crit-att': 95, 'crit-quiz': 92, 'crit-mid': 94, 'crit-final': 95 }, FinalGrade: 94, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
   { id: 'grd-s2-sub3-p1', StudentID: 2, ClassID: 1, SubjectID: 3, TeacherID: 2, Period: '1st', CriteriaScores: { 'crit-att': 92, 'crit-quiz': 90, 'crit-mid': 91, 'crit-final': 90 }, FinalGrade: 91, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
   { id: 'grd-s2-sub4-p1', StudentID: 2, ClassID: 1, SubjectID: 4, TeacherID: 4, Period: '1st', CriteriaScores: { 'crit-att': 88, 'crit-quiz': 85, 'crit-mid': 87, 'crit-final': 86 }, FinalGrade: 86, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
   { id: 'grd-s2-sub5-p1', StudentID: 2, ClassID: 1, SubjectID: 5, TeacherID: 4, Period: '1st', CriteriaScores: { 'crit-att': 85, 'crit-quiz': 82, 'crit-mid': 84, 'crit-final': 83 }, FinalGrade: 83, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
+  { id: 'grd-s2-sub21-p1', StudentID: 2, ClassID: 1, SubjectID: 21, TeacherID: 88, Period: '1st', CriteriaScores: { 'crit-att': 95, 'crit-quiz': 98, 'crit-mid': 97, 'crit-final': 98 }, FinalGrade: 97, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
 
   // Student 3 (Rohan Al-Baghdadi - Class 7)
   { id: 'grd-s3-sub7-p1', StudentID: 3, ClassID: 7, SubjectID: 7, TeacherID: 1, Period: '1st', CriteriaScores: { 'crit-att': 92, 'crit-quiz': 90, 'crit-mid': 91, 'crit-final': 90 }, FinalGrade: 90, GradedAt: '2026-09-01T12:00:00Z', IsLocked: true, UnlockRequested: false },

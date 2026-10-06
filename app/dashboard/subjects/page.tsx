@@ -11,6 +11,7 @@ import {
   SubjectTeacherItem,
   ClassScheduleItem,
   DepartmentType,
+  StudentItem,
 } from '@/lib/types';
 import {
   BookOpen,
@@ -35,7 +36,11 @@ import {
   MapPin,
   ClipboardList,
   ArrowUpRight,
+  ExternalLink,
+  FolderOpen,
+  Eye,
 } from 'lucide-react';
+import EBookReaderModal from './EBookReaderModal';
 
 export default function SubjectsPage() {
   const [classes, setClasses] = useState<ClassItem[]>([]);
@@ -43,12 +48,48 @@ export default function SubjectsPage() {
   const [teachers, setTeachers] = useState<TeacherItem[]>([]);
   const [subjectTeachers, setSubjectTeachers] = useState<SubjectTeacherItem[]>([]);
   const [schedules, setSchedules] = useState<ClassScheduleItem[]>([]);
+  const [students, setStudents] = useState<StudentItem[]>([]);
 
   // Permissions & Current User
   const currentUser = AuthService.getSession();
   const isAdmin = currentUser?.role === 'admin';
   const isMudir = currentUser?.role === 'mudir';
   const canManage = isAdmin || isMudir;
+
+  // E-Book Reader Modal State
+  const [readerModal, setReaderModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    arabicTitle?: string;
+    subjectName?: string;
+    driveUrl?: string;
+  }>({
+    isOpen: false,
+    title: 'Central Digital Library',
+    arabicTitle: 'المكتبة الرقمية والمناهج المعتمدة',
+    subjectName: '',
+    driveUrl: 'https://drive.google.com/drive/folders/1fCXKezhMzm93fm9S98keWyxLfG-N2NDf?usp=drive_link',
+  });
+
+  const openCentralLibrary = () => {
+    setReaderModal({
+      isOpen: true,
+      title: 'Central Digital Library & Official Syllabi',
+      arabicTitle: 'المكتبة الرقمية المركزية والمناهج المعتمدة',
+      subjectName: 'All University Course Books',
+      driveUrl: 'https://drive.google.com/drive/folders/1fCXKezhMzm93fm9S98keWyxLfG-N2NDf?usp=drive_link',
+    });
+  };
+
+  const openSubjectBook = (sub: SubjectItem) => {
+    setReaderModal({
+      isOpen: true,
+      title: sub.BookTitle || `${sub.SubjectClass} Textbook`,
+      arabicTitle: sub.SubjectArabic ? `كتاب مقرر ${sub.SubjectArabic}` : 'كتاب المقرر الدراسي المعتمد',
+      subjectName: sub.SubjectClass,
+      driveUrl: sub.BookDriveUrl || 'https://drive.google.com/drive/folders/1fCXKezhMzm93fm9S98keWyxLfG-N2NDf?usp=drive_link',
+    });
+  };
 
   // Search & Filter states
   const [search, setSearch] = useState('');
@@ -67,6 +108,8 @@ export default function SubjectsPage() {
   const [subjectName, setSubjectName] = useState('');
   const [subjectArabic, setSubjectArabic] = useState('');
   const [subjectCode, setSubjectCode] = useState('');
+  const [bookTitle, setBookTitle] = useState('');
+  const [bookDriveUrl, setBookDriveUrl] = useState('');
 
   // Optional instant assignment in modal
   const [assignNow, setAssignNow] = useState(false);
@@ -105,6 +148,7 @@ export default function SubjectsPage() {
     setTeachers(DataStore.getTeachers());
     setSubjectTeachers(DataStore.getSubjectTeachers());
     setSchedules(DataStore.getSchedules());
+    setStudents(DataStore.getStudents());
 
     if (clsList.length > 0 && selectedClassId === 1) {
       setSelectedClassId(clsList[0].ClassID);
@@ -148,6 +192,8 @@ export default function SubjectsPage() {
     setSubjectName('');
     setSubjectArabic('');
     setSubjectCode('');
+    setBookTitle('');
+    setBookDriveUrl('');
     setAssignNow(false);
     setSelectedDept('5-days');
     setSelectedLevel('Ibtidaiyyah');
@@ -161,6 +207,8 @@ export default function SubjectsPage() {
     setSubjectName(s.SubjectClass);
     setSubjectArabic(s.SubjectArabic || '');
     setSubjectCode(s.SubjectCode || '');
+    setBookTitle(s.BookTitle || '');
+    setBookDriveUrl(s.BookDriveUrl || '');
     setSelectedClassId(s.ClassID);
     const targetClass = classes.find((c) => c.ClassID === s.ClassID);
     if (targetClass) {
@@ -179,6 +227,8 @@ export default function SubjectsPage() {
   const applyPreset = (preset: { name: string; arabic: string; code: string }) => {
     setSubjectName(preset.name);
     setSubjectArabic(preset.arabic);
+    setBookTitle(preset.arabic ? `كتاب مقرر ${preset.arabic}` : `${preset.name} Course Textbook`);
+    setBookDriveUrl('https://drive.google.com/drive/folders/1fCXKezhMzm93fm9S98keWyxLfG-N2NDf?usp=drive_link');
     const targetClass = classes.find((c) => c.ClassID === selectedClassId);
     const yearGrade = targetClass?.YearGrade || 1;
     setSubjectCode(`${preset.code}-${yearGrade}01`);
@@ -204,6 +254,8 @@ export default function SubjectsPage() {
         SubjectClass: subjectName.trim(),
         SubjectArabic: subjectArabic.trim() || undefined,
         SubjectCode: subjectCode.trim() || undefined,
+        BookTitle: bookTitle.trim() || undefined,
+        BookDriveUrl: bookDriveUrl.trim() || undefined,
       });
       setMsg({ text: `Subject "${subjectName}" updated successfully!`, type: 'success' });
     } else {
@@ -212,6 +264,8 @@ export default function SubjectsPage() {
         SubjectClass: subjectName.trim(),
         SubjectArabic: subjectArabic.trim() || undefined,
         SubjectCode: subjectCode.trim() || undefined,
+        BookTitle: bookTitle.trim() || undefined,
+        BookDriveUrl: bookDriveUrl.trim() || undefined,
       });
       setMsg({ text: `New subject "${subjectName}" added successfully!`, type: 'success' });
     }
@@ -276,6 +330,253 @@ export default function SubjectsPage() {
     const matchesClass = filterClass === 0 || s.ClassID === filterClass;
     return matchesSearch && matchesDept && matchesLevel && matchesClass;
   });
+
+  // -------------------------------------------------------------
+  // STUDENT SPECIFIC CURRICULUM & E-BOOKS VIEW
+  // -------------------------------------------------------------
+  const isStudent = currentUser?.role === 'student';
+  const currentStudent = useMemo(() => {
+    return (
+      students.find((s) => s.StudentID === currentUser?.linkedId) ||
+      students.find((s) => s.Email === currentUser?.email) ||
+      students[0]
+    );
+  }, [students, currentUser]);
+
+  const studentClass = useMemo(() => {
+    if (!currentStudent) return null;
+    return classes.find((c) => c.ClassID === currentStudent.ClassID);
+  }, [classes, currentStudent]);
+
+  const studentSubjects = useMemo(() => {
+    if (!currentStudent) return [];
+    return subjects.filter((s) => s.ClassID === currentStudent.ClassID);
+  }, [subjects, currentStudent]);
+
+  const filteredStudentSubjects = useMemo(() => {
+    return studentSubjects.filter((s) => {
+      const matchesSearch =
+        s.SubjectClass.toLowerCase().includes(search.toLowerCase()) ||
+        (s.SubjectArabic || '').toLowerCase().includes(search.toLowerCase()) ||
+        (s.SubjectCode || '').toLowerCase().includes(search.toLowerCase());
+      return matchesSearch;
+    });
+  }, [studentSubjects, search]);
+
+  if (isStudent) {
+    return (
+      <div className="space-y-6">
+        {/* Top Student Header Banner */}
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-slate-900 text-white rounded-3xl p-6 sm:p-7 shadow-xl border border-emerald-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-amber-400 bg-slate-800 shadow-md flex items-center justify-center shrink-0">
+              {currentStudent?.ProfilePic ? (
+                <img
+                  src={currentStudent.ProfilePic}
+                  alt={currentStudent.Name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <GraduationCap className="w-8 h-8 text-amber-300" />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-400/20 text-amber-300 font-mono">
+                  Student Curriculum &bull; المناهج والكتب الدراسية
+                </span>
+                {currentStudent?.IdNumber && (
+                  <span className="text-xs text-emerald-300 font-mono">
+                    {currentStudent.IdNumber}
+                  </span>
+                )}
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2 mt-0.5">
+                <span>{currentStudent?.NameArabic || currentStudent?.Name}</span>
+                <span className="text-emerald-200 text-sm font-normal">
+                  ({currentStudent?.Name})
+                </span>
+              </h1>
+              <p className="text-xs text-emerald-200/90 mt-0.5 font-serif" dir="rtl">
+                {studentClass?.ClassName} &bull; {studentClass?.Department === '2-days' ? 'قسم يومين (Weekend)' : 'قسم ٥ أيام (5-Days)'} &bull; تصفح وقراءة المقررات والكتب الدراسية المعتمدة مباشرة
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Counter Badges */}
+          <div className="flex items-center gap-3">
+            <div className="bg-slate-950/60 border border-emerald-700/60 rounded-2xl px-4 py-2.5 text-center">
+              <span className="text-[11px] text-amber-300 block font-bold font-serif">المواد المسجلة</span>
+              <span className="text-xl font-black text-white font-mono">{studentSubjects.length}</span>
+            </div>
+            <div className="bg-slate-950/60 border border-emerald-700/60 rounded-2xl px-4 py-2.5 text-center">
+              <span className="text-[11px] text-cyan-300 block font-bold font-serif">المرحلة</span>
+              <span className="text-xs font-bold text-white font-serif">{studentClass?.Level || 'مرحلة'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Central Digital Library Banner */}
+        <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-slate-950 rounded-3xl p-5 sm:p-6 shadow-md border-2 border-amber-400 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-slate-950 text-amber-300 flex items-center justify-center shadow shrink-0">
+              <FolderOpen className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-slate-950 text-amber-300 font-mono">
+                  Cloud E-Library &bull; Google Drive
+                </span>
+                <span className="text-[11px] font-bold text-amber-950 font-serif" dir="rtl">
+                  المكتبة الرقمية والمناهج المعتمدة
+                </span>
+              </div>
+              <h2 className="text-base sm:text-lg font-black text-slate-950 mt-0.5">
+                Central Digital Curriculum & Approved Textbooks
+              </h2>
+              <p className="text-xs text-amber-950/90 font-serif" dir="rtl">
+                تصفح وافتح جميع الكتب المدرسية والمناهج المعتمدة لجامعة منيب الكزبري مباشرة في بيئة قراءة رقمية مدمجة
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={openCentralLibrary}
+              className="px-5 py-2.5 bg-slate-950 hover:bg-slate-900 text-amber-300 hover:text-white rounded-xl text-xs font-black shadow cursor-pointer transition-all flex items-center gap-2 transform active:scale-95"
+            >
+              <BookOpen className="w-4 h-4 text-amber-400" />
+              <span>Browse All Books (تصفح جميع الكتب)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search subject by name or code (بحث في المواد والكتب)..."
+              className="w-full pl-9 pr-4 py-2 text-xs font-medium border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600/30"
+            />
+          </div>
+          <span className="text-xs font-bold text-slate-600 font-serif" dir="rtl">
+            {filteredStudentSubjects.length} من أصل {studentSubjects.length} مادة
+          </span>
+        </div>
+
+        {/* Student Subjects Grid */}
+        <div className="bg-[#dfd4b8] border-2 border-[#ccbf99] rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#c4b68e] pb-3" dir="rtl">
+            <h3 className="text-base sm:text-lg font-black text-slate-950 font-serif flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-emerald-900" />
+              <span>المقررات والكتب الدراسية المعتمدة (My Course Textbooks & Curriculum)</span>
+            </h3>
+            <span className="text-xs font-bold text-slate-800 font-serif">
+              الصف: {studentClass?.ClassName || 'فصل الطالب'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filteredStudentSubjects.map((sub) => {
+              const alloc = subjectTeachers.find(
+                (st) => st.SubjectID === sub.SubjectID && st.ClassID === sub.ClassID
+              );
+              const teacher = alloc
+                ? teachers.find((t) => t.TeacherID === alloc.TeacherID)
+                : null;
+              const subSchedules = schedules.filter(
+                (sch) => sch.SubjectID === sub.SubjectID && sch.ClassID === sub.ClassID
+              );
+
+              return (
+                <div
+                  key={sub.SubjectID}
+                  className="bg-white p-4 rounded-2xl border border-[#cfc39f] shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between space-y-3 text-right"
+                  dir="rtl"
+                >
+                  <div className="space-y-2">
+                    {/* Level / Dept badge */}
+                    <div className="flex items-center justify-between">
+                      <span className="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-black bg-[#b79e55] text-slate-950 font-serif">
+                        {studentClass?.Level || 'مرحلة دراسية'}
+                      </span>
+                      {sub.SubjectCode && (
+                        <span className="text-[10px] uppercase font-bold font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                          {sub.SubjectCode}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Subject Names */}
+                    <div className="text-center pt-1">
+                      <h4 className="text-lg font-black text-slate-950 font-serif">
+                        {sub.SubjectArabic || sub.SubjectClass}
+                      </h4>
+                      <p className="text-xs text-slate-500 font-sans mt-0.5" dir="ltr">
+                        {sub.SubjectClass}
+                      </p>
+                    </div>
+
+                    {/* Teacher & Schedule Info */}
+                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 space-y-1 text-xs">
+                      {teacher && (
+                        <div className="flex items-center gap-2">
+                          <UserCheck className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                          <span className="font-bold text-slate-800">
+                            الأستاذ: {teacher.NameArabic || teacher.Name}
+                          </span>
+                        </div>
+                      )}
+                      {subSchedules.length > 0 && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-600 font-mono">
+                          <Clock className="w-3 h-3 text-amber-600 shrink-0" />
+                          <span>{subSchedules[0].Day} ({subSchedules[0].StartTime}-{subSchedules[0].EndTime})</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Textbook Button */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => openSubjectBook(sub)}
+                      className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center justify-center gap-1.5 transition-all active:scale-98"
+                    >
+                      <BookOpen className="w-4 h-4 text-slate-950" />
+                      <span>Read Course Book</span>
+                      <span className="font-serif text-[11px] font-bold" dir="rtl">(قراءة المقرر الدراسي)</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {filteredStudentSubjects.length === 0 && (
+            <div className="bg-white rounded-2xl p-8 text-center text-slate-500 font-serif text-sm">
+              لا توجد مواد دراسية مسجلة مطابقة للبحث.
+            </div>
+          )}
+        </div>
+
+        {/* E-Book Reader Modal */}
+        <EBookReaderModal
+          isOpen={readerModal.isOpen}
+          onClose={() => setReaderModal((prev) => ({ ...prev, isOpen: false }))}
+          title={readerModal.title}
+          arabicTitle={readerModal.arabicTitle}
+          subjectName={readerModal.subjectName}
+          driveUrl={readerModal.driveUrl}
+        />
+      </div>
+    );
+  }
 
   // -------------------------------------------------------------
   // TEACHER SPECIFIC CURRICULUM VIEW (MOVED FROM SCHEDULES)
@@ -390,6 +691,42 @@ export default function SubjectsPage() {
           </div>
         </div>
 
+        {/* Central Digital Library Banner */}
+        <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-slate-950 rounded-3xl p-5 sm:p-6 shadow-md border-2 border-amber-400 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-slate-950 text-amber-300 flex items-center justify-center shadow shrink-0">
+              <FolderOpen className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-slate-950 text-amber-300 font-mono">
+                  Cloud E-Library &bull; Google Drive
+                </span>
+                <span className="text-[11px] font-bold text-amber-950 font-serif" dir="rtl">
+                  المكتبة الرقمية والمناهج المعتمدة
+                </span>
+              </div>
+              <h2 className="text-base sm:text-lg font-black text-slate-950 mt-0.5">
+                Central Digital Curriculum & Approved Textbooks
+              </h2>
+              <p className="text-xs text-amber-950/90 font-serif" dir="rtl">
+                تصفح وافتح جميع الكتب المدرسية والمناهج المعتمدة لجامعة منيب الكزبري مباشرة في بيئة قراءة رقمية مدمجة
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={openCentralLibrary}
+              className="px-5 py-2.5 bg-slate-950 hover:bg-slate-900 text-amber-300 hover:text-white rounded-xl text-xs font-black shadow cursor-pointer transition-all flex items-center gap-2 transform active:scale-95"
+            >
+              <BookOpen className="w-4 h-4 text-amber-400" />
+              <span>Browse All Books (تصفح جميع الكتب)</span>
+            </button>
+          </div>
+        </div>
+
         {/* Search & Filter Bar */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
@@ -465,7 +802,7 @@ export default function SubjectsPage() {
                   dir="rtl"
                 >
                   <div className="space-y-2">
-                    {/* Grade Level Tag (Centered / right styled as in screenshot) */}
+                    {/* Grade Level Tag */}
                     <div className="flex items-center justify-between">
                       <span className="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-black bg-[#b79e55] text-slate-950 font-serif">
                         مرحلة: {cls?.Level || cls?.ClassName || 'مرحلة دراسية'}
@@ -490,7 +827,7 @@ export default function SubjectsPage() {
                     </div>
                   </div>
 
-                  {/* Actions & Schedule counts matching screenshot */}
+                  {/* Actions: Textbook + Grades */}
                   <div className="space-y-2 pt-2 border-t border-slate-100">
                     <div className="flex items-center justify-between text-xs">
                       <Link
@@ -504,6 +841,16 @@ export default function SubjectsPage() {
                         {subSchedules.length} حصص/أسبوع
                       </span>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => openSubjectBook(sub)}
+                      className="w-full py-2 px-3 bg-[#dfd4b8] hover:bg-[#d5c7a0] text-slate-900 border border-[#bfae83] font-black text-xs rounded-xl shadow-2xs cursor-pointer flex items-center justify-center gap-1.5 transition-all active:scale-98"
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-emerald-800" />
+                      <span>{sub.BookTitle || 'Course Textbook'}</span>
+                      <span className="font-serif text-[11px] text-slate-700" dir="rtl">(كتاب المقرر)</span>
+                    </button>
 
                     <Link
                       href={`/dashboard/grades?subjectId=${sub.SubjectID}&classId=${sub.ClassID}`}
@@ -525,6 +872,16 @@ export default function SubjectsPage() {
             </div>
           )}
         </div>
+
+        {/* E-Book Reader Modal */}
+        <EBookReaderModal
+          isOpen={readerModal.isOpen}
+          onClose={() => setReaderModal((prev) => ({ ...prev, isOpen: false }))}
+          title={readerModal.title}
+          arabicTitle={readerModal.arabicTitle}
+          subjectName={readerModal.subjectName}
+          driveUrl={readerModal.driveUrl}
+        />
       </div>
     );
   }
@@ -596,6 +953,42 @@ export default function SubjectsPage() {
             </span>
             <span className="text-2xl font-black text-emerald-400">{stats.allocatedSubs}</span>
           </div>
+        </div>
+      </div>
+
+      {/* Central Digital Library Banner */}
+      <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-slate-950 rounded-3xl p-5 sm:p-6 shadow-md border-2 border-amber-400 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-slate-950 text-amber-300 flex items-center justify-center shadow shrink-0">
+            <FolderOpen className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-slate-950 text-amber-300 font-mono">
+                Cloud E-Library &bull; Google Drive Integration
+              </span>
+              <span className="text-[11px] font-bold text-amber-950 font-serif" dir="rtl">
+                المكتبة الرقمية والمناهج المعتمدة
+              </span>
+            </div>
+            <h2 className="text-base sm:text-lg font-black text-slate-950 mt-0.5">
+              JMAA-MoritAko Central Digital Library & Curriculum Books
+            </h2>
+            <p className="text-xs text-amber-950/90 font-serif" dir="rtl">
+              تصفح وقراءة كافة المقررات والكتب الدراسية المعتمدة لجميع المراحل الدراسية عبر واجهة Google Drive السحابية المدمجة
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={openCentralLibrary}
+            className="px-5 py-2.5 bg-slate-950 hover:bg-slate-900 text-amber-300 hover:text-white rounded-xl text-xs font-black shadow cursor-pointer transition-all flex items-center gap-2 transform active:scale-95"
+          >
+            <BookOpen className="w-4 h-4 text-amber-400" />
+            <span>Open Central E-Library (فتح المكتبة الرقمية)</span>
+          </button>
         </div>
       </div>
 
@@ -705,7 +1098,7 @@ export default function SubjectsPage() {
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-slate-600 font-bold text-xs uppercase tracking-wider border-b border-slate-200">
               <tr>
-                <th className="py-3.5 px-4">Subject</th>
+                <th className="py-3.5 px-4">Subject & Textbook</th>
                 <th className="py-3.5 px-4">Class & Department</th>
                 <th className="py-3.5 px-4">Assigned Teacher</th>
                 <th className="py-3.5 px-4">Timetable Schedule</th>
@@ -750,6 +1143,18 @@ export default function SubjectsPage() {
                             {s.SubjectArabic}
                           </span>
                         )}
+                        <div className="mt-1">
+                          <button
+                            type="button"
+                            onClick={() => openSubjectBook(s)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-colors cursor-pointer"
+                            title="Preview textbook in embedded reader"
+                          >
+                            <BookOpen className="w-3 h-3 text-amber-700" />
+                            <span>{s.BookTitle || 'Course Book'}</span>
+                            <span className="font-serif text-[10px]" dir="rtl">(كتاب المقرر)</span>
+                          </button>
+                        </div>
                       </td>
 
                       <td className="py-3.5 px-4">
@@ -779,7 +1184,7 @@ export default function SubjectsPage() {
                               <p className="font-bold text-xs text-slate-900">{teacher.Name}</p>
                               {teacher.NameArabic && (
                                 <p className="text-[10px] text-slate-500 font-serif" dir="rtl">
-                                  {teacher.NameArabic}
+                                   {teacher.NameArabic}
                                 </p>
                               )}
                             </div>
@@ -821,6 +1226,14 @@ export default function SubjectsPage() {
 
                       {canManage && (
                         <td className="py-3.5 px-4 text-right space-x-1 whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => openSubjectBook(s)}
+                            className="p-1.5 text-amber-700 hover:bg-amber-50 rounded-lg cursor-pointer transition-colors inline-block"
+                            title="Read E-Book / قراءة الكتاب المقرر"
+                          >
+                            <BookOpen className="w-4 h-4" />
+                          </button>
                           <Link
                             href={`/dashboard/teachers/assignments?subjectId=${s.SubjectID}&classId=${s.ClassID}`}
                             className="p-1.5 text-emerald-700 hover:bg-emerald-50 rounded-lg inline-block transition-colors"
@@ -1039,7 +1452,61 @@ export default function SubjectsPage() {
                 </div>
               </div>
 
-              {/* STEP 3: OPTIONAL INSTANT TEACHER & TIMETABLE ALLOCATION */}
+              {/* STEP 3: COURSE TEXTBOOK & E-BOOK LINK (GOOGLE DRIVE) */}
+              <div className="space-y-3 pt-3 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
+                    <BookOpen className="w-4 h-4 text-amber-600" />
+                    Step 3: Course Textbook & E-Book Link (Google Drive)
+                  </span>
+                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full font-bold border border-emerald-200">
+                    Zero Supabase MB Usage
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Textbook Title (عنوان الكتاب المقرر)
+                    </label>
+                    <input
+                      type="text"
+                      value={bookTitle}
+                      onChange={(e) => setBookTitle(e.target.value)}
+                      placeholder="e.g. كتاب الفقه الميسر / Fiqh Textbook"
+                      className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-amber-500 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Google Drive URL (رابط الكتاب السحابي)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setBookDriveUrl('https://drive.google.com/drive/folders/1fCXKezhMzm93fm9S98keWyxLfG-N2NDf?usp=drive_link')}
+                        className="text-[10px] text-amber-800 hover:text-amber-950 font-bold underline cursor-pointer"
+                      >
+                        Auto-fill Central Folder
+                      </button>
+                    </div>
+                    <input
+                      type="url"
+                      value={bookDriveUrl}
+                      onChange={(e) => setBookDriveUrl(e.target.value)}
+                      placeholder="https://drive.google.com/..."
+                      className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm bg-white font-mono text-xs focus:ring-2 focus:ring-amber-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-500 bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/60 leading-relaxed font-sans">
+                  💡 <strong>Google Drive Cloud Storage:</strong> Linking to Google Drive avoids consuming Supabase MB quota, allowing teachers and students to view high-resolution curriculum PDFs with instant in-browser preview, zoom, and search.
+                </p>
+              </div>
+
+              {/* STEP 4: OPTIONAL INSTANT TEACHER & TIMETABLE ALLOCATION */}
               {!editingId && (
                 <div className="space-y-3 pt-3 border-t border-slate-100">
                   <div className="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/80">
@@ -1146,6 +1613,16 @@ export default function SubjectsPage() {
           </div>
         </div>
       )}
+
+      {/* E-Book Reader Modal in Mudir / Admin View */}
+      <EBookReaderModal
+        isOpen={readerModal.isOpen}
+        onClose={() => setReaderModal((prev) => ({ ...prev, isOpen: false }))}
+        title={readerModal.title}
+        arabicTitle={readerModal.arabicTitle}
+        subjectName={readerModal.subjectName}
+        driveUrl={readerModal.driveUrl}
+      />
     </div>
   );
 }

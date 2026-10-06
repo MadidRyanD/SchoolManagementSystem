@@ -30,6 +30,7 @@ import {
   ShieldAlert,
   Send,
   Check,
+  Award,
 } from 'lucide-react';
 import { toHindiNumerals } from '@/lib/numerals';
 
@@ -43,6 +44,7 @@ interface ExcelGradeEditorProps {
   onBack: () => void;
   teacherId: number;
   isMudir?: boolean;
+  isSSG?: boolean;
   onSaveSuccess: () => void;
 }
 
@@ -58,6 +60,7 @@ export default function ExcelGradeEditor({
   onBack,
   teacherId,
   isMudir = false,
+  isSSG = false,
   onSaveSuccess,
 }: ExcelGradeEditorProps) {
   const [viewMode, setViewMode] = useState<EditorViewMode>('dawr');
@@ -70,6 +73,25 @@ export default function ExcelGradeEditor({
   const [toastMsg, setToastMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [quickFillVal, setQuickFillVal] = useState<string>('85');
   const [showQuickFill, setShowQuickFill] = useState(false);
+
+  // Nashat Subject & SSG Permission Checks
+  const isNashatSubject = Boolean(
+    subject.IsNashat ||
+    subject.SubjectArabic === 'نشاط' ||
+    (subject.SubjectClass && subject.SubjectClass.toLowerCase().includes('nashat'))
+  );
+
+  // Permission logic:
+  // - SSG can ONLY edit Nashat subjects
+  // - Regular teachers can edit academic subjects, but NOT Nashat (since SSG keeps Nashat grades)
+  // - Mudir is supervisory inspector
+  const canUserEditThisSubject = useMemo(() => {
+    if (isMudir) return false;
+    if (isSSG) return isNashatSubject;
+    // Regular teacher cannot edit Nashat (it's managed exclusively by SSG)
+    if (isNashatSubject) return false;
+    return true;
+  }, [isMudir, isSSG, isNashatSubject]);
 
   // Focus matrix for Excel-style keyboard navigation
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -388,6 +410,17 @@ export default function ExcelGradeEditor({
     if (isMudir) {
       setToastMsg({ type: 'error', text: 'حساب المدير في وضع القراءة والمعاينة فقط.' });
       setTimeout(() => setToastMsg(null), 3000);
+      return;
+    }
+
+    if (!canUserEditThisSubject) {
+      setToastMsg({
+        type: 'error',
+        text: isSSG
+          ? 'عذراً، يحق لمجلس الطلبة تعديل درجات مادة النشاط فقط.'
+          : 'عذراً، مادة النشاط مسندة لمجلس الطلبة (SSG) للتقييم والرصد.',
+      });
+      setTimeout(() => setToastMsg(null), 4000);
       return;
     }
 
@@ -741,17 +774,32 @@ export default function ExcelGradeEditor({
             <button
               type="button"
               onClick={handleSaveAll}
-              disabled={isMudir || activeLockInfo.isLocked}
+              disabled={!canUserEditThisSubject || activeLockInfo.isLocked}
               className={`px-5 py-2 text-white font-extrabold text-xs sm:text-sm rounded-full shadow-xs cursor-pointer flex items-center gap-1.5 transition-all active:scale-95 ${
-                activeLockInfo.isLocked
+                !canUserEditThisSubject
+                  ? 'bg-slate-600 cursor-not-allowed opacity-80'
+                  : activeLockInfo.isLocked
                   ? 'bg-slate-600 cursor-not-allowed opacity-80'
                   : hasUnsavedChanges
                   ? 'bg-emerald-700 hover:bg-emerald-600 ring-2 ring-amber-400 ring-offset-1 animate-pulse'
                   : 'bg-[#187d44] hover:bg-[#136838]'
               }`}
-              title={activeLockInfo.isLocked ? 'سجل الدرجات مقفل (انتهت مهلة التعديل)' : 'Save Grades (Ctrl+S)'}
+              title={
+                !canUserEditThisSubject
+                  ? isSSG
+                    ? 'خاص بمادة النشاط فقط لمجلس الطلبة'
+                    : 'مادة النشاط مخصصة لمجلس الطلبة فقط'
+                  : activeLockInfo.isLocked
+                  ? 'سجل الدرجات مقفل (انتهت مهلة التعديل)'
+                  : 'Save Grades (Ctrl+S)'
+              }
             >
-              {activeLockInfo.isLocked ? (
+              {!canUserEditThisSubject ? (
+                <>
+                  <Lock className="w-4 h-4 text-amber-300" />
+                  <span>{isSSG ? 'خاص بالنشاط فقط' : 'مسند لمجلس الطلبة'}</span>
+                </>
+              ) : activeLockInfo.isLocked ? (
                 <>
                   <Lock className="w-4 h-4 text-red-300" />
                   <span>السجل مقفل (Locked)</span>
@@ -765,64 +813,66 @@ export default function ExcelGradeEditor({
             </button>
 
             {/* Quick Fill Button */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowQuickFill(!showQuickFill)}
-                className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-full shadow-xs cursor-pointer flex items-center gap-1"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>تعبئة سريعة (Quick Fill)</span>
-              </button>
-
-              {showQuickFill && (
-                <div
-                  className="absolute left-0 top-full mt-2 w-56 p-3 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 space-y-2 text-right"
-                  dir="rtl"
+            {canUserEditThisSubject && !activeLockInfo.isLocked && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickFill(!showQuickFill)}
+                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-full shadow-xs cursor-pointer flex items-center gap-1"
                 >
-                  <span className="block text-xs font-bold text-slate-700">تعبئة الدرجات الفارغة:</span>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={quickFillVal}
-                      onChange={e => setQuickFillVal(e.target.value)}
-                      placeholder="85"
-                      className="w-20 px-2 py-1 border border-slate-300 rounded-lg text-center font-mono font-bold text-sm bg-slate-50"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleApplyQuickFill}
-                      className="flex-1 py-1 bg-emerald-800 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold cursor-pointer"
-                    >
-                      تطبيق
-                    </button>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>تعبئة سريعة (Quick Fill)</span>
+                </button>
+
+                {showQuickFill && (
+                  <div
+                    className="absolute left-0 top-full mt-2 w-56 p-3 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 space-y-2 text-right"
+                    dir="rtl"
+                  >
+                    <span className="block text-xs font-bold text-slate-700">تعبئة الدرجات الفارغة:</span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={quickFillVal}
+                        onChange={e => setQuickFillVal(e.target.value)}
+                        placeholder="85"
+                        className="w-20 px-2 py-1 border border-slate-300 rounded-lg text-center font-mono font-bold text-sm bg-slate-50"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyQuickFill}
+                        className="flex-1 py-1 bg-emerald-800 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold cursor-pointer"
+                      >
+                        تطبيق
+                      </button>
+                    </div>
+                    <div className="flex gap-1 justify-center pt-1 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => setQuickFillVal('95')}
+                        className="px-2 py-0.5 text-[11px] bg-slate-100 hover:bg-slate-200 rounded text-slate-700"
+                      >
+                        95 (ممتاز)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuickFillVal('85')}
+                        className="px-2 py-0.5 text-[11px] bg-slate-100 hover:bg-slate-200 rounded text-slate-700"
+                      >
+                        85 (جيد جدا)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuickFillVal('75')}
+                        className="px-2 py-0.5 text-[11px] bg-slate-100 hover:bg-slate-200 rounded text-slate-700"
+                      >
+                        75 (جيد)
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-1 justify-center pt-1 border-t border-slate-100">
-                    <button
-                      type="button"
-                      onClick={() => setQuickFillVal('95')}
-                      className="px-2 py-0.5 text-[11px] bg-slate-100 hover:bg-slate-200 rounded text-slate-700"
-                    >
-                      95 (ممتاز)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setQuickFillVal('85')}
-                      className="px-2 py-0.5 text-[11px] bg-slate-100 hover:bg-slate-200 rounded text-slate-700"
-                    >
-                      85 (جيد جدا)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setQuickFillVal('75')}
-                      className="px-2 py-0.5 text-[11px] bg-slate-100 hover:bg-slate-200 rounded text-slate-700"
-                    >
-                      75 (جيد)
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* Export to Excel */}
             <button
@@ -835,7 +885,7 @@ export default function ExcelGradeEditor({
             </button>
 
             {/* Import from Excel */}
-            {!isMudir && (
+            {!isMudir && canUserEditThisSubject && (
               <label className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-full shadow-xs cursor-pointer flex items-center gap-1 transition-colors border border-slate-300">
                 <Upload className="w-3.5 h-3.5 text-slate-600" />
                 <span>استيراد Excel</span>
@@ -867,6 +917,73 @@ export default function ExcelGradeEditor({
             </span>
           </div>
         </div>
+
+        {/* SSG Role & Nashat Subject Status Banner */}
+        {isSSG ? (
+          isNashatSubject ? (
+            <div
+              className="bg-gradient-to-r from-rose-900 via-rose-950 to-slate-900 text-white p-4 rounded-2xl border-2 border-rose-500 shadow-sm flex items-center justify-between gap-4 text-right"
+              dir="rtl"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-400 flex items-center justify-center flex-shrink-0 text-rose-300">
+                  <Award className="w-6 h-6 text-rose-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-rose-200 font-serif text-sm sm:text-base">
+                      بوابة مجلس الطلبة (SSG) &bull; رصد درجات مادة النشاط
+                    </span>
+                    <span className="text-[11px] font-bold bg-rose-500/30 text-rose-300 px-2.5 py-0.5 rounded-full border border-rose-400/40">
+                      صلاحية كاملة للمجلس
+                    </span>
+                  </div>
+                  <p className="text-xs text-rose-200/90 leading-relaxed mt-0.5">
+                    بصفتك مسؤولاً في مجلس الطلبة (SSG)، يحق لك تقييم ورصد درجات مقرر النشاط والفعاليات لهذا الصف وتحديثها مباشرة.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              className="bg-gradient-to-r from-amber-900/90 via-slate-900 to-slate-950 text-white p-4 rounded-2xl border-2 border-amber-600/80 shadow-sm flex items-center justify-between gap-4 text-right"
+              dir="rtl"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400 flex items-center justify-center flex-shrink-0 text-amber-300">
+                  <ShieldAlert className="w-6 h-6 text-amber-400" />
+                </div>
+                <div>
+                  <span className="font-black text-amber-300 font-serif text-sm sm:text-base">
+                    تنبيه مجلس الطلبة: مادة أكاديمية عامة للقراءة فقط
+                  </span>
+                  <p className="text-xs text-amber-200/90 leading-relaxed mt-0.5">
+                    هذه المادة تابعة للأساتذة الأكاديميين. وفقاً للصلاحيات، يحق لمجلس الطلبة رصد وتعديل مادة <strong>(النشاط / Nashat)</strong> فقط.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )
+        ) : isNashatSubject && !isMudir ? (
+          <div
+            className="bg-gradient-to-r from-rose-950 via-slate-900 to-slate-950 text-white p-4 rounded-2xl border-2 border-rose-700 shadow-sm flex items-center justify-between gap-4 text-right"
+            dir="rtl"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-400 flex items-center justify-center flex-shrink-0 text-rose-300">
+                <Award className="w-6 h-6 text-rose-400" />
+              </div>
+              <div>
+                <span className="font-black text-rose-300 font-serif text-sm sm:text-base">
+                  مادة النشاط مسندة حصرياً لمجلس الطلبة (SSG)
+                </span>
+                <p className="text-xs text-rose-200/90 leading-relaxed mt-0.5">
+                  رصد وتقييم هذا المقرر تحت إشراف ومسؤولية مجلس الطلبة (SSG). السجل متاح للعرض فقط للكادر التعليمي.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {/* Excel Instructions Banner */}
         <div
@@ -1194,19 +1311,27 @@ export default function ExcelGradeEditor({
                               inputRefs.current[refKey] = el;
                             }}
                             type="text"
-                            disabled={isMudir || activeLockInfo.isLocked}
+                            disabled={!canUserEditThisSubject || activeLockInfo.isLocked}
                             value={rawVal}
                             placeholder="—"
                             onChange={e => handleCellChange(student.StudentID, selectedPeriod, e.target.value)}
                             onKeyDown={e => handleKeyDown(e, rowIndex, 0, [selectedPeriod])}
                             className={`w-28 py-1.5 px-2 text-center font-mono font-bold text-sm rounded-lg border transition-all ${
-                              activeLockInfo.isLocked
+                              !canUserEditThisSubject || activeLockInfo.isLocked
                                 ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
                                 : rawVal !== ''
                                 ? 'bg-white border-slate-300 text-slate-950 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
                                 : 'bg-slate-50 border-dashed border-slate-300 text-slate-400 focus:bg-white focus:border-emerald-600'
                             }`}
-                            title={activeLockInfo.isLocked ? 'سجل الدرجات مقفل (انتهت مهلة التعديل المحددة من الإدارة)' : ''}
+                            title={
+                              !canUserEditThisSubject
+                                ? isSSG
+                                  ? 'يحق لمجلس الطلبة تعديل مادة النشاط فقط'
+                                  : 'مادة النشاط مخصصة لمجلس الطلبة فقط'
+                                : activeLockInfo.isLocked
+                                ? 'سجل الدرجات مقفل (انتهت مهلة التعديل المحددة من الإدارة)'
+                                : ''
+                            }
                           />
                         </td>
 
@@ -1287,17 +1412,25 @@ export default function ExcelGradeEditor({
                               inputRefs.current[`${rowIndex}-0`] = el;
                             }}
                             type="text"
-                            disabled={isMudir || activeLockInfo.isLocked}
+                            disabled={!canUserEditThisSubject || activeLockInfo.isLocked}
                             value={d1Raw}
                             placeholder="—"
                             onChange={e => handleCellChange(student.StudentID, activePeriods[0], e.target.value)}
                             onKeyDown={e => handleKeyDown(e, rowIndex, 0, activePeriods)}
                             className={`w-20 py-1.5 px-1 text-center font-mono font-bold text-sm rounded-lg border transition-all ${
-                              activeLockInfo.isLocked
+                              !canUserEditThisSubject || activeLockInfo.isLocked
                                 ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
                                 : 'border-slate-300 bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
                             }`}
-                            title={activeLockInfo.isLocked ? 'سجل الدرجات مقفل (انتهت مهلة التعديل)' : ''}
+                            title={
+                              !canUserEditThisSubject
+                                ? isSSG
+                                  ? 'خاص بمادة النشاط فقط'
+                                  : 'مادة النشاط مخصصة لمجلس الطلبة'
+                                : activeLockInfo.isLocked
+                                ? 'سجل الدرجات مقفل (انتهت مهلة التعديل)'
+                                : ''
+                            }
                           />
                         </td>
 
@@ -1308,17 +1441,25 @@ export default function ExcelGradeEditor({
                               inputRefs.current[`${rowIndex}-1`] = el;
                             }}
                             type="text"
-                            disabled={isMudir || activeLockInfo.isLocked}
+                            disabled={!canUserEditThisSubject || activeLockInfo.isLocked}
                             value={d2Raw}
                             placeholder="—"
                             onChange={e => handleCellChange(student.StudentID, activePeriods[1], e.target.value)}
                             onKeyDown={e => handleKeyDown(e, rowIndex, 1, activePeriods)}
                             className={`w-20 py-1.5 px-1 text-center font-mono font-bold text-sm rounded-lg border transition-all ${
-                              activeLockInfo.isLocked
+                              !canUserEditThisSubject || activeLockInfo.isLocked
                                 ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
                                 : 'border-slate-300 bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
                             }`}
-                            title={activeLockInfo.isLocked ? 'سجل الدرجات مقفل (انتهت مهلة التعديل)' : ''}
+                            title={
+                              !canUserEditThisSubject
+                                ? isSSG
+                                  ? 'خاص بمادة النشاط فقط'
+                                  : 'مادة النشاط مخصصة لمجلس الطلبة'
+                                : activeLockInfo.isLocked
+                                ? 'سجل الدرجات مقفل (انتهت مهلة التعديل)'
+                                : ''
+                            }
                           />
                         </td>
 
@@ -1329,17 +1470,25 @@ export default function ExcelGradeEditor({
                               inputRefs.current[`${rowIndex}-2`] = el;
                             }}
                             type="text"
-                            disabled={isMudir || activeLockInfo.isLocked}
+                            disabled={!canUserEditThisSubject || activeLockInfo.isLocked}
                             value={d3Raw}
                             placeholder="—"
                             onChange={e => handleCellChange(student.StudentID, activePeriods[2], e.target.value)}
                             onKeyDown={e => handleKeyDown(e, rowIndex, 2, activePeriods)}
                             className={`w-20 py-1.5 px-1 text-center font-mono font-bold text-sm rounded-lg border transition-all ${
-                              activeLockInfo.isLocked
+                              !canUserEditThisSubject || activeLockInfo.isLocked
                                 ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
                                 : 'border-slate-300 bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
                             }`}
-                            title={activeLockInfo.isLocked ? 'سجل الدرجات مقفل (انتهت مهلة التعديل)' : ''}
+                            title={
+                              !canUserEditThisSubject
+                                ? isSSG
+                                  ? 'خاص بمادة النشاط فقط'
+                                  : 'مادة النشاط مخصصة لمجلس الطلبة'
+                                : activeLockInfo.isLocked
+                                ? 'سجل الدرجات مقفل (انتهت مهلة التعديل)'
+                                : ''
+                            }
                           />
                         </td>
 

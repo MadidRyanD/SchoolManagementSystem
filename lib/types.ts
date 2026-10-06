@@ -2,7 +2,7 @@ export type DepartmentType = '5-days' | '2-days';
 
 export type GradingPeriod = '1st' | '2nd' | '3rd' | '4th' | '5th' | '6th';
 
-export type UserRole = 'admin' | 'mudir' | 'cashier' | 'teacher' | 'student';
+export type UserRole = 'admin' | 'mudir' | 'cashier' | 'teacher' | 'student' | 'ssg';
 
 export interface UserSession {
   id: string;
@@ -12,6 +12,7 @@ export interface UserSession {
   email: string;
   linkedId?: number;
   profilePic?: string;
+  isSSG?: boolean;
 }
 
 export interface ClassItem {
@@ -30,6 +31,7 @@ export interface SubjectItem {
   SubjectCode?: string;
   SubjectArabic?: string;
   Semester?: '1st' | '2nd' | 'Both';
+  IsNashat?: boolean; // Managed & graded by SSG Student Council
   BookDriveUrl?: string;
   BookTitle?: string;
 }
@@ -76,6 +78,8 @@ export interface StudentItem {
   Remarks?: string;
   ProfilePic?: string;
   Awards?: string[];
+  IsSSG?: boolean;
+  SSGPosition?: string;
 }
 
 export interface SubjectTeacherItem {

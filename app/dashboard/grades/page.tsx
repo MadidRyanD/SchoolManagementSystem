@@ -43,6 +43,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Hourglass,
+  Award,
 } from 'lucide-react';
 import { toHindiNumerals } from '@/lib/numerals';
 
@@ -58,6 +59,7 @@ export default function GradesPage() {
   // Active user and permissions
   const currentUser = AuthService.getSession();
   const role = currentUser?.role;
+  const isSSG = role === 'ssg' || Boolean(currentUser?.isSSG);
   const isMudir = role === 'mudir';
   const isTeacher = role === 'teacher';
   const isAdmin = role === 'admin';
@@ -143,8 +145,23 @@ export default function GradesPage() {
   const gradingPeriods: GradingPeriod[] = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
 
   // TEACHER'S ASSIGNED SUBJECTS ONLY:
-  // The teacher only can see the list of their subjects that they are teaching.
+  // For teachers: only subjects they teach.
+  // For SSG officer: all Nashat (Student Activity) subjects across classes.
   const teacherSubjectsList = useMemo(() => {
+    if (isSSG) {
+      const nashatSubs = subjects.filter(
+        s => s.IsNashat || s.SubjectArabic === 'نشاط' || (s.SubjectClass && s.SubjectClass.toLowerCase().includes('nashat'))
+      );
+      const ssgAssigned: { subject: SubjectItem; classItem: ClassItem }[] = [];
+      nashatSubs.forEach(sub => {
+        const cls = classes.find(c => c.ClassID === sub.ClassID);
+        if (cls) {
+          ssgAssigned.push({ subject: sub, classItem: cls });
+        }
+      });
+      return ssgAssigned;
+    }
+
     if (!currentTeacher) return [];
 
     const assigned: { subject: SubjectItem; classItem: ClassItem }[] = [];
@@ -185,7 +202,7 @@ export default function GradesPage() {
     }
 
     return assigned;
-  }, [subjectTeachers, currentTeacher, subjects, classes]);
+  }, [subjectTeachers, currentTeacher, subjects, classes, isSSG]);
 
   // Students in selected class (for Matrix View)
   const classStudents = students.filter(s => s.ClassID === selectedClassId);
@@ -480,8 +497,9 @@ export default function GradesPage() {
     reader.readAsBinaryString(file);
   };
 
-  // If student is logged in, immediately show the Student Grade View
-  const isStudent = role === 'student';
+  // If normal student is logged in, immediately show the Student Grade View
+  // SSG officers proceed to the Nashat grade editing portal
+  const isStudent = role === 'student' && !isSSG;
   const myStudentProfile = students.find(
     s =>
       s.StudentID === currentUser?.linkedId ||
@@ -524,8 +542,12 @@ export default function GradesPage() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
             }`}
           >
-            <BookOpen className="w-4 h-4 text-emerald-300" />
-            <span>كشف الأستاذ وجدول الإكسل (Teacher's View & Excel)</span>
+            {isSSG ? <Award className="w-4 h-4 text-rose-300" /> : <BookOpen className="w-4 h-4 text-emerald-300" />}
+            <span>
+              {isSSG 
+                ? 'رصد درجات النشاط وجدول الإكسل (SSG Nashat Grades & Excel)' 
+                : "كشف الأستاذ وجدول الإكسل (Teacher's View & Excel)"}
+            </span>
           </button>
 
           {/* 2. Global Matrix (Admin / Mudir only) */}
@@ -624,16 +646,25 @@ export default function GradesPage() {
             onBack={() => setSelectedEditSubject(null)}
             teacherId={currentTeacher?.TeacherID || 2}
             isMudir={isMudir}
+            isSSG={isSSG}
             onSaveSuccess={loadData}
           />
         ) : (
           /* When no subject is currently selected -> Display ONLY the list of subjects teaching */
           <div className="space-y-6">
-            {/* Teacher Greeting & Identity Banner */}
-            <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-slate-900 rounded-3xl p-6 text-white shadow-xl border border-emerald-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {/* Teacher / SSG Greeting & Identity Banner */}
+            <div className={`rounded-3xl p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+              isSSG
+                ? 'bg-gradient-to-r from-rose-950 via-rose-900 to-slate-900 border border-rose-800/80'
+                : 'bg-gradient-to-r from-emerald-950 via-emerald-900 to-slate-900 border border-emerald-800/80'
+            }`}>
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-amber-400 shadow-md bg-slate-800 flex items-center justify-center flex-shrink-0">
-                  {currentTeacher?.ProfilePic ? (
+                <div className={`w-16 h-16 rounded-2xl overflow-hidden border-2 shadow-md flex items-center justify-center flex-shrink-0 ${
+                  isSSG ? 'border-rose-400 bg-rose-950/70' : 'border-amber-400 bg-slate-800'
+                }`}>
+                  {isSSG ? (
+                    <Award className="w-9 h-9 text-rose-300" />
+                  ) : currentTeacher?.ProfilePic ? (
                     <img src={currentTeacher.ProfilePic} alt={currentTeacher.Name} className="w-full h-full object-cover" />
                   ) : (
                     <UserCheck className="w-8 h-8 text-amber-300" />
@@ -641,34 +672,42 @@ export default function GradesPage() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-400/20 text-amber-300 font-mono">
-                      Faculty / أستاذ
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider font-mono ${
+                      isSSG ? 'bg-rose-500/20 text-rose-300 border border-rose-400/30' : 'bg-amber-400/20 text-amber-300'
+                    }`}>
+                      {isSSG ? 'SSG Council / مجلس الطلبة' : 'Faculty / أستاذ'}
                     </span>
                     <span className="text-xs text-emerald-300 font-medium">
                       JMAA-MoritAko &bull; جامعة منيب الكزبري العربية
                     </span>
                   </div>
                   <h1 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2 mt-0.5">
-                    <span>{currentTeacher?.Name || 'Ryan Madid'}</span>
-                    {currentTeacher?.NameArabic && (
+                    <span>{isSSG ? (currentUser?.name || 'SSG Officer') : (currentTeacher?.Name || 'Ryan Madid')}</span>
+                    {(isSSG ? currentUser?.nameArabic : currentTeacher?.NameArabic) && (
                       <span className="text-amber-300 font-serif font-normal text-lg" dir="rtl">
-                        ({currentTeacher.NameArabic})
+                        ({isSSG ? currentUser?.nameArabic : currentTeacher?.NameArabic})
                       </span>
                     )}
                   </h1>
-                  <p className="text-xs text-emerald-200/80 mt-0.5">
-                    قائمة المواد المسندة للتدريس &bull; يمكنك اختيار المادة لتعديل درجات الطلاب مباشرة بنظام الإكسل
+                  <p className="text-xs text-slate-200 mt-0.5">
+                    {isSSG
+                      ? 'بوابة مجلس الطلبة لرصد درجات مقرر النشاط (Nashat) حصرياً لجميع الصفوف والأدوار بنظام الإكسل'
+                      : 'قائمة المواد المسندة للتدريس • يمكنك اختيار المادة لتعديل درجات الطلاب مباشرة بنظام الإكسل'}
                   </p>
                 </div>
               </div>
 
               {/* Quick Summary Counts */}
               <div className="flex items-center gap-3">
-                <div className="bg-slate-950/60 border border-emerald-700/50 rounded-2xl px-4 py-2.5 text-center">
-                  <span className="text-[11px] text-emerald-300 block font-bold uppercase">المواد المسندة</span>
+                <div className={`border rounded-2xl px-4 py-2.5 text-center ${
+                  isSSG ? 'bg-slate-950/60 border-rose-700/50' : 'bg-slate-950/60 border-emerald-700/50'
+                }`}>
+                  <span className={`text-[11px] block font-bold uppercase ${isSSG ? 'text-rose-300' : 'text-emerald-300'}`}>
+                    {isSSG ? 'صفوف النشاط' : 'المواد المسندة'}
+                  </span>
                   <span className="text-xl font-black text-white font-mono">{teacherSubjectsList.length}</span>
                 </div>
-                <div className="bg-slate-950/60 border border-emerald-700/50 rounded-2xl px-4 py-2.5 text-center">
+                <div className="bg-slate-950/60 border border-amber-700/50 rounded-2xl px-4 py-2.5 text-center">
                   <span className="text-[11px] text-amber-300 block font-bold uppercase">إجمالي الطلاب</span>
                   <span className="text-xl font-black text-white font-mono">
                     {teacherSubjectsList.reduce((acc, curr) => {
@@ -684,16 +723,22 @@ export default function GradesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-emerald-800" />
-                  <span>المواد الدراسية المسندة للأستاذ (My Teaching Subjects)</span>
+                  {isSSG ? <Award className="w-5 h-5 text-rose-700" /> : <BookOpen className="w-5 h-5 text-emerald-800" />}
+                  <span>
+                    {isSSG
+                      ? 'مقررات درجات النشاط لمجلس الطلبة (SSG Nashat Grade Portals)'
+                      : 'المواد الدراسية المسندة للأستاذ (My Teaching Subjects)'}
+                  </span>
                 </h2>
                 <p className="text-xs text-slate-500">
-                  اختر أي مادة لعرض وتعديل درجات الطلاب بالاتجاه من اليمين إلى اليسار (RTL) وبطريقة الإكسل.
+                  {isSSG
+                    ? 'اختر أي صف للبدء في تقييم ورصد درجات النشاط للطلاب بالاتجاه من اليمين لليسار (RTL) بطريقة الإكسل.'
+                    : 'اختر أي مادة لعرض وتعديل درجات الطلاب بالاتجاه من اليمين إلى اليسار (RTL) وبطريقة الإكسل.'}
                 </p>
               </div>
 
               <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
-                {teacherSubjectsList.length} مادة دراسية
+                {teacherSubjectsList.length} {isSSG ? 'صف دراسي' : 'مادة دراسية'}
               </span>
             </div>
 

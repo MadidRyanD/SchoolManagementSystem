@@ -15,7 +15,8 @@ import {
   UserCheck,
   GraduationCap,
   Crown,
-  Wallet
+  Wallet,
+  Award,
 } from 'lucide-react';
 
 export default function UserAccountsPage() {
@@ -222,9 +223,21 @@ export default function UserAccountsPage() {
                 .map(s => (
                   <tr key={s.StudentID} className="hover:bg-slate-50/60 transition-colors">
                     <td className="py-3 px-4 font-mono font-bold text-xs text-slate-700">{s.RollNo}</td>
-                    <td className="py-3 px-4 font-bold text-slate-900">{s.Name}</td>
+                    <td className="py-3 px-4 font-bold text-slate-900">
+                      <div className="flex items-center gap-2">
+                        <span>{s.Name}</span>
+                        {s.IsSSG && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                            <Award className="w-3 h-3 text-rose-600" />
+                            <span>مجلس الطلبة (SSG Officer)</span>
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="py-3 px-4 text-xs font-mono text-slate-500">{s.IdNumber}</td>
-                    <td className="py-3 px-4 text-xs text-slate-500 font-mono">student123 (or roll no)</td>
+                    <td className="py-3 px-4 text-xs text-slate-500 font-mono">
+                      {s.IsSSG ? 'ssg123 (or student123)' : 'student123 (or roll no)'}
+                    </td>
                     <td className="py-3 px-4 text-right space-x-2">
                       <button
                         type="button"

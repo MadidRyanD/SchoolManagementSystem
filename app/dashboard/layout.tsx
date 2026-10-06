@@ -116,6 +116,15 @@ export default function DashboardLayout({
           bg: 'bg-red-600',
           icon: ShieldCheck,
         };
+      case 'ssg':
+        return {
+          titleEn: 'SSG Student Council',
+          titleAr: 'مجلس الطلبة / مسؤول النشاط',
+          portalTitleEn: 'SSG Student Council Portal',
+          portalTitleAr: 'بوابة مجلس الطلبة ورصد النشاط',
+          bg: 'bg-rose-700',
+          icon: Award,
+        };
     }
   };
 
@@ -123,6 +132,17 @@ export default function DashboardLayout({
 
   // Navigation Items per Portal with English First
   const getNavItems = () => {
+    if (role === 'ssg') {
+      return [
+        { href: '/dashboard', labelEn: 'Home Dashboard', labelAr: 'الرئيسية', icon: LayoutDashboard },
+        { href: '/dashboard/grades', labelEn: 'Nashat Grades (النشاط)', labelAr: 'رصد درجات النشاط', icon: ClipboardList },
+        { href: '/dashboard/schedules', labelEn: 'Activities Schedule', labelAr: 'جدول الأنشطة والحصص', icon: Calendar },
+        { href: '/dashboard/students', labelEn: 'Student Directory', labelAr: 'دليل وبيانات الطلاب', icon: GraduationCap },
+        { href: '/dashboard/announcements', labelEn: 'Announcements', labelAr: 'الإعلانات والأنشطة', icon: Megaphone },
+        { href: '/dashboard/profile', labelEn: 'My Profile', labelAr: 'الملف الشخصي', icon: User },
+      ];
+    }
+
     if (role === 'teacher') {
       return [
         { href: '/dashboard', labelEn: 'Home', labelAr: 'الرئيسية', icon: LayoutDashboard },
@@ -141,6 +161,7 @@ export default function DashboardLayout({
         { href: '/dashboard/profile', labelEn: 'My Profile', labelAr: 'الملف الشخصي', icon: User },
         { href: '/dashboard/grades', labelEn: 'My Academic Grades', labelAr: 'الدرجات الأكاديمية', icon: ClipboardList },
         { href: '/dashboard/schedules', labelEn: 'Class Schedule', labelAr: 'جدول الحصص', icon: Calendar },
+        { href: '/dashboard/subjects', labelEn: 'Curriculum & E-Books', labelAr: 'المناهج والكتب الدراسية', icon: BookOpen },
         { href: '/dashboard/finance', labelEn: 'Tuition & Billing', labelAr: 'الرسوم والمستحقات', icon: Wallet },
         { href: '/dashboard/honors', labelEn: 'Honor Roll', labelAr: 'لوحة الشرف والمتفوقين', icon: Award },
         { href: '/dashboard/announcements', labelEn: 'Announcements', labelAr: 'الإعلانات والتعاميم', icon: Megaphone },

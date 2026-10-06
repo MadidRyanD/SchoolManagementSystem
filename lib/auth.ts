@@ -102,8 +102,39 @@ export const AuthService = {
       }
     }
 
-    // 5. Student Verification
+    // 5. SSG Student Council Verification
     const students = DataStore.getStudents();
+    if (
+      cleanUser === 'ssg' ||
+      cleanUser === 'ssg@jmaa.edu' ||
+      cleanUser === 'ssg@student.jmaa.edu' ||
+      cleanUser === 'ssg101'
+    ) {
+      if (cleanPass === 'ssg123' || cleanPass === 'ssg' || cleanPass === 'student123') {
+        const ssgStudent = students.find(s => s.IsSSG || s.RollNo === 'SSG101') || {
+          StudentID: 12,
+          RollNo: 'SSG101',
+          Name: 'Tariq Al-Mansoor (SSG Officer)',
+          NameArabic: 'طارق المنصور (رئيس مجلس الطلبة / النشاط)',
+          Email: 'ssg@student.jmaa.edu',
+          ProfilePic: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        };
+        const ssgSession: UserSession = {
+          id: `usr-ssg-${ssgStudent.StudentID}`,
+          name: ssgStudent.Name,
+          nameArabic: ssgStudent.NameArabic,
+          email: ssgStudent.Email || 'ssg@student.jmaa.edu',
+          role: 'ssg',
+          linkedId: ssgStudent.StudentID,
+          profilePic: ssgStudent.ProfilePic,
+          isSSG: true,
+        };
+        this.setSession(ssgSession);
+        return { success: true, user: ssgSession };
+      }
+    }
+
+    // 6. Student Verification
     const matchedStudent = students.find(
       s =>
         s.RollNo.toLowerCase() === cleanUser ||
@@ -115,15 +146,17 @@ export const AuthService = {
     );
 
     if (matchedStudent) {
-      if (cleanPass === 'student123' || cleanPass === matchedStudent.RollNo.toLowerCase()) {
+      if (cleanPass === 'student123' || cleanPass === matchedStudent.RollNo.toLowerCase() || (matchedStudent.IsSSG && cleanPass === 'ssg123')) {
+        const isSSGStudent = Boolean(matchedStudent.IsSSG);
         const studentSession: UserSession = {
-          id: `usr-student-${matchedStudent.StudentID}`,
+          id: isSSGStudent ? `usr-ssg-${matchedStudent.StudentID}` : `usr-student-${matchedStudent.StudentID}`,
           name: matchedStudent.Name,
           nameArabic: matchedStudent.NameArabic,
           email: matchedStudent.Email || `${matchedStudent.RollNo.toLowerCase()}@student.jmaa.edu`,
-          role: 'student',
+          role: isSSGStudent ? 'ssg' : 'student',
           linkedId: matchedStudent.StudentID,
           profilePic: matchedStudent.ProfilePic,
+          isSSG: isSSGStudent,
         };
         this.setSession(studentSession);
         return { success: true, user: studentSession };
