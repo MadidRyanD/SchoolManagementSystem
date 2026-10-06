@@ -28,6 +28,7 @@ export const initialSettings: SystemSettings = {
   systemName: 'JMAA-MoritAko',
   gradeLockDays: 7,
   gradeEditWindowHours: 24, // Default allowed editing time given by principal/admin after submission
+  libraryDriveFolderUrl: 'https://drive.google.com/drive/folders/1fCXKezhMzm93fm9S98keWyxLfG-N2NDf?usp=drive_link',
 };
 
 // 1. Classes across 5-Days and 2-Days departments
