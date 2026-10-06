@@ -135,22 +135,24 @@ export default function ExcelGradeEditor({
     );
 
     const defaultHours = DataStore.getGradeEditWindowHours();
+    const primaryPeriod = viewMode === 'dawr' ? selectedPeriod : activePeriods[0];
+    const deadlineCheck = DataStore.checkGradeLock(undefined, primaryPeriod);
 
     if (periodGrades.length === 0) {
       return {
-        isLocked: false,
+        isLocked: deadlineCheck.isLocked,
         remainingMs: 0,
         allowedHours: defaultHours,
-        status: 'unsubmitted' as const,
+        status: deadlineCheck.isLocked ? ('expired_locked' as const) : ('unsubmitted' as const),
         hasUnlockRequest: unlockRequestedLocal,
         submittedAt: null as string | null,
-        expiresAt: null as string | null,
+        expiresAt: deadlineCheck.expiresAt || null,
       };
     }
 
     const checks = periodGrades.map(g => ({
       grade: g,
-      check: DataStore.checkGradeLock(g),
+      check: DataStore.checkGradeLock(g, g.Period),
     }));
 
     const anyLocked = checks.some(c => c.check.isLocked);
@@ -169,6 +171,34 @@ export default function ExcelGradeEditor({
       expiresAt: sampleCheck.expiresAt || null,
     };
   }, [allGrades, classItem.ClassID, subject.SubjectID, viewMode, selectedPeriod, activePeriods, nowTime, unlockRequestedLocal]);
+
+  // Dawr submission deadline set by principal
+  const currentDawrDeadline = useMemo(() => {
+    const periodToInspect = viewMode === 'dawr' ? selectedPeriod : activePeriods[0];
+    const item = DataStore.getGradeSubmissionDeadline(periodToInspect);
+    if (!item?.deadlineIso) return null;
+    const target = new Date(item.deadlineIso).getTime();
+    const isExpired = !isNaN(target) && Date.now() > target;
+    let days = 0;
+    let hours = 0;
+    let mins = 0;
+    if (!isExpired && !isNaN(target)) {
+      const diffSec = Math.floor((target - Date.now()) / 1000);
+      days = Math.floor(diffSec / 86400);
+      hours = Math.floor((diffSec % 86400) / 3600);
+      mins = Math.floor((diffSec % 3600) / 60);
+    }
+    return {
+      period: periodToInspect,
+      deadlineIso: item.deadlineIso,
+      instructions: item.instructions,
+      enforceLock: item.enforceLock ?? true,
+      isExpired,
+      days,
+      hours,
+      mins,
+    };
+  }, [viewMode, selectedPeriod, activePeriods, nowTime]);
 
   // Countdown timer in Hindi numerals
   const countdown = useMemo(() => {
@@ -1002,6 +1032,86 @@ export default function ExcelGradeEditor({
             </span>
           )}
         </div>
+
+        {/* ========================================================================= */}
+        {/* PRINCIPAL'S OFFICIAL SUBMISSION DEADLINE BANNER                           */}
+        {/* ========================================================================= */}
+        {currentDawrDeadline && (
+          <div
+            className={`rounded-2xl p-4 border-2 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 text-right transition-all ${
+              currentDawrDeadline.isExpired && currentDawrDeadline.enforceLock
+                ? 'bg-gradient-to-r from-red-950 via-rose-950 to-slate-900 border-red-700 text-white'
+                : 'bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 border-emerald-600/80 text-white'
+            }`}
+            dir="rtl"
+          >
+            <div className="flex items-start gap-3.5">
+              <div
+                className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 mt-0.5 border shadow-inner ${
+                  currentDawrDeadline.isExpired && currentDawrDeadline.enforceLock
+                    ? 'bg-red-600/30 border-red-400 text-red-200'
+                    : 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
+                }`}
+              >
+                {currentDawrDeadline.isExpired && currentDawrDeadline.enforceLock ? (
+                  <ShieldAlert className="w-6 h-6 text-red-400" />
+                ) : (
+                  <Calendar className="w-6 h-6 text-amber-300" />
+                )}
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-black text-white font-serif text-sm sm:text-base">
+                    الموعد النهائي لتسليم درجات {dawrArabicNames[currentDawrDeadline.period]} (المحدد من المدير)
+                  </span>
+                  <span
+                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                      currentDawrDeadline.isExpired
+                        ? 'bg-red-500/30 text-red-200 border-red-400/50'
+                        : 'bg-emerald-500/30 text-emerald-200 border-emerald-400/50'
+                    }`}
+                  >
+                    {currentDawrDeadline.isExpired ? 'انتهت المهلة الرسمية' : 'موعد تسليم معتمد'}
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-200/90 leading-relaxed font-sans">
+                  التاريخ النهائي للإغلاق: <strong className="text-amber-300 font-mono">{formatDateTimeArabic(currentDawrDeadline.deadlineIso)}</strong>
+                  {currentDawrDeadline.enforceLock && (
+                    <span className="text-slate-300 text-[11px] mr-2">
+                      &bull; القفل الإجباري مفعل لحفظ دقة النتائج
+                    </span>
+                  )}
+                </p>
+
+                {currentDawrDeadline.instructions && (
+                  <div className="bg-white/10 border border-amber-400/40 rounded-xl px-3 py-1.5 mt-1.5 text-xs text-amber-200 font-serif leading-relaxed">
+                    <span className="font-bold text-amber-300">توجيهات المدير للأستاذ: </span>
+                    &quot;{currentDawrDeadline.instructions}&quot;
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Countdown Badge */}
+            <div className="flex items-center gap-2 flex-shrink-0 self-end md:self-center">
+              {currentDawrDeadline.isExpired ? (
+                <div className="px-4 py-2 bg-red-600/30 border border-red-500 text-red-200 rounded-xl text-xs font-black inline-flex items-center gap-1.5">
+                  <Lock className="w-4 h-4 text-red-400" />
+                  <span>انقضى موعد التسليم الرسمي</span>
+                </div>
+              ) : (
+                <div className="px-4 py-2 bg-emerald-800/80 border border-emerald-400 text-white rounded-xl text-xs font-black inline-flex items-center gap-2 shadow-inner">
+                  <Clock className="w-4 h-4 text-amber-300" />
+                  <span>متبقي على موعد التسليم:</span>
+                  <span className="text-amber-300 font-mono text-sm">
+                    {toHindiNumerals(currentDawrDeadline.days)} يوم و {toHindiNumerals(currentDawrDeadline.hours)} س و {toHindiNumerals(currentDawrDeadline.mins)} د
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ========================================================================= */}
         {/* TIME LOCK & ALLOWED EDIT WINDOW BANNER (Principal/Admin Lock Control)     */}

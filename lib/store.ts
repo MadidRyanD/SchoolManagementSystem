@@ -17,6 +17,7 @@ import {
   SystemSettings,
   GradingPeriod,
   DepartmentType,
+  DawrDeadlineItem,
   FeesItem,
   ExamItem,
   ExpenseItem,
@@ -28,6 +29,15 @@ export const initialSettings: SystemSettings = {
   systemName: 'JMAA-MoritAko',
   gradeLockDays: 7,
   gradeEditWindowHours: 24, // Default allowed editing time given by principal/admin after submission
+  activeGradingPeriod: '1st',
+  gradeSubmissionDeadlines: {
+    '1st': { period: '1st', deadlineIso: '2026-10-31T23:59', instructions: 'يرجى مراجعة وتدقيق درجات الدور الأول قبل انتهاء الموعد المحدد', enforceLock: true },
+    '2nd': { period: '2nd', deadlineIso: '2026-11-30T23:59', instructions: 'الموعد النهائي لتسليم درجات الدور الثاني', enforceLock: true },
+    '3rd': { period: '3rd', deadlineIso: '2026-12-31T23:59', instructions: 'الموعد النهائي لتسليم درجات الدور الثالث ونهاية الفصل الأول', enforceLock: true },
+    '4th': { period: '4th', deadlineIso: '2027-01-31T23:59', instructions: 'الموعد النهائي لتسليم درجات الدور الرابع وبداية الفصل الثاني', enforceLock: true },
+    '5th': { period: '5th', deadlineIso: '2027-02-28T23:59', instructions: 'الموعد النهائي لتسليم درجات الدور الخامس', enforceLock: true },
+    '6th': { period: '6th', deadlineIso: '2027-03-31T23:59', instructions: 'الموعد النهائي لتسليم درجات الدور السادس والاختبارات النهائية', enforceLock: true },
+  },
   libraryDriveFolderUrl: 'https://drive.google.com/drive/folders/1fCXKezhMzm93fm9S98keWyxLfG-N2NDf?usp=drive_link',
 };
 
@@ -1176,7 +1186,32 @@ export const DataStore = {
   setGradeEditWindowHours(hours: number): void {
     this.updateSettings({ gradeEditWindowHours: hours });
   },
-  checkGradeLock(grade: StudentGradeItem | undefined | null): {
+
+  // Dawr Submission Deadlines & Active Period Management
+  getActiveGradingPeriod(): GradingPeriod {
+    const s = this.getSettings();
+    return s.activeGradingPeriod || '1st';
+  },
+  setActiveGradingPeriod(period: GradingPeriod): void {
+    this.updateSettings({ activeGradingPeriod: period });
+  },
+  getGradeSubmissionDeadlines(): Partial<Record<GradingPeriod, DawrDeadlineItem>> {
+    const s = this.getSettings();
+    return s.gradeSubmissionDeadlines || initialSettings.gradeSubmissionDeadlines || {};
+  },
+  getGradeSubmissionDeadline(period: GradingPeriod): DawrDeadlineItem | undefined {
+    const deadlines = this.getGradeSubmissionDeadlines();
+    return deadlines[period] || initialSettings.gradeSubmissionDeadlines?.[period];
+  },
+  setGradeSubmissionDeadline(period: GradingPeriod, item: DawrDeadlineItem): void {
+    const current = { ...this.getGradeSubmissionDeadlines(), [period]: item };
+    this.updateSettings({ gradeSubmissionDeadlines: current });
+  },
+  setAllGradeSubmissionDeadlines(deadlines: Partial<Record<GradingPeriod, DawrDeadlineItem>>): void {
+    this.updateSettings({ gradeSubmissionDeadlines: deadlines });
+  },
+
+  checkGradeLock(grade: StudentGradeItem | undefined | null, period?: GradingPeriod): {
     isLocked: boolean;
     remainingMs: number;
     expiresAt?: string;
@@ -1185,6 +1220,39 @@ export const DataStore = {
     status: 'unsubmitted' | 'editable_grace_period' | 'unlocked_by_admin' | 'expired_locked' | 'manually_locked';
   } {
     const defaultHours = this.getGradeEditWindowHours();
+    const dawrPeriod = grade?.Period || period;
+
+    // Check Dawr-level calendar deadline set by Principal
+    if (dawrPeriod) {
+      const dawrDeadline = this.getGradeSubmissionDeadline(dawrPeriod);
+      if (dawrDeadline && dawrDeadline.enforceLock && dawrDeadline.deadlineIso) {
+        const deadlineTime = new Date(dawrDeadline.deadlineIso).getTime();
+        if (!isNaN(deadlineTime) && Date.now() > deadlineTime) {
+          // If admin explicitly granted an unlock extension with future expiration, respect it
+          if (grade?.UnlockGranted && grade?.LockExpiresAt) {
+            const rem = new Date(grade.LockExpiresAt).getTime() - Date.now();
+            if (rem > 0) {
+              return {
+                isLocked: false,
+                remainingMs: rem,
+                expiresAt: grade.LockExpiresAt,
+                submittedAt: grade.SubmittedAt || grade.GradedAt,
+                allowedHours: grade.AllowedEditHours || defaultHours,
+                status: 'unlocked_by_admin',
+              };
+            }
+          }
+          return {
+            isLocked: true,
+            remainingMs: 0,
+            expiresAt: dawrDeadline.deadlineIso,
+            submittedAt: grade?.SubmittedAt || grade?.GradedAt,
+            allowedHours: grade?.AllowedEditHours || defaultHours,
+            status: 'expired_locked',
+          };
+        }
+      }
+    }
     if (!grade || grade.FinalGrade === undefined || grade.FinalGrade === null) {
       return {
         isLocked: false,

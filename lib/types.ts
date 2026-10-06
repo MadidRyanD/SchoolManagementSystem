@@ -201,12 +201,21 @@ export interface FormTemplateItem {
   createdAt: string;
 }
 
+export interface DawrDeadlineItem {
+  period: GradingPeriod;
+  deadlineIso: string; // e.g. "2026-10-25T23:59:00Z"
+  instructions?: string;
+  enforceLock?: boolean; // If true, locking is strictly enforced when deadline is reached
+}
+
 export interface SystemSettings {
   schoolNameEn: string;
   schoolNameAr: string;
   systemName: string;
   gradeLockDays: number;
   gradeEditWindowHours?: number; // Allowed hours set by principal/admin for editing grades after submission
+  activeGradingPeriod?: GradingPeriod; // Current active dawr (e.g. '1st')
+  gradeSubmissionDeadlines?: Partial<Record<GradingPeriod, DawrDeadlineItem>>;
   libraryDriveFolderUrl?: string; // Google Drive Central Library folder URL
 }
 

@@ -37,6 +37,7 @@ import {
   CalendarCheck,
   Sparkles,
 } from 'lucide-react';
+import { toHindiNumerals } from '@/lib/numerals';
 
 export default function DashboardOverviewPage() {
   const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
@@ -363,6 +364,21 @@ export default function DashboardOverviewPage() {
     const adviseeClasses = classes.filter(c => c.AdviserID === teacher?.TeacherID);
     const adviseeStudents = students.filter(s => adviseeClasses.some(c => c.ClassID === s.ClassID));
 
+    const activeDawr = DataStore.getActiveGradingPeriod();
+    const dawrDeadline = DataStore.getGradeSubmissionDeadline(activeDawr);
+    let deadlineDiff: any = null;
+    if (dawrDeadline?.deadlineIso) {
+      const tgt = new Date(dawrDeadline.deadlineIso).getTime();
+      if (!isNaN(tgt)) {
+        const isExp = Date.now() > tgt;
+        const diffSec = Math.max(0, Math.floor((tgt - Date.now()) / 1000));
+        const days = Math.floor(diffSec / 86400);
+        const hours = Math.floor((diffSec % 86400) / 3600);
+        const mins = Math.floor((diffSec % 3600) / 60);
+        deadlineDiff = { isExp, days, hours, mins, ...dawrDeadline };
+      }
+    }
+
     const InfoRow = ({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value?: string }) =>
       value ? (
         <div className="flex items-start gap-3 py-2.5 border-b border-[#e8e0cc] last:border-0">
@@ -489,6 +505,65 @@ export default function DashboardOverviewPage() {
                 </div>
               </div>
             </div>
+
+            {/* 1.5 Submission Deadline Reminder Card for Faculty */}
+            {deadlineDiff && (
+              <div
+                className={`rounded-2xl p-4 border-2 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-right ${
+                  deadlineDiff.isExp && deadlineDiff.enforceLock
+                    ? 'bg-rose-50 border-rose-300 text-rose-950'
+                    : 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-300 text-emerald-950'
+                }`}
+                dir="rtl"
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                      deadlineDiff.isExp ? 'bg-rose-200 text-rose-800' : 'bg-emerald-200 text-emerald-800'
+                    }`}
+                  >
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-serif font-black text-sm sm:text-base">
+                        تنبيه موعد تسليم الدرجات ({deadlineDiff.period === '1st' ? 'الدور الأول' : deadlineDiff.period === '2nd' ? 'الدور الثاني' : deadlineDiff.period === '3rd' ? 'الدور الثالث' : deadlineDiff.period === '4th' ? 'الدور الرابع' : deadlineDiff.period === '5th' ? 'الدور الخامس' : 'الدور السادس'}):
+                      </span>
+                      <span className="text-[11px] font-bold bg-white/90 px-2 py-0.5 rounded-full border border-emerald-200 font-mono">
+                        المعتمد من المدير
+                      </span>
+                    </div>
+                    {deadlineDiff.instructions ? (
+                      <p className="text-xs text-slate-700 mt-0.5 font-serif">
+                        {deadlineDiff.instructions}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-slate-600 mt-0.5 font-serif">
+                        يرجى إدخال واعتماد درجات الطلاب قبل حلول الموعد النهائي لتفادي قفل السجل.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
+                  {deadlineDiff.isExp ? (
+                    <span className="px-3 py-1 bg-rose-200/90 text-rose-900 border border-rose-300 rounded-lg text-xs font-black">
+                      انتهت المهلة
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 bg-white text-emerald-900 border border-emerald-300 rounded-lg text-xs font-black font-mono">
+                      متبقي: {toHindiNumerals(deadlineDiff.days)} يوم و {toHindiNumerals(deadlineDiff.hours)} س
+                    </span>
+                  )}
+                  <Link
+                    href="/dashboard/grades"
+                    className="px-3.5 py-1.5 bg-[#126b38] hover:bg-[#0e5830] text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    رصد الدرجات
+                  </Link>
+                </div>
+              </div>
+            )}
 
             {/* 2. Announcements Section (Placed at the beginning per user request) */}
             <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">

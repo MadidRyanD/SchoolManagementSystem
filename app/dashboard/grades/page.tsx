@@ -58,6 +58,30 @@ export default function GradesPage() {
 
   // Active user and permissions
   const currentUser = AuthService.getSession();
+
+  const activeDawr = useMemo(() => DataStore.getActiveGradingPeriod(), []);
+  const activeDawrDeadline = useMemo(() => {
+    const item = DataStore.getGradeSubmissionDeadline(activeDawr);
+    if (!item?.deadlineIso) return null;
+    const target = new Date(item.deadlineIso).getTime();
+    const isExpired = !isNaN(target) && Date.now() > target;
+    let days = 0;
+    let hours = 0;
+    let mins = 0;
+    if (!isExpired && !isNaN(target)) {
+      const diffSec = Math.floor((target - Date.now()) / 1000);
+      days = Math.floor(diffSec / 86400);
+      hours = Math.floor((diffSec % 86400) / 3600);
+      mins = Math.floor((diffSec % 3600) / 60);
+    }
+    return {
+      ...item,
+      isExpired,
+      days,
+      hours,
+      mins,
+    };
+  }, [activeDawr]);
   const role = currentUser?.role;
   const isSSG = role === 'ssg' || Boolean(currentUser?.isSSG);
   const isMudir = role === 'mudir';
@@ -718,6 +742,57 @@ export default function GradesPage() {
                 </div>
               </div>
             </div>
+
+            {/* Active Dawr Deadline Notification Banner for Faculty */}
+            {activeDawrDeadline && (
+              <div
+                className={`p-4 rounded-2xl border-2 flex flex-col md:flex-row md:items-center justify-between gap-4 text-right shadow-xs ${
+                  activeDawrDeadline.isExpired && activeDawrDeadline.enforceLock
+                    ? 'bg-rose-50 border-rose-300 text-rose-950'
+                    : 'bg-emerald-50 border-emerald-300 text-emerald-950'
+                }`}
+                dir="rtl"
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    activeDawrDeadline.isExpired ? 'bg-rose-200 text-rose-800' : 'bg-emerald-200 text-emerald-800'
+                  }`}>
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-serif font-black text-sm sm:text-base">
+                        الموعد النهائي لتسليم الدرجات المحدد من المدير:
+                      </span>
+                      <span className="font-bold text-xs bg-white/80 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                        {activeDawr === '1st' ? 'الدور الأول' : activeDawr === '2nd' ? 'الدور الثاني' : activeDawr === '3rd' ? 'الدور الثالث' : activeDawr === '4th' ? 'الدور الرابع' : activeDawr === '5th' ? 'الدور الخامس' : 'الدور السادس'}
+                      </span>
+                    </div>
+                    {activeDawrDeadline.instructions && (
+                      <p className="text-xs text-slate-700 mt-1 font-serif leading-relaxed">
+                        توجيهات المدير: {activeDawrDeadline.instructions}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0 self-end md:self-center">
+                  {activeDawrDeadline.isExpired ? (
+                    <span className="px-3 py-1.5 bg-rose-200/90 text-rose-900 border border-rose-300 rounded-xl text-xs font-black inline-flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5" /> انتهت المهلة الرسمية المحددة من الإدارة
+                    </span>
+                  ) : (
+                    <span className="px-3.5 py-1.5 bg-white text-emerald-950 border border-emerald-300 rounded-xl text-xs font-black inline-flex items-center gap-1.5 shadow-2xs font-mono">
+                      <Hourglass className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>متبقي:</span>
+                      <strong className="text-emerald-800 text-sm">
+                        {toHindiNumerals(activeDawrDeadline.days)} يوم و {toHindiNumerals(activeDawrDeadline.hours)} س و {toHindiNumerals(activeDawrDeadline.mins)} د
+                      </strong>
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* List of Subjects Header */}
             <div className="flex items-center justify-between">
