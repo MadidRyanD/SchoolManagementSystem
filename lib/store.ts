@@ -1140,8 +1140,35 @@ export const DataStore = {
     setItem(KEYS.STUDENTS, list);
     return newItem;
   },
+  saveStudentsBatch(items: Array<Omit<StudentItem, 'StudentID'>>): StudentItem[] {
+    const list = this.getStudents();
+    let nextId = list.length > 0 ? Math.max(...list.map(s => s.StudentID)) + 1 : 1;
+    const added: StudentItem[] = [];
+    for (const item of items) {
+      const newItem: StudentItem = { ...item, StudentID: nextId++ };
+      list.push(newItem);
+      added.push(newItem);
+    }
+    setItem(KEYS.STUDENTS, list);
+    return added;
+  },
   deleteStudent(id: number): void {
     const list = this.getStudents().filter(s => s.StudentID !== id);
+    setItem(KEYS.STUDENTS, list);
+  },
+  deleteStudentsBatch(ids: number[]): void {
+    const idSet = new Set(ids);
+    const list = this.getStudents().filter(s => !idSet.has(s.StudentID));
+    setItem(KEYS.STUDENTS, list);
+  },
+  updateStudentsBatch(ids: number[], updates: Partial<StudentItem>): void {
+    const idSet = new Set(ids);
+    const list = this.getStudents().map(s => {
+      if (idSet.has(s.StudentID)) {
+        return { ...s, ...updates };
+      }
+      return s;
+    });
     setItem(KEYS.STUDENTS, list);
   },
 
