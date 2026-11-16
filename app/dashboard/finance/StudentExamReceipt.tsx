@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import SchoolArabicTitle from '@/app/components/SchoolArabicTitle';
 import {
   StudentItem,
   ClassItem,
@@ -704,13 +705,15 @@ export default function StudentExamReceipt({
             {/* Header with crest */}
             <div className="flex items-center justify-between border-b-2 border-[#126b38] pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-amber-400 bg-emerald-950 p-1">
+                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-amber-400 bg-white p-1">
                   <img src="/logo.png" alt="JMAA Emblem" className="w-full h-full object-contain" />
                 </div>
                 <div>
-                  <h3 className="font-black text-slate-900 text-base font-serif" dir="rtl">
-                    جامعة منيب الكزبري العربية
-                  </h3>
+                  <SchoolArabicTitle
+                    variant="dark"
+                    imgClassName="h-8 w-auto object-contain"
+                    fallbackClassName="font-black text-slate-900 text-base font-serif block"
+                  />
                   <p className="text-xs font-bold text-slate-600 font-sans">
                     Jamiatu Monib Alkuzbary Al-Arabia
                   </p>

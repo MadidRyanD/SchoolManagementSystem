@@ -4,6 +4,9 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'JMAA-MoritAko | Jamiatu Monib Alkuzbary Al-Arabia - School Management System',
   description: 'Comprehensive School Management System for Administration, Teachers, and Students',
+  icons: {
+    icon: '/logo.png',
+  },
 };
 
 export default function RootLayout({

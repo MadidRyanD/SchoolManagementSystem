@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { TeacherItem, TeacherPayrollItem } from '@/lib/types';
 import { toHindiNumerals } from '@/lib/numerals';
+import SchoolArabicTitle from '@/app/components/SchoolArabicTitle';
 import {
   Printer,
   ShieldCheck,
@@ -414,9 +415,13 @@ export default function StaffPayrollSlip({
             <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-900 bg-[#fdfdfc]" id="printable-payroll-slip">
               {/* Institution Seal & Watermark Header */}
               <div className="text-center pb-4 border-b-2 border-emerald-800/30 space-y-1">
-                <div className="flex items-center justify-center gap-2 text-emerald-900 font-extrabold text-base">
-                  <School className="w-6 h-6 text-emerald-700" />
-                  <span className="font-serif text-lg font-black">جامعة منيب الكزبري العربية</span>
+                <div className="flex items-center justify-center gap-2.5 text-emerald-900 font-extrabold text-base">
+                  <img src="/logo.png" alt="JMAA Logo" className="w-8 h-8 object-contain" />
+                  <SchoolArabicTitle
+                    variant="dark"
+                    imgClassName="h-9 w-auto object-contain"
+                    fallbackClassName="font-serif text-lg font-black"
+                  />
                 </div>
                 <p className="text-xs font-sans text-emerald-800 font-bold" dir="ltr">
                   Jamiatu Monib Alkuzbary Al-Arabia • Directorate of Finance & Human Resources

@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { AuthService } from '@/lib/auth';
 import { UserRole } from '@/lib/types';
 import AcademicTermSwitcher from '@/app/dashboard/components/AcademicTermSwitcher';
+import SchoolArabicTitle from '@/app/components/SchoolArabicTitle';
 import {
-  School,
   ShieldCheck,
   Crown,
   Wallet,
@@ -17,6 +17,9 @@ import {
   Lock,
   User,
   Award,
+  Sparkles,
+  BookOpen,
+  Users,
 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -73,28 +76,91 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-lg text-center">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-tr from-emerald-500 to-amber-400 text-slate-950 shadow-2xl shadow-emerald-500/20 mb-3 ring-4 ring-white/10">
-          <School className="w-10 h-10 text-emerald-950" />
-        </div>
-        
-        {/* Arabic Title */}
-        <h3 className="text-2xl font-bold text-amber-300 font-serif tracking-wide mb-1" dir="rtl">
-          جامعة منيب الكزبري العربية
-        </h3>
-        {/* English Title */}
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-          Jamiatu Monib Alkuzbary Al-Arabia
-        </h1>
-        {/* System Name Badge */}
-        <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold tracking-wider uppercase">
-          <span>Portal: JMAA-MoritAko</span>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 relative overflow-hidden flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8">
+      {/* Subtle Ambient Background Glow */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_rgba(16,185,129,0.16),_transparent_55%),radial-gradient(ellipse_at_bottom_right,_rgba(245,158,11,0.12),_transparent_55%)]" />
 
-      <div className="mt-7 sm:mx-auto sm:w-full sm:max-w-xl">
-        <div className="bg-white/95 backdrop-blur-md py-8 px-6 shadow-2xl rounded-2xl sm:px-10 border border-white/20">
+      <div className="relative z-10 max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+        {/* Left Column: Official School Identity & Campus Advertising Showcase */}
+        <div className="lg:col-span-6 space-y-5 text-center lg:text-left">
+          {/* Logo + Arabic Calligraphy Title + English Name */}
+          <div className="flex flex-col sm:flex-row items-center lg:items-center gap-4 justify-center lg:justify-start">
+            <div className="w-24 h-24 rounded-3xl bg-white p-2 shadow-2xl shadow-emerald-950/50 ring-4 ring-amber-400/50 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <img
+                src="/logo.png"
+                alt="Jamiatu Monib Alkuzbary Al-Arabia Logo"
+                className="w-full h-full object-contain"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex justify-center lg:justify-start">
+                <SchoolArabicTitle
+                  variant="light"
+                  imgClassName="h-14 sm:h-16 w-auto object-contain drop-shadow-lg"
+                  fallbackClassName="text-2xl sm:text-3xl font-bold text-amber-300 font-serif tracking-wide"
+                />
+              </div>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+                Jamiatu Monib Alkuzbary Al-Arabia
+              </h1>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold tracking-wider uppercase">
+                <span>Portal: JMAA-MoritAko</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Campus Advertising Showcase Card */}
+          <div className="bg-white rounded-3xl p-3 sm:p-4 shadow-2xl border border-amber-300/40 relative overflow-hidden">
+            <div className="flex items-center justify-between px-2 pt-1 pb-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-900 text-amber-300 text-[11px] font-bold uppercase tracking-wider shadow-xs">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Main Campus &bull; Admissions Open</span>
+              </span>
+              <span className="text-xs font-serif font-bold text-emerald-900" dir="rtl">
+                التسجيل والقبول مفتوح
+              </span>
+            </div>
+
+            <div className="rounded-2xl bg-gradient-to-b from-sky-50/70 via-white to-white px-2 pt-2 pb-1">
+              <img
+                src="/school-building.jpg"
+                alt="Jamiatu Monib Alkuzbary Al-Arabia School Building"
+                className="w-full h-56 sm:h-64 object-contain mx-auto"
+              />
+            </div>
+
+            {/* Advertising Highlights Strip */}
+            <div className="mt-2 rounded-2xl bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-4 text-left">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2.5">
+                <p className="text-sm font-extrabold text-amber-300 tracking-tight">
+                  Excellence in Arabic &amp; Islamic Education
+                </p>
+                <p className="text-xs font-serif text-emerald-200" dir="rtl">
+                  التميز في التعليم العربي والإسلامي
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] font-semibold text-emerald-100">
+                <div className="flex items-center gap-1.5 bg-white/10 rounded-xl px-2.5 py-2">
+                  <GraduationCap className="w-4 h-4 text-amber-300 flex-shrink-0" />
+                  <span>6-Dawr Academic System</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-white/10 rounded-xl px-2.5 py-2">
+                  <BookOpen className="w-4 h-4 text-amber-300 flex-shrink-0" />
+                  <span>Digital E-Library</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-white/10 rounded-xl px-2.5 py-2">
+                  <Users className="w-4 h-4 text-amber-300 flex-shrink-0" />
+                  <span>Unified Portal</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Login Card */}
+        <div className="lg:col-span-6 w-full max-w-xl mx-auto">
+          <div className="bg-white/95 backdrop-blur-md py-7 px-6 shadow-2xl rounded-3xl sm:px-9 border border-white/20">
           
           {/* 6-Role Fast Switcher */}
           <div className="mb-6">
@@ -280,9 +346,10 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-xs text-slate-400">
-          Jamiatu Monib Alkuzbary Al-Arabia &bull; JMAA-MoritAko &bull; Vercel Serverless Ready
-        </p>
+          <p className="mt-5 text-center text-xs text-slate-400">
+            Jamiatu Monib Alkuzbary Al-Arabia &bull; JMAA-MoritAko &bull; Vercel Serverless Ready
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthService } from '@/lib/auth';
+import SchoolArabicTitle from '@/app/components/SchoolArabicTitle';
 
 export default function HomePage() {
   const router = useRouter();
@@ -21,7 +22,13 @@ export default function HomePage() {
     <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white p-4">
       <div className="text-center space-y-4 max-w-sm">
         <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-        <h2 className="text-base font-bold text-white">جامعة منيب الكزبري العربية</h2>
+        <div className="flex justify-center">
+          <SchoolArabicTitle
+            variant="light"
+            imgClassName="h-10 w-auto object-contain"
+            fallbackClassName="text-base font-bold text-white"
+          />
+        </div>
         <p className="text-xs text-emerald-300 font-mono">JMAA-MoritAko &bull; Portal Loading...</p>
         <div className="pt-2">
           <a

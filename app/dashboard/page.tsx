@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import SchoolArabicTitle from '@/app/components/SchoolArabicTitle';
 import { DataStore } from '@/lib/store';
 import { AuthService } from '@/lib/auth';
 import {
@@ -733,9 +734,13 @@ export default function DashboardOverviewPage() {
             </span>
           </div>
 
-          <h2 className="text-2xl font-bold text-amber-300 font-serif mb-1" dir="rtl">
-            جامعة منيب الكزبري العربية
-          </h2>
+          <div className="mb-1">
+            <SchoolArabicTitle
+              variant="light"
+              imgClassName="h-12 sm:h-14 w-auto object-contain drop-shadow-md"
+              fallbackClassName="text-2xl font-bold text-amber-300 font-serif"
+            />
+          </div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white font-sans">
             Jamiatu Monib Alkuzbary Al-Arabia
           </h1>

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { DataStore } from '@/lib/store';
 import { AuthService } from '@/lib/auth';
 import { useAcademicTerm } from '@/lib/useAcademicTerm';
+import SchoolArabicTitle from '@/app/components/SchoolArabicTitle';
 import {
   GradingPeriod,
   StudentGradeItem,
@@ -703,8 +704,13 @@ export default function GradesPage() {
                     }`}>
                       {isSSG ? 'SSG Council / مجلس الطلبة' : 'Faculty / أستاذ'}
                     </span>
-                    <span className="text-xs text-emerald-300 font-medium">
-                      JMAA-MoritAko &bull; جامعة منيب الكزبري العربية
+                    <span className="inline-flex items-center gap-1.5 text-xs text-emerald-300 font-medium">
+                      <span>JMAA-MoritAko &bull;</span>
+                      <SchoolArabicTitle
+                        variant="light"
+                        imgClassName="h-5 w-auto object-contain"
+                        fallbackClassName="font-serif"
+                      />
                     </span>
                   </div>
                   <h1 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2 mt-0.5">

@@ -8,6 +8,7 @@ import { UserSession, UserRole } from '@/lib/types';
 import { toHindiNumerals } from '@/lib/numerals';
 import AcademicTermSwitcher from './components/AcademicTermSwitcher';
 import BreadcrumbNav from './components/BreadcrumbNav';
+import SchoolArabicTitle from '@/app/components/SchoolArabicTitle';
 import {
   School,
   LayoutDashboard,
@@ -244,9 +245,11 @@ export default function DashboardLayout({
               <span className="bg-[#dfd4b8] border border-[#ccbf99] text-[#126b38] px-3.5 py-1 rounded-full font-black text-xs sm:text-sm tracking-wide shadow-2xs font-mono">
                 JMAA-MoritAko
               </span>
-              <span className="hidden xl:inline-block text-xs text-slate-500 font-serif">
-                جامعة منيب الكزبري العربية
-              </span>
+              <SchoolArabicTitle
+                variant="dark"
+                imgClassName="hidden xl:inline-block h-7 w-auto object-contain"
+                fallbackClassName="hidden xl:inline-block text-xs text-slate-600 font-serif"
+              />
             </div>
 
             {/* Global Academic Year & Semester Switcher */}
@@ -335,7 +338,7 @@ export default function DashboardLayout({
               </button>
 
               {/* Crest Logo */}
-              <div className="w-18 h-18 mx-auto rounded-full bg-white/10 p-1.5 border-2 border-amber-400 shadow-md flex items-center justify-center overflow-hidden">
+              <div className="w-18 h-18 mx-auto rounded-full bg-white p-1.5 border-2 border-amber-400 shadow-md flex items-center justify-center overflow-hidden">
                 <img
                   src="/logo.png"
                   alt="JMAA Emblem"
@@ -347,9 +350,13 @@ export default function DashboardLayout({
               <h2 className="mt-2 font-black text-base text-white leading-tight font-sans tracking-tight">
                 Jamiatu Monib Alkuzbary
               </h2>
-              <p className="text-[11px] text-amber-200/90 font-serif mt-0.5 font-bold" dir="rtl">
-                جامعة منيب الكزبري العربية
-              </p>
+              <div className="mt-1 flex justify-center">
+                <SchoolArabicTitle
+                  variant="light"
+                  imgClassName="h-8 w-auto object-contain drop-shadow"
+                  fallbackClassName="text-[11px] text-amber-200/90 font-serif font-bold"
+                />
+              </div>
 
               {/* Dedicated Portal Badge */}
               <div className="mt-2.5 mx-auto px-3 py-1 rounded-xl bg-amber-400/20 border border-amber-400/40 text-center">

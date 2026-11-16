@@ -8,6 +8,7 @@ import {
   TeacherItem,
 } from '@/lib/types';
 import { DataStore } from '@/lib/store';
+import SchoolArabicTitle from '@/app/components/SchoolArabicTitle';
 import { buildScheduleTimeSlots } from '@/lib/scheduleData';
 import { toHindiNumerals, formatTimeHindi } from '@/lib/numerals';
 import {
@@ -223,9 +224,11 @@ export default function PrincipalMasterScheduleView({
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-400/20 text-amber-300 font-mono">
                 عمادة وإدارة الجامعة &bull; Master Schedule
               </span>
-              <span className="text-xs text-emerald-300 font-mono">
-                جامعة منيب الكزبري العربية
-              </span>
+              <SchoolArabicTitle
+                variant="light"
+                imgClassName="h-6 w-auto object-contain"
+                fallbackClassName="text-xs text-emerald-300 font-mono"
+              />
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2 mt-0.5">
               <span>جدول الحصص والمحاضرات العام</span>

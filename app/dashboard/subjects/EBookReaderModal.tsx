@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import SchoolArabicTitle from '@/app/components/SchoolArabicTitle';
 import {
   BookOpen,
   X,
@@ -177,8 +178,14 @@ export default function EBookReaderModal({
         <div className="bg-slate-50 px-5 py-2.5 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-600 shrink-0" dir="rtl">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="font-serif">
-              المكتبة السحابية متصلة &bull; جامعة منيب الكزبري العربية (JMAA-MoritAko)
+            <span className="inline-flex items-center gap-1.5 font-serif">
+              <span>المكتبة السحابية متصلة &bull;</span>
+              <SchoolArabicTitle
+                variant="dark"
+                imgClassName="h-5 w-auto object-contain inline-block"
+                fallbackClassName="font-serif"
+              />
+              <span>(JMAA-MoritAko)</span>
             </span>
           </div>
 
