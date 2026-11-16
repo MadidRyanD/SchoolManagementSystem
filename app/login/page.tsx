@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthService } from '@/lib/auth';
 import { UserRole } from '@/lib/types';
+import AcademicTermSwitcher from '@/app/dashboard/components/AcademicTermSwitcher';
 import {
   School,
   ShieldCheck,
@@ -234,6 +235,13 @@ export default function LoginPage() {
                   className="block w-full pl-10 pr-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 bg-white"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                Academic Year & Semester (السنة الدراسية والفصل)
+              </label>
+              <AcademicTermSwitcher canAddYear={false} />
             </div>
 
             <div className="pt-2">

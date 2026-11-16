@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { DataStore } from '@/lib/store';
 import { AuthService } from '@/lib/auth';
+import { useAcademicTerm } from '@/lib/useAcademicTerm';
 import {
   GradingPeriod,
   StudentItem,
@@ -81,6 +82,7 @@ export default function FinancePage() {
     Address: '',
   });
 
+  const { academicYear, semester } = useAcademicTerm();
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const currentUser = AuthService.getSession();
@@ -94,11 +96,11 @@ export default function FinancePage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [academicYear, semester]);
 
   const loadData = () => {
     const cls = DataStore.getClasses();
-    const stds = DataStore.getStudents();
+    const stds = DataStore.getStudentsForTerm(academicYear, semester);
     const tchs = DataStore.getTeachers();
     setClasses(cls);
     setStudents(stds);
@@ -132,7 +134,7 @@ export default function FinancePage() {
     const amount = fs ? fs.DawrAmount[period] || 300 : 300;
 
     const cashierName = currentUser?.name || 'Cashier Office';
-    DataStore.markDawrPayment(student.StudentID, student.ClassID, period, newStatus, cashierName, amount);
+    DataStore.markDawrPayment(student.StudentID, student.ClassID, period, newStatus, cashierName, amount, academicYear);
 
     loadData();
     setMsg({
@@ -168,12 +170,19 @@ export default function FinancePage() {
     e.preventDefault();
     if (!newStudent.Name.trim() || !newStudent.RollNo.trim()) return;
 
-    DataStore.saveStudent({
-      ...newStudent,
-      ClassID: Number(newStudent.ClassID),
-      IdNumber: `STD-2026-${Math.floor(100 + Math.random() * 900)}`,
-      AdmissionDate: new Date().toISOString().split('T')[0],
-    });
+    DataStore.saveStudent(
+      {
+        ...newStudent,
+        ClassID: Number(newStudent.ClassID),
+        IdNumber: `STD-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+        AdmissionDate: new Date().toISOString().split('T')[0],
+      },
+      {
+        academicYear,
+        semester,
+        enrollBothSemesters: true,
+      }
+    );
 
     setMsg({ type: 'success', text: `Student ${newStudent.Name} successfully enrolled!` });
     setNewStudent({

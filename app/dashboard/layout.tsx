@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { AuthService } from '@/lib/auth';
 import { UserSession, UserRole } from '@/lib/types';
 import { toHindiNumerals } from '@/lib/numerals';
+import AcademicTermSwitcher from './components/AcademicTermSwitcher';
+import BreadcrumbNav from './components/BreadcrumbNav';
 import {
   School,
   LayoutDashboard,
@@ -31,6 +33,7 @@ import {
   Phone,
   Clock,
   Facebook,
+  UserPlus,
 } from 'lucide-react';
 
 export default function DashboardLayout({
@@ -172,6 +175,7 @@ export default function DashboardLayout({
       return [
         { href: '/dashboard', labelEn: 'Cashier Dashboard', labelAr: 'لوحة المالية', icon: LayoutDashboard },
         { href: '/dashboard/finance', labelEn: 'Tuition & Cashier Ledger', labelAr: 'المالية والصندوق', icon: Wallet },
+        { href: '/dashboard/enrollment', labelEn: 'New Year Enrollment', labelAr: 'التسجيل والترفيع السنوي', icon: UserPlus },
         { href: '/dashboard/students', labelEn: 'Student Directory', labelAr: 'بيانات الطلاب', icon: GraduationCap },
         { href: '/dashboard/announcements', labelEn: 'Announcements', labelAr: 'الإعلانات والتعاميم', icon: Megaphone },
         { href: '/dashboard/profile', labelEn: 'My Profile', labelAr: 'الملف الشخصي', icon: User },
@@ -192,6 +196,7 @@ export default function DashboardLayout({
       { href: '/dashboard/subjects', labelEn: 'Curriculum & Subjects', labelAr: 'المناهج والمواد الدراسية', icon: BookOpen },
       { href: '/dashboard/teachers', labelEn: 'Faculty & Teachers', labelAr: 'الكادر التعليمي والمعلمين', icon: Users },
       { href: '/dashboard/teachers/assignments', labelEn: 'Subject Allocations', labelAr: 'توزيع المواد والمعلمين', icon: UserCog },
+      { href: '/dashboard/enrollment', labelEn: 'Academic Year Enrollment', labelAr: 'التسجيل والترفيع السنوي', icon: UserPlus },
       { href: '/dashboard/students', labelEn: 'Student Directory', labelAr: 'سجل وبيانات الطلاب', icon: GraduationCap },
       { href: '/dashboard/students/attendance', labelEn: 'Student Attendance', labelAr: 'سجل حضور الطلاب', icon: CalendarCheck },
       { href: '/dashboard/attendance', labelEn: 'Staff Attendance', labelAr: 'سجل دوام المعلمين', icon: Clock },
@@ -239,9 +244,14 @@ export default function DashboardLayout({
               <span className="bg-[#dfd4b8] border border-[#ccbf99] text-[#126b38] px-3.5 py-1 rounded-full font-black text-xs sm:text-sm tracking-wide shadow-2xs font-mono">
                 JMAA-MoritAko
               </span>
-              <span className="hidden md:inline-block text-xs text-slate-500 font-serif">
+              <span className="hidden xl:inline-block text-xs text-slate-500 font-serif">
                 جامعة منيب الكزبري العربية
               </span>
+            </div>
+
+            {/* Global Academic Year & Semester Switcher */}
+            <div className="hidden md:block">
+              <AcademicTermSwitcher canAddYear={role === 'admin' || role === 'mudir'} />
             </div>
           </div>
 
@@ -298,6 +308,12 @@ export default function DashboardLayout({
         {/* Main Content Area (Left side on desktop) */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto">
+            {/* Mobile Academic Year & Semester Switcher */}
+            <div className="md:hidden mb-3">
+              <AcademicTermSwitcher canAddYear={role === 'admin' || role === 'mudir'} />
+            </div>
+            {/* Breadcrumb Navigation with Academic Year & Semester */}
+            <BreadcrumbNav />
             {children}
           </div>
         </main>

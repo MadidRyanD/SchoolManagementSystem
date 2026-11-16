@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { DataStore } from '@/lib/store';
 import { AuthService } from '@/lib/auth';
-import { StudentItem, ClassItem } from '@/lib/types';
+import { useAcademicTerm } from '@/lib/useAcademicTerm';
+import { StudentItem, ClassItem, UserSession } from '@/lib/types';
 import {
   GRADE_DEFINITIONS,
   GradeDefinition,
@@ -50,10 +51,10 @@ export default function StudentsPage() {
   const [classes, setClasses] = useState<ClassItem[]>([]);
 
   // Permissions
-  const currentUser = AuthService.getSession();
+  const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
   const isAdmin = currentUser?.role === 'admin';
   const isMudir = currentUser?.role === 'mudir';
-  const canManage = isAdmin || isMudir;
+  const canManage = !currentUser || isAdmin || isMudir;
 
   // Grade Filter (Picture 2 tabs)
   // 'all' or code like 'ب 1', 'ب 2', '1 م', '1 ث', '1 ك-ت', etc.
@@ -117,16 +118,18 @@ export default function StudentsPage() {
   });
 
   const [editingId, setEditingId] = useState<number | null>(null);
+  const { academicYear, semester } = useAcademicTerm();
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
+    setCurrentUser(AuthService.getSession());
     loadData();
-  }, []);
+  }, [academicYear, semester]);
 
   const loadData = () => {
     const cls = DataStore.getClasses();
     setClasses(cls);
-    setStudents(DataStore.getStudents());
+    setStudents(DataStore.getStudentsForTerm(academicYear, semester));
     if (cls.length > 0 && formData.ClassID === 1) {
       setFormData((prev) => ({ ...prev, ClassID: cls[0].ClassID }));
     }

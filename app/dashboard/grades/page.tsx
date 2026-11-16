@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { DataStore } from '@/lib/store';
 import { AuthService } from '@/lib/auth';
+import { useAcademicTerm } from '@/lib/useAcademicTerm';
 import {
   GradingPeriod,
   StudentGradeItem,
@@ -135,23 +136,24 @@ export default function GradesPage() {
   const [finalGradeInput, setFinalGradeInput] = useState<string>('0');
   const [statusSpecial, setStatusSpecial] = useState<'NUMERIC' | 'INC' | 'DRP'>('NUMERIC');
 
+  const { academicYear, semester } = useAcademicTerm();
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [academicYear, semester]);
 
   const loadData = () => {
     const cls = DataStore.getClasses();
     const subs = DataStore.getSubjects();
-    const stds = DataStore.getStudents();
+    const stds = DataStore.getStudentsForTerm(academicYear, semester);
     const tchs = DataStore.getTeachers();
     const stMap = DataStore.getSubjectTeachers();
     setClasses(cls);
     setSubjects(subs);
     setStudents(stds);
     setTeachers(tchs);
-    setGrades(DataStore.getGrades());
+    setGrades(DataStore.getGradesForTerm(academicYear));
     setCriteria(DataStore.getCriteria());
     setSubjectTeachers(stMap);
 

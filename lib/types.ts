@@ -2,6 +2,8 @@ export type DepartmentType = '5-days' | '2-days';
 
 export type GradingPeriod = '1st' | '2nd' | '3rd' | '4th' | '5th' | '6th';
 
+export type SemesterType = '1st' | '2nd';
+
 export type UserRole = 'admin' | 'mudir' | 'cashier' | 'teacher' | 'student' | 'ssg';
 
 export interface UserSession {
@@ -113,6 +115,8 @@ export interface StudentGradeItem {
   SubjectID: number;
   TeacherID: number;
   Period: GradingPeriod;
+  AcademicYear?: string;
+  Semester?: SemesterType;
   CriteriaScores: Record<string, number>;
   FinalGrade: number | 'INC' | 'DRP';
   GradedAt: string;
@@ -140,8 +144,26 @@ export interface StudentAttendanceItem {
   RollNo: string;
   Status: boolean;
   Date: string;
+  AcademicYear?: string;
+  Semester?: SemesterType;
   EditedBy?: string;
   EditedAt?: string;
+}
+
+export type EnrollmentStatus = 'Active' | 'Promoted' | 'Completed' | 'Transferred' | 'Dropped';
+
+export interface StudentEnrollmentRecord {
+  id: string;
+  StudentID: number;
+  AcademicYear: string;
+  Semester: SemesterType;
+  ClassID: number;
+  RollNo: string;
+  Status: EnrollmentStatus;
+  EnrolledAt: string;
+  PreviousAcademicYear?: string;
+  PreviousClassID?: number;
+  Remarks?: string;
 }
 
 export interface TuitionFeeSetting {
@@ -215,6 +237,9 @@ export interface SystemSettings {
   gradeLockDays: number;
   gradeEditWindowHours?: number; // Allowed hours set by principal/admin for editing grades after submission
   activeGradingPeriod?: GradingPeriod; // Current active dawr (e.g. '1st')
+  activeAcademicYear?: string; // Current active academic year (e.g. 'SY 2025-2026')
+  activeSemester?: SemesterType; // Current active semester ('1st' | '2nd')
+  availableAcademicYears?: string[]; // List of configured academic years
   gradeSubmissionDeadlines?: Partial<Record<GradingPeriod, DawrDeadlineItem>>;
   libraryDriveFolderUrl?: string; // Google Drive Central Library folder URL
 }

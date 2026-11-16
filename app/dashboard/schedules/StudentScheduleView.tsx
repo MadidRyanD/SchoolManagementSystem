@@ -9,6 +9,7 @@ import {
   StudentItem,
 } from '@/lib/types';
 import { toHindiNumerals, formatTimeHindi } from '@/lib/numerals';
+import { buildScheduleTimeSlots } from '@/lib/scheduleData';
 import {
   Clock,
   Filter,
@@ -46,16 +47,6 @@ export default function StudentScheduleView({
   // Selected Subject for highlight (clicking a subject highlights all cells with that subject)
   const [highlightedSubjectId, setHighlightedSubjectId] = useState<number | null>(null);
 
-  // Time periods definition matching the mockup
-  const timeSlots = [
-    { label: '7:00 - 8:30', start: '07:00', end: '08:30', isBreak: false },
-    { label: '8:30 - 9:30', start: '08:30', end: '09:30', isBreak: false },
-    { label: '9:30 - 9:40', start: '09:30', end: '09:40', isBreak: true, titleArabic: 'فسحة' },
-    { label: '9:40 - 10:40', start: '09:40', end: '10:40', isBreak: false },
-    { label: '10:40 - 11:30', start: '10:40', end: '11:30', isBreak: false },
-    { label: '11:30 - 12:30', start: '11:30', end: '12:30', isBreak: false },
-  ];
-
   // Days columns based on department (5-Days: Sun-Thu | 2-Days: Fri-Sat)
   const fiveDaysList = [
     { key: 'Sunday', nameEn: 'Sun', nameAr: 'الأحد' },
@@ -77,13 +68,15 @@ export default function StudentScheduleView({
     s => s.ClassID === student.ClassID
   );
 
+  const timeSlots = buildScheduleTimeSlots(studentSchedules);
+
   const getSubject = (subjectId: number) => subjects.find(s => s.SubjectID === subjectId);
   const getTeacher = (teacherId: number) => teachers.find(t => t.TeacherID === teacherId);
 
   // Find schedule for a specific day and time slot
-  const getSlotSchedule = (dayKey: string, startTime: string) => {
+  const getSlotSchedule = (dayKey: string, startTime: string, endTime: string) => {
     return studentSchedules.find(
-      s => s.Day === dayKey && s.StartTime === startTime
+      s => s.Day === dayKey && s.StartTime === startTime && s.EndTime === endTime
     );
   };
 
@@ -336,7 +329,7 @@ export default function StudentScheduleView({
 
                     {/* Day Cells */}
                     {activeDays.map((day, dIdx) => {
-                      const item = getSlotSchedule(day.key, slot.start);
+                      const item = getSlotSchedule(day.key, slot.start, slot.end);
                       const sub = item ? getSubject(item.SubjectID) : null;
                       const teacher = item ? getTeacher(item.TeacherID) : null;
 

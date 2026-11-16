@@ -16,12 +16,22 @@ import {
   FormTemplateItem,
   SystemSettings,
   GradingPeriod,
+  SemesterType,
   DepartmentType,
   DawrDeadlineItem,
+  StudentEnrollmentRecord,
+  EnrollmentStatus,
   FeesItem,
   ExamItem,
   ExpenseItem,
 } from './types';
+import {
+  scheduleClasses,
+  scheduleTeachers,
+  scheduleSubjects,
+  scheduleSubjectTeachers,
+  scheduleItems,
+} from './scheduleData';
 
 export const initialSettings: SystemSettings = {
   schoolNameEn: 'Jamiatu Monib Alkuzbary Al-Arabia',
@@ -30,6 +40,9 @@ export const initialSettings: SystemSettings = {
   gradeLockDays: 7,
   gradeEditWindowHours: 24, // Default allowed editing time given by principal/admin after submission
   activeGradingPeriod: '1st',
+  activeAcademicYear: 'SY 2025-2026',
+  activeSemester: '1st',
+  availableAcademicYears: ['SY 2024-2025', 'SY 2025-2026', 'SY 2026-2027'],
   gradeSubmissionDeadlines: {
     '1st': { period: '1st', deadlineIso: '2026-10-31T23:59', instructions: 'يرجى مراجعة وتدقيق درجات الدور الأول قبل انتهاء الموعد المحدد', enforceLock: true },
     '2nd': { period: '2nd', deadlineIso: '2026-11-30T23:59', instructions: 'الموعد النهائي لتسليم درجات الدور الثاني', enforceLock: true },
@@ -41,332 +54,20 @@ export const initialSettings: SystemSettings = {
   libraryDriveFolderUrl: 'https://drive.google.com/drive/folders/1fCXKezhMzm93fm9S98keWyxLfG-N2NDf?usp=drive_link',
 };
 
-// 1. Classes across 5-Days and 2-Days departments
-export const initialClasses: ClassItem[] = [
-  // 5-Days Department
-  // Ibtidaiyyah (Grade 1 to 6)
-  { ClassID: 1, ClassName: 'Ibtidaiyyah - Grade 1-A', Department: '5-days', Level: 'Ibtidaiyyah', YearGrade: 1, AdviserID: 2 },
-  { ClassID: 2, ClassName: 'Ibtidaiyyah - Grade 2-A', Department: '5-days', Level: 'Ibtidaiyyah', YearGrade: 2, AdviserID: 3 },
-  { ClassID: 3, ClassName: 'Ibtidaiyyah - Grade 3-A', Department: '5-days', Level: 'Ibtidaiyyah', YearGrade: 3, AdviserID: 4 },
-  { ClassID: 4, ClassName: 'Ibtidaiyyah - Grade 4-A', Department: '5-days', Level: 'Ibtidaiyyah', YearGrade: 4, AdviserID: 2 },
-  { ClassID: 5, ClassName: 'Ibtidaiyyah - Grade 5-A', Department: '5-days', Level: 'Ibtidaiyyah', YearGrade: 5, AdviserID: 3 },
-  { ClassID: 6, ClassName: 'Ibtidaiyyah - Grade 6-A', Department: '5-days', Level: 'Ibtidaiyyah', YearGrade: 6, AdviserID: 4 },
-  // Mutawassit (1 to 3)
-  { ClassID: 7, ClassName: 'Mutawassit - Year 1-A', Department: '5-days', Level: 'Mutawassit', YearGrade: 1, AdviserID: 2 },
-  { ClassID: 8, ClassName: 'Mutawassit - Year 2-A', Department: '5-days', Level: 'Mutawassit', YearGrade: 2, AdviserID: 5 },
-  { ClassID: 9, ClassName: 'Mutawassit - Year 3-A', Department: '5-days', Level: 'Mutawassit', YearGrade: 3, AdviserID: 4 },
-  // Thanawi (1 to 3)
-  { ClassID: 10, ClassName: 'Thanawi - Year 1-A', Department: '5-days', Level: 'Thanawi', YearGrade: 1, AdviserID: 5 },
-  { ClassID: 11, ClassName: 'Thanawi - Year 2-A', Department: '5-days', Level: 'Thanawi', YearGrade: 2, AdviserID: 2 },
-  { ClassID: 12, ClassName: 'Thanawi - Year 3-A', Department: '5-days', Level: 'Thanawi', YearGrade: 3, AdviserID: 3 },
-  // Kulliyatu Shariah (1 to 4)
-  { ClassID: 13, ClassName: 'Kulliyatu Shariah - Year 1', Department: '5-days', Level: 'Kulliyatu Shariah', YearGrade: 1, AdviserID: 1 },
-  { ClassID: 14, ClassName: 'Kulliyatu Shariah - Year 2', Department: '5-days', Level: 'Kulliyatu Shariah', YearGrade: 2, AdviserID: 1 },
-  { ClassID: 15, ClassName: 'Kulliyatu Shariah - Year 3', Department: '5-days', Level: 'Kulliyatu Shariah', YearGrade: 3, AdviserID: 5 },
-  { ClassID: 16, ClassName: 'Kulliyatu Shariah - Year 4', Department: '5-days', Level: 'Kulliyatu Shariah', YearGrade: 4, AdviserID: 5 },
-  // Kulliyatu Dawa (1 to 4)
-  { ClassID: 17, ClassName: 'Kulliyatu Dawa - Year 1', Department: '5-days', Level: 'Kulliyatu Dawa', YearGrade: 1, AdviserID: 2 },
-  { ClassID: 18, ClassName: 'Kulliyatu Dawa - Year 2', Department: '5-days', Level: 'Kulliyatu Dawa', YearGrade: 2, AdviserID: 4 },
-  { ClassID: 19, ClassName: 'Kulliyatu Dawa - Year 3', Department: '5-days', Level: 'Kulliyatu Dawa', YearGrade: 3, AdviserID: 2 },
-  { ClassID: 20, ClassName: 'Kulliyatu Dawa - Year 4', Department: '5-days', Level: 'Kulliyatu Dawa', YearGrade: 4, AdviserID: 4 },
-  // Kulliyatu Tarbiya (1 to 4)
-  { ClassID: 21, ClassName: 'Kulliyatu Tarbiya - Year 1', Department: '5-days', Level: 'Kulliyatu Tarbiya', YearGrade: 1, AdviserID: 3 },
-  { ClassID: 22, ClassName: 'Kulliyatu Tarbiya - Year 2', Department: '5-days', Level: 'Kulliyatu Tarbiya', YearGrade: 2, AdviserID: 3 },
-  { ClassID: 23, ClassName: 'Kulliyatu Tarbiya - Year 3', Department: '5-days', Level: 'Kulliyatu Tarbiya', YearGrade: 3, AdviserID: 3 },
-  { ClassID: 24, ClassName: 'Kulliyatu Tarbiya - Year 4', Department: '5-days', Level: 'Kulliyatu Tarbiya', YearGrade: 4, AdviserID: 3 },
+// 1. Classes (populated from scheduleData.ts)
+export const initialClasses: ClassItem[] = scheduleClasses;
 
-  // 2-Days Department
-  // Ibtidaiyyah (Grade 1 to 6)
-  { ClassID: 25, ClassName: '2-Days Ibtidaiyyah - Grade 1', Department: '2-days', Level: 'Ibtidaiyyah', YearGrade: 1, AdviserID: 4 },
-  { ClassID: 26, ClassName: '2-Days Ibtidaiyyah - Grade 2', Department: '2-days', Level: 'Ibtidaiyyah', YearGrade: 2, AdviserID: 4 },
-  { ClassID: 27, ClassName: '2-Days Ibtidaiyyah - Grade 3', Department: '2-days', Level: 'Ibtidaiyyah', YearGrade: 3, AdviserID: 2 },
-  { ClassID: 28, ClassName: '2-Days Ibtidaiyyah - Grade 4', Department: '2-days', Level: 'Ibtidaiyyah', YearGrade: 4, AdviserID: 3 },
-  { ClassID: 29, ClassName: '2-Days Ibtidaiyyah - Grade 5', Department: '2-days', Level: 'Ibtidaiyyah', YearGrade: 5, AdviserID: 4 },
-  { ClassID: 30, ClassName: '2-Days Ibtidaiyyah - Grade 6', Department: '2-days', Level: 'Ibtidaiyyah', YearGrade: 6, AdviserID: 2 },
-  // Mutawassit (1 to 3)
-  { ClassID: 31, ClassName: '2-Days Mutawassit - Year 1', Department: '2-days', Level: 'Mutawassit', YearGrade: 1, AdviserID: 5 },
-  { ClassID: 32, ClassName: '2-Days Mutawassit - Year 2', Department: '2-days', Level: 'Mutawassit', YearGrade: 2, AdviserID: 5 },
-  { ClassID: 33, ClassName: '2-Days Mutawassit - Year 3', Department: '2-days', Level: 'Mutawassit', YearGrade: 3, AdviserID: 2 },
-  // Thanawi (1 to 3)
-  { ClassID: 34, ClassName: '2-Days Thanawi - Year 1', Department: '2-days', Level: 'Thanawi', YearGrade: 1, AdviserID: 5 },
-  { ClassID: 35, ClassName: '2-Days Thanawi - Year 2', Department: '2-days', Level: 'Thanawi', YearGrade: 2, AdviserID: 3 },
-  { ClassID: 36, ClassName: '2-Days Thanawi - Year 3', Department: '2-days', Level: 'Thanawi', YearGrade: 3, AdviserID: 1 },
-  // Kulliyatu Tarbiyah (1 to 4)
-  { ClassID: 37, ClassName: '2-Days Kulliyatu Tarbiyah - Year 1', Department: '2-days', Level: 'Kulliyatu Tarbiyah', YearGrade: 1, AdviserID: 3 },
-  { ClassID: 38, ClassName: '2-Days Kulliyatu Tarbiyah - Year 2', Department: '2-days', Level: 'Kulliyatu Tarbiyah', YearGrade: 2, AdviserID: 3 },
-  { ClassID: 39, ClassName: '2-Days Kulliyatu Tarbiyah - Year 3', Department: '2-days', Level: 'Kulliyatu Tarbiyah', YearGrade: 3, AdviserID: 2 },
-  { ClassID: 40, ClassName: '2-Days Kulliyatu Tarbiyah - Year 4', Department: '2-days', Level: 'Kulliyatu Tarbiyah', YearGrade: 4, AdviserID: 1 },
-];
+// 2. Faculty & Mudir (populated from scheduleData.ts)
+export const initialTeachers: TeacherItem[] = scheduleTeachers;
 
-// 2. Faculty & Mudir
-export const initialTeachers: TeacherItem[] = [
-  {
-    TeacherID: 1,
-    Name: 'Dr. Monib Alkuzbary',
-    NameArabic: 'د. منيب الكزبري',
-    Gender: 'Male',
-    Tribe: 'Quraysh',
-    Nationality: 'Saudi / Arab',
-    BirthDate: '1972-03-15',
-    BirthPlace: 'Damascus / Riyadh',
-    Address: 'Central Academic Quarters, Campus A',
-    MobileNumber: '+966 50 123 4567',
-    Email: 'mudir@jmaa.edu',
-    Password: 'mudir123',
-    IdNumber: 'TCH-001-MDR',
-    Degree: 'Ph.D. in Islamic Jurisprudence (Fiqh & Usool)',
-    AdmissionDate: '2010-09-01',
-    Remarks: 'Principal (Mudir Al-Aam) & Senior Professor of Usul Al-Fiqh',
-    ProfilePic: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    IsMudir: true,
-  },
-  {
-    TeacherID: 2,
-    Name: 'Sheikh Ahmad Al-Farouq',
-    NameArabic: 'الشيخ أحمد الفاروق',
-    Gender: 'Male',
-    Tribe: 'Bani Hashim',
-    Nationality: 'Syrian',
-    BirthDate: '1984-06-20',
-    BirthPlace: 'Aleppo',
-    Address: 'Al-Noor District, Faculty Housing 12',
-    MobileNumber: '+966 55 234 5678',
-    Email: 'teacher@school.edu',
-    Password: 'teacher123',
-    IdNumber: 'TCH-002-FAR',
-    Degree: 'M.A. in Quranic Exegesis (Tafseer & Tajweed)',
-    AdmissionDate: '2016-08-15',
-    Remarks: 'Head of Quranic Recitation & Department Adviser',
-    ProfilePic: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    IsMudir: false,
-  },
-  {
-    TeacherID: 3,
-    Name: 'Ustadha Fatima Al-Zahra',
-    NameArabic: 'الأستاذة فاطمة الزهراء',
-    Gender: 'Female',
-    Tribe: 'Tamim',
-    Nationality: 'Egyptian',
-    BirthDate: '1988-11-04',
-    BirthPlace: 'Cairo',
-    Address: 'Rawdah District, Villa 4B',
-    MobileNumber: '+966 54 345 6789',
-    Email: 'fatima@jmaa.edu',
-    Password: 'teacher123',
-    IdNumber: 'TCH-003-ZAH',
-    Degree: 'M.Ed. in Islamic Education (Tarbiya)',
-    AdmissionDate: '2018-09-01',
-    Remarks: 'Dean of Kulliyatu Tarbiya',
-    ProfilePic: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    IsMudir: false,
-  },
-  {
-    TeacherID: 4,
-    Name: 'Sheikh Bilal Mansoor',
-    NameArabic: 'الشيخ بلال منصور',
-    Gender: 'Male',
-    Tribe: 'Ansari',
-    Nationality: 'Jordanian',
-    BirthDate: '1986-02-18',
-    BirthPlace: 'Amman',
-    Address: 'Faculty Building 3, Apt 101',
-    MobileNumber: '+966 56 456 7890',
-    Email: 'bilal@jmaa.edu',
-    Password: 'teacher123',
-    IdNumber: 'TCH-004-MAN',
-    Degree: 'M.A. in Arabic Language & Grammar (Nahw & Sarf)',
-    AdmissionDate: '2017-09-01',
-    Remarks: 'Senior Lecturer in Arabic Linguistics',
-    ProfilePic: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-    IsMudir: false,
-  },
-  {
-    TeacherID: 5,
-    Name: 'Dr. Tariq Al-Hashimi',
-    NameArabic: 'د. طارق الهاشمي',
-    Gender: 'Male',
-    Tribe: 'Hashimi',
-    Nationality: 'Iraqi',
-    BirthDate: '1979-08-12',
-    BirthPlace: 'Baghdad',
-    Address: 'Campus Avenue 8, Villa 15',
-    MobileNumber: '+966 53 567 8901',
-    Email: 'tariq@jmaa.edu',
-    Password: 'teacher123',
-    IdNumber: 'TCH-005-HAS',
-    Degree: 'Ph.D. in Hadith Sciences & Sanad',
-    AdmissionDate: '2015-09-01',
-    Remarks: 'Professor of Hadith Literature & Vice Dean',
-    ProfilePic: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
-    IsMudir: false,
-  },
-  {
-    TeacherID: 6,
-    Name: 'Ustadh Al-Yasa',
-    NameArabic: 'اليسع',
-    Gender: 'Male',
-    Nationality: 'Saudi',
-    Email: 'alyasa@jmaa.edu',
-    Password: 'teacher123',
-    IdNumber: 'TCH-006-YAS',
-    Degree: 'B.A. in Islamic Jurisprudence (Fiqh)',
-    AdmissionDate: '2019-09-01',
-    Remarks: 'Lecturer of Fiqh',
-    ProfilePic: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    IsMudir: false,
-  },
-  {
-    TeacherID: 7,
-    Name: 'Ustadh Ryan Madid',
-    NameArabic: 'ريان',
-    Gender: 'Male',
-    Nationality: 'Filipino / Arab',
-    Email: 'ryan@jmaa.edu',
-    Password: 'teacher123',
-    IdNumber: 'TCH-007-RYN',
-    Degree: 'B.S. in Islamic Theology & Tawheed',
-    AdmissionDate: '2020-08-15',
-    Remarks: 'Lecturer of Tawheed & Islamic Beliefs',
-    ProfilePic: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    IsMudir: false,
-  },
-];
+// 3. Subjects (populated from scheduleData.ts)
+export const initialSubjects: SubjectItem[] = scheduleSubjects;
 
-// 3. Subjects
-export const initialSubjects: SubjectItem[] = [
-  { SubjectID: 1, ClassID: 1, SubjectClass: 'Fiqh (Jurisprudence)', SubjectCode: 'FIQ-101', SubjectArabic: 'فقه', Semester: 'Both' },
-  { SubjectID: 2, ClassID: 1, SubjectClass: 'Tawheed (Monotheism)', SubjectCode: 'TWH-101', SubjectArabic: 'توحيد', Semester: 'Both' },
-  { SubjectID: 3, ClassID: 1, SubjectClass: 'Quran & Tajweed', SubjectCode: 'QUR-101', SubjectArabic: 'قرآن', Semester: 'Both' },
-  { SubjectID: 4, ClassID: 1, SubjectClass: 'Tabeer (Arabic Expression)', SubjectCode: 'TBR-101', SubjectArabic: 'تعبير', Semester: 'Both' },
-  { SubjectID: 5, ClassID: 1, SubjectClass: 'Nusoos (Arabic Literature)', SubjectCode: 'NSS-101', SubjectArabic: 'نصوص', Semester: 'Both' },
-  { SubjectID: 6, ClassID: 1, SubjectClass: 'Islamic Morals (Adab & Akhlaq)', SubjectCode: 'ADB-101', SubjectArabic: 'آداب وأخلاق', Semester: 'Both' },
-  { SubjectID: 7, ClassID: 7, SubjectClass: 'Fiqh Al-Ibadat (Jurisprudence)', SubjectCode: 'FIQ-201', SubjectArabic: 'فقه العبادات', Semester: 'Both' },
-  { SubjectID: 8, ClassID: 7, SubjectClass: 'Nahw & Sarf (Arabic Grammar)', SubjectCode: 'ARB-201', SubjectArabic: 'نحو وصرف', Semester: 'Both' },
-  { SubjectID: 9, ClassID: 7, SubjectClass: 'Seerah & Islamic History', SubjectCode: 'SIR-201', SubjectArabic: 'سيرة وتاريخ', Semester: 'Both' },
-  { SubjectID: 10, ClassID: 10, SubjectClass: 'Usool Al-Hadith', SubjectCode: 'HAD-301', SubjectArabic: 'أصول الحديث', Semester: 'Both' },
-  { SubjectID: 11, ClassID: 10, SubjectClass: 'Aqeedah & Islamic Theology', SubjectCode: 'AQD-301', SubjectArabic: 'عقيدة إسلامية', Semester: 'Both' },
-  { SubjectID: 12, ClassID: 13, SubjectClass: 'Advanced Usul Al-Fiqh', SubjectCode: 'SHR-401', SubjectArabic: 'أصول الفقه المتقدم', Semester: 'Both' },
-  { SubjectID: 13, ClassID: 13, SubjectClass: 'Comparative Islamic Jurisprudence', SubjectCode: 'SHR-402', SubjectArabic: 'فقه مقارن', Semester: 'Both' },
-  { SubjectID: 14, ClassID: 17, SubjectClass: 'Principles of Dawa & Dialogue', SubjectCode: 'DAW-401', SubjectArabic: 'أصول الدعوة والحوار', Semester: 'Both' },
-  { SubjectID: 15, ClassID: 21, SubjectClass: 'Educational Psychology & Pedagogy', SubjectCode: 'TRB-401', SubjectArabic: 'علم النفس التربوي', Semester: 'Both' },
-  { SubjectID: 16, ClassID: 15, SubjectClass: 'Fiqh Al-Muamalat (Jurisprudence)', SubjectCode: 'FIQ-301', SubjectArabic: 'فقه', Semester: 'Both' },
-  // 2-Days Department Subjects (Class 25)
-  { SubjectID: 17, ClassID: 25, SubjectClass: 'Fiqh (Jurisprudence)', SubjectCode: 'FIQ-101-W', SubjectArabic: 'فقه', Semester: 'Both' },
-  { SubjectID: 18, ClassID: 25, SubjectClass: 'Tawheed (Monotheism)', SubjectCode: 'TWH-101-W', SubjectArabic: 'توحيد', Semester: 'Both' },
-  { SubjectID: 19, ClassID: 25, SubjectClass: 'Quran & Tajweed', SubjectCode: 'QUR-101-W', SubjectArabic: 'قرآن', Semester: 'Both' },
-  { SubjectID: 20, ClassID: 25, SubjectClass: 'Islamic Morals (Adab & Akhlaq)', SubjectCode: 'ADB-101-W', SubjectArabic: 'آداب وأخلاق', Semester: 'Both' },
-  // Nashat (Student Activity) Subjects - Managed exclusively by SSG (مجلس الطلبة)
-  { SubjectID: 21, ClassID: 1, SubjectClass: 'Nashat (Student Activity)', SubjectCode: 'NST-101', SubjectArabic: 'نشاط', Semester: 'Both', IsNashat: true },
-  { SubjectID: 22, ClassID: 7, SubjectClass: 'Nashat (Student Activity)', SubjectCode: 'NST-201', SubjectArabic: 'نشاط', Semester: 'Both', IsNashat: true },
-  { SubjectID: 23, ClassID: 10, SubjectClass: 'Nashat (Student Activity)', SubjectCode: 'NST-301', SubjectArabic: 'نشاط', Semester: 'Both', IsNashat: true },
-  { SubjectID: 24, ClassID: 13, SubjectClass: 'Nashat (Student Activity)', SubjectCode: 'NST-401', SubjectArabic: 'نشاط', Semester: 'Both', IsNashat: true },
-  { SubjectID: 25, ClassID: 15, SubjectClass: 'Nashat (Student Activity)', SubjectCode: 'NST-501', SubjectArabic: 'نشاط', Semester: 'Both', IsNashat: true },
-  { SubjectID: 26, ClassID: 25, SubjectClass: 'Nashat (Student Activity)', SubjectCode: 'NST-101-W', SubjectArabic: 'نشاط', Semester: 'Both', IsNashat: true },
-];
+// 4. Subject-Teacher Mappings (populated from scheduleData.ts)
+export const initialSubjectTeachers: SubjectTeacherItem[] = scheduleSubjectTeachers;
 
-// 4. Subject-Teacher Mappings
-export const initialSubjectTeachers: SubjectTeacherItem[] = [
-  { ID: 1, ClassID: 1, SubjectID: 1, TeacherID: 6 }, // اليسع (Fiqh)
-  { ID: 2, ClassID: 1, SubjectID: 2, TeacherID: 7 }, // ريان (Tawheed)
-  { ID: 3, ClassID: 1, SubjectID: 3, TeacherID: 2 }, // الشيخ أحمد (Quran)
-  { ID: 4, ClassID: 1, SubjectID: 4, TeacherID: 4 }, // الشيخ بلال (Tabeer)
-  { ID: 5, ClassID: 1, SubjectID: 5, TeacherID: 6 }, // اليسع (Nusoos)
-  { ID: 6, ClassID: 1, SubjectID: 6, TeacherID: 3 }, // Ustadha Fatima (Adab)
-  { ID: 7, ClassID: 7, SubjectID: 7, TeacherID: 1 },
-  { ID: 8, ClassID: 7, SubjectID: 8, TeacherID: 4 },
-  { ID: 9, ClassID: 7, SubjectID: 9, TeacherID: 5 },
-  { ID: 10, ClassID: 10, SubjectID: 10, TeacherID: 5 },
-  { ID: 11, ClassID: 10, SubjectID: 11, TeacherID: 2 },
-  { ID: 12, ClassID: 13, SubjectID: 12, TeacherID: 1 },
-  { ID: 13, ClassID: 13, SubjectID: 13, TeacherID: 5 },
-  { ID: 14, ClassID: 17, SubjectID: 14, TeacherID: 2 },
-  { ID: 15, ClassID: 21, SubjectID: 15, TeacherID: 3 },
-  { ID: 16, ClassID: 15, SubjectID: 16, TeacherID: 2 },
-  // 2-Days mappings
-  { ID: 17, ClassID: 25, SubjectID: 17, TeacherID: 6 }, // اليسع (Fiqh)
-  { ID: 18, ClassID: 25, SubjectID: 18, TeacherID: 7 }, // ريان (Tawheed)
-  { ID: 19, ClassID: 25, SubjectID: 19, TeacherID: 2 }, // الشيخ أحمد (Quran)
-  { ID: 20, ClassID: 25, SubjectID: 20, TeacherID: 3 }, // فاطمة (Adab)
-  // SSG Nashat Mappings
-  { ID: 21, ClassID: 1, SubjectID: 21, TeacherID: 88 },
-  { ID: 22, ClassID: 7, SubjectID: 22, TeacherID: 88 },
-  { ID: 23, ClassID: 10, SubjectID: 23, TeacherID: 88 },
-  { ID: 24, ClassID: 13, SubjectID: 24, TeacherID: 88 },
-  { ID: 25, ClassID: 15, SubjectID: 25, TeacherID: 88 },
-  { ID: 26, ClassID: 25, SubjectID: 26, TeacherID: 88 },
-];
-
-// 5. Weekly Class Schedules
-export const initialSchedules: ClassScheduleItem[] = [
-  // Class 1 - Sunday
-  { ID: 1, ClassID: 1, SubjectID: 3, TeacherID: 2, Day: 'Sunday', StartTime: '07:00', EndTime: '08:30', Room: 'Hall 101' },
-  { ID: 2, ClassID: 1, SubjectID: 1, TeacherID: 6, Day: 'Sunday', StartTime: '08:30', EndTime: '09:30', Room: 'Hall 101' },
-  { ID: 3, ClassID: 1, SubjectID: 2, TeacherID: 7, Day: 'Sunday', StartTime: '09:40', EndTime: '10:40', Room: 'Hall 101' },
-  { ID: 4, ClassID: 1, SubjectID: 4, TeacherID: 4, Day: 'Sunday', StartTime: '10:40', EndTime: '11:30', Room: 'Hall 101' },
-  { ID: 5, ClassID: 1, SubjectID: 5, TeacherID: 6, Day: 'Sunday', StartTime: '11:30', EndTime: '12:30', Room: 'Hall 101' },
-
-  // Class 1 - Monday
-  { ID: 6, ClassID: 1, SubjectID: 2, TeacherID: 7, Day: 'Monday', StartTime: '07:00', EndTime: '08:30', Room: 'Hall 101' },
-  { ID: 7, ClassID: 1, SubjectID: 3, TeacherID: 2, Day: 'Monday', StartTime: '08:30', EndTime: '09:30', Room: 'Hall 101' },
-  { ID: 8, ClassID: 1, SubjectID: 1, TeacherID: 6, Day: 'Monday', StartTime: '09:40', EndTime: '10:40', Room: 'Hall 101' },
-  { ID: 9, ClassID: 1, SubjectID: 6, TeacherID: 3, Day: 'Monday', StartTime: '10:40', EndTime: '11:30', Room: 'Hall 101' },
-  { ID: 10, ClassID: 1, SubjectID: 4, TeacherID: 4, Day: 'Monday', StartTime: '11:30', EndTime: '12:30', Room: 'Hall 101' },
-
-  // Class 1 - Tuesday
-  { ID: 11, ClassID: 1, SubjectID: 1, TeacherID: 6, Day: 'Tuesday', StartTime: '07:00', EndTime: '08:30', Room: 'Hall 101' },
-  { ID: 12, ClassID: 1, SubjectID: 5, TeacherID: 6, Day: 'Tuesday', StartTime: '08:30', EndTime: '09:30', Room: 'Hall 101' },
-  { ID: 17, ClassID: 1, SubjectID: 3, TeacherID: 2, Day: 'Tuesday', StartTime: '09:40', EndTime: '10:40', Room: 'Hall 101' },
-  { ID: 18, ClassID: 1, SubjectID: 2, TeacherID: 7, Day: 'Tuesday', StartTime: '10:40', EndTime: '11:30', Room: 'Hall 101' },
-  { ID: 19, ClassID: 1, SubjectID: 6, TeacherID: 3, Day: 'Tuesday', StartTime: '11:30', EndTime: '12:30', Room: 'Hall 101' },
-
-  // Class 1 - Wednesday
-  { ID: 20, ClassID: 1, SubjectID: 3, TeacherID: 2, Day: 'Wednesday', StartTime: '07:00', EndTime: '08:30', Room: 'Hall 101' },
-  { ID: 21, ClassID: 1, SubjectID: 4, TeacherID: 4, Day: 'Wednesday', StartTime: '08:30', EndTime: '09:30', Room: 'Hall 101' },
-  { ID: 24, ClassID: 1, SubjectID: 1, TeacherID: 6, Day: 'Wednesday', StartTime: '09:40', EndTime: '10:40', Room: 'Hall 101' },
-  { ID: 25, ClassID: 1, SubjectID: 5, TeacherID: 6, Day: 'Wednesday', StartTime: '10:40', EndTime: '11:30', Room: 'Hall 101' },
-  { ID: 26, ClassID: 1, SubjectID: 2, TeacherID: 7, Day: 'Wednesday', StartTime: '11:30', EndTime: '12:30', Room: 'Hall 101' },
-
-  // Class 1 - Thursday (Exact Mockup Match)
-  { ID: 22, ClassID: 1, SubjectID: 1, TeacherID: 6, Day: 'Thursday', StartTime: '07:00', EndTime: '08:30', Room: 'Hall 101' },
-  { ID: 27, ClassID: 1, SubjectID: 2, TeacherID: 7, Day: 'Thursday', StartTime: '08:30', EndTime: '09:30', Room: 'Hall 101' },
-  { ID: 28, ClassID: 1, SubjectID: 2, TeacherID: 7, Day: 'Thursday', StartTime: '09:40', EndTime: '10:40', Room: 'Hall 101' },
-  { ID: 29, ClassID: 1, SubjectID: 1, TeacherID: 6, Day: 'Thursday', StartTime: '10:40', EndTime: '11:30', Room: 'Hall 101' },
-  { ID: 30, ClassID: 1, SubjectID: 1, TeacherID: 6, Day: 'Thursday', StartTime: '11:30', EndTime: '12:30', Room: 'Hall 101' },
-
-  // Other Classes / Faculty Slots
-  { ID: 31, ClassID: 7, SubjectID: 4, TeacherID: 1, Day: 'Sunday', StartTime: '08:00', EndTime: '09:30', Room: 'Lecture Hall B' },
-  { ID: 32, ClassID: 7, SubjectID: 5, TeacherID: 4, Day: 'Sunday', StartTime: '10:30', EndTime: '11:30', Room: 'Lecture Hall B' },
-  { ID: 33, ClassID: 10, SubjectID: 7, TeacherID: 5, Day: 'Sunday', StartTime: '08:30', EndTime: '10:00', Room: 'Seminar Room 2' },
-  { ID: 34, ClassID: 13, SubjectID: 9, TeacherID: 1, Day: 'Sunday', StartTime: '10:00', EndTime: '11:30', Room: 'Auditorium 1' },
-  { ID: 16, ClassID: 15, SubjectID: 16, TeacherID: 2, Day: 'Sunday', StartTime: '11:45', EndTime: '13:00', Room: 'Kulliyah Wing 3' },
-  
-  { ID: 35, ClassID: 7, SubjectID: 6, TeacherID: 5, Day: 'Monday', StartTime: '08:00', EndTime: '09:30', Room: 'Lecture Hall B' },
-  { ID: 36, ClassID: 10, SubjectID: 8, TeacherID: 2, Day: 'Monday', StartTime: '10:30', EndTime: '12:00', Room: 'Seminar Room 2' },
-  { ID: 37, ClassID: 17, SubjectID: 11, TeacherID: 2, Day: 'Monday', StartTime: '13:00', EndTime: '14:30', Room: 'Dawa Hall' },
-  { ID: 38, ClassID: 21, SubjectID: 12, TeacherID: 3, Day: 'Monday', StartTime: '10:00', EndTime: '11:30', Room: 'Tarbiya Lab' },
-
-  { ID: 39, ClassID: 15, SubjectID: 16, TeacherID: 2, Day: 'Tuesday', StartTime: '09:30', EndTime: '11:00', Room: 'Kulliyah Wing 3' },
-  { ID: 40, ClassID: 10, SubjectID: 11, TeacherID: 2, Day: 'Tuesday', StartTime: '11:15', EndTime: '12:30', Room: 'Seminar Room 2' },
-
-  { ID: 41, ClassID: 15, SubjectID: 16, TeacherID: 2, Day: 'Wednesday', StartTime: '10:00', EndTime: '11:30', Room: 'Kulliyah Wing 3' },
-  { ID: 23, ClassID: 17, SubjectID: 14, TeacherID: 2, Day: 'Thursday', StartTime: '10:00', EndTime: '11:30', Room: 'Dawa Hall' },
-
-  // 2-Days Department Schedule (Class 25 - Friday & Saturday)
-  { ID: 13, ClassID: 25, SubjectID: 17, TeacherID: 6, Day: 'Friday', StartTime: '07:00', EndTime: '08:30', Room: 'Weekend Wing 1' },
-  { ID: 42, ClassID: 25, SubjectID: 18, TeacherID: 7, Day: 'Friday', StartTime: '08:30', EndTime: '09:30', Room: 'Weekend Wing 1' },
-  { ID: 43, ClassID: 25, SubjectID: 19, TeacherID: 2, Day: 'Friday', StartTime: '09:40', EndTime: '10:40', Room: 'Weekend Wing 1' },
-  { ID: 44, ClassID: 25, SubjectID: 20, TeacherID: 3, Day: 'Friday', StartTime: '10:40', EndTime: '11:30', Room: 'Weekend Wing 1' },
-  { ID: 45, ClassID: 25, SubjectID: 17, TeacherID: 6, Day: 'Friday', StartTime: '11:30', EndTime: '12:30', Room: 'Weekend Wing 1' },
-
-  { ID: 46, ClassID: 25, SubjectID: 19, TeacherID: 2, Day: 'Saturday', StartTime: '07:00', EndTime: '08:30', Room: 'Weekend Wing 1' },
-  { ID: 47, ClassID: 25, SubjectID: 17, TeacherID: 6, Day: 'Saturday', StartTime: '08:30', EndTime: '09:30', Room: 'Weekend Wing 1' },
-  { ID: 48, ClassID: 25, SubjectID: 18, TeacherID: 7, Day: 'Saturday', StartTime: '09:40', EndTime: '10:40', Room: 'Weekend Wing 1' },
-  { ID: 49, ClassID: 25, SubjectID: 17, TeacherID: 6, Day: 'Saturday', StartTime: '10:40', EndTime: '11:30', Room: 'Weekend Wing 1' },
-  { ID: 50, ClassID: 25, SubjectID: 18, TeacherID: 7, Day: 'Saturday', StartTime: '11:30', EndTime: '12:30', Room: 'Weekend Wing 1' },
-
-  { ID: 14, ClassID: 31, SubjectID: 4, TeacherID: 5, Day: 'Friday', StartTime: '09:45', EndTime: '11:15', Room: 'Weekend Wing 2' },
-  { ID: 15, ClassID: 37, SubjectID: 12, TeacherID: 3, Day: 'Saturday', StartTime: '08:30', EndTime: '10:30', Room: 'Weekend Wing 3' },
-];
+// 5. Weekly Class Schedules (populated from scheduleData.ts)
+export const initialSchedules: ClassScheduleItem[] = scheduleItems;
 
 // 6. Students
 export const initialStudents: StudentItem[] = [
@@ -875,6 +576,7 @@ const KEYS = {
   SUBJECT_TEACHERS: 'jmaa_sub_teachers',
   SCHEDULES: 'jmaa_schedules',
   STUDENTS: 'jmaa_students',
+  ENROLLMENTS: 'jmaa_enrollments',
   CRITERIA: 'jmaa_criteria',
   GRADES: 'jmaa_grades',
   FEES: 'jmaa_fees',
@@ -886,8 +588,28 @@ const KEYS = {
   STUDENT_ATTENDANCE: 'jmaa_student_attendance',
 };
 
+const DATA_VERSION_KEY = 'jmaa_data_version';
+const CURRENT_DATA_VERSION = 'v2_schedule_reset';
+
+function ensureDataVersion(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (localStorage.getItem(DATA_VERSION_KEY) !== CURRENT_DATA_VERSION) {
+      localStorage.removeItem(KEYS.CLASSES);
+      localStorage.removeItem(KEYS.TEACHERS);
+      localStorage.removeItem(KEYS.SUBJECTS);
+      localStorage.removeItem(KEYS.SUBJECT_TEACHERS);
+      localStorage.removeItem(KEYS.SCHEDULES);
+      localStorage.setItem(DATA_VERSION_KEY, CURRENT_DATA_VERSION);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 function getItem<T>(key: string, defaultVal: T): T {
   if (typeof window === 'undefined') return defaultVal;
+  ensureDataVersion();
   try {
     const raw = localStorage.getItem(key);
     if (!raw) {
@@ -917,6 +639,36 @@ export const DataStore = {
   updateSettings(settings: Partial<SystemSettings>): void {
     const current = this.getSettings();
     setItem(KEYS.SETTINGS, { ...current, ...settings });
+  },
+  getActiveAcademicYear(): string {
+    const s = this.getSettings();
+    return s.activeAcademicYear || initialSettings.activeAcademicYear || 'SY 2025-2026';
+  },
+  setActiveAcademicYear(year: string): void {
+    const available = this.getAvailableAcademicYears();
+    const updatedYears = available.includes(year) ? available : [...available, year].sort();
+    this.updateSettings({ activeAcademicYear: year, availableAcademicYears: updatedYears });
+  },
+  getActiveSemester(): SemesterType {
+    const s = this.getSettings();
+    return s.activeSemester || initialSettings.activeSemester || '1st';
+  },
+  setActiveSemester(semester: SemesterType): void {
+    this.updateSettings({ activeSemester: semester });
+  },
+  getAvailableAcademicYears(): string[] {
+    const s = this.getSettings();
+    return s.availableAcademicYears && s.availableAcademicYears.length > 0
+      ? s.availableAcademicYears
+      : initialSettings.availableAcademicYears || ['SY 2024-2025', 'SY 2025-2026', 'SY 2026-2027'];
+  },
+  addAcademicYear(year: string): string[] {
+    const trimmed = year.trim();
+    const current = this.getAvailableAcademicYears();
+    if (!trimmed || current.includes(trimmed)) return current;
+    const next = [...current, trimmed].sort();
+    this.updateSettings({ availableAcademicYears: next });
+    return next;
   },
 
   // Classes
@@ -978,20 +730,7 @@ export const DataStore = {
 
   // Subjects
   getSubjects(): SubjectItem[] {
-    const list = getItem<SubjectItem[]>(KEYS.SUBJECTS, initialSubjects);
-    let updated = false;
-    for (const initSub of initialSubjects) {
-      const idx = list.findIndex(s => s.SubjectID === initSub.SubjectID);
-      if (idx === -1) {
-        list.push(initSub);
-        updated = true;
-      } else if (!list[idx].SubjectArabic && initSub.SubjectArabic) {
-        list[idx] = { ...list[idx], SubjectArabic: initSub.SubjectArabic, SubjectClass: initSub.SubjectClass };
-        updated = true;
-      }
-    }
-    if (updated) setItem(KEYS.SUBJECTS, list);
-    return list;
+    return getItem<SubjectItem[]>(KEYS.SUBJECTS, initialSubjects);
   },
   saveSubject(item: Omit<SubjectItem, 'SubjectID'> & { SubjectID?: number }): SubjectItem {
     const list = this.getSubjects();
@@ -1016,17 +755,7 @@ export const DataStore = {
 
   // Subject Teachers
   getSubjectTeachers(): SubjectTeacherItem[] {
-    const list = getItem<SubjectTeacherItem[]>(KEYS.SUBJECT_TEACHERS, initialSubjectTeachers);
-    let updated = false;
-    for (const initST of initialSubjectTeachers) {
-      const idx = list.findIndex(st => st.ID === initST.ID || (st.ClassID === initST.ClassID && st.SubjectID === initST.SubjectID && st.TeacherID === initST.TeacherID));
-      if (idx === -1) {
-        list.push(initST);
-        updated = true;
-      }
-    }
-    if (updated) setItem(KEYS.SUBJECT_TEACHERS, list);
-    return list;
+    return getItem<SubjectTeacherItem[]>(KEYS.SUBJECT_TEACHERS, initialSubjectTeachers);
   },
   saveSubjectTeacher(item: Omit<SubjectTeacherItem, 'ID'> & { ID?: number }): SubjectTeacherItem {
     const list = this.getSubjectTeachers();
@@ -1051,25 +780,7 @@ export const DataStore = {
 
   // Schedules & Conflict Detection
   getSchedules(): ClassScheduleItem[] {
-    const list = getItem<ClassScheduleItem[]>(KEYS.SCHEDULES, initialSchedules);
-    let updated = false;
-    for (const initSch of initialSchedules) {
-      const idx = list.findIndex(s => s.ID === initSch.ID);
-      if (idx === -1) {
-        list.push(initSch);
-        updated = true;
-      } else if (
-        list[idx].StartTime !== initSch.StartTime ||
-        list[idx].EndTime !== initSch.EndTime ||
-        list[idx].TeacherID !== initSch.TeacherID ||
-        list[idx].SubjectID !== initSch.SubjectID
-      ) {
-        list[idx] = { ...initSch };
-        updated = true;
-      }
-    }
-    if (updated) setItem(KEYS.SCHEDULES, list);
-    return list;
+    return getItem<ClassScheduleItem[]>(KEYS.SCHEDULES, initialSchedules);
   },
   saveSchedule(item: Omit<ClassScheduleItem, 'ID'> & { ID?: number }): { success: boolean; conflict?: string; schedule?: ClassScheduleItem } {
     const list = this.getSchedules();
@@ -1112,19 +823,9 @@ export const DataStore = {
 
   // Students
   getStudents(): StudentItem[] {
-    const list = getItem<StudentItem[]>(KEYS.STUDENTS, initialStudents);
-    let updated = false;
-    for (const initStd of initialStudents) {
-      const idx = list.findIndex(s => s.StudentID === initStd.StudentID);
-      if (idx === -1) {
-        list.push(initStd);
-        updated = true;
-      }
-    }
-    if (updated) setItem(KEYS.STUDENTS, list);
-    return list;
+    return getItem<StudentItem[]>(KEYS.STUDENTS, initialStudents);
   },
-  saveStudent(item: Omit<StudentItem, 'StudentID'> & { StudentID?: number }): StudentItem {
+  saveStudent(item: Omit<StudentItem, 'StudentID'> & { StudentID?: number }, targetTerm?: { academicYear?: string; semester?: SemesterType; enrollBothSemesters?: boolean }): StudentItem {
     const list = this.getStudents();
     if (item.StudentID && item.StudentID > 0) {
       const idx = list.findIndex(s => s.StudentID === item.StudentID);
@@ -1138,9 +839,23 @@ export const DataStore = {
     const newItem: StudentItem = { ...item, StudentID: nextId };
     list.push(newItem);
     setItem(KEYS.STUDENTS, list);
+
+    // Also create enrollment record(s) for the active/target academic year & semester
+    const year = targetTerm?.academicYear || this.getActiveAcademicYear();
+    const sem = targetTerm?.semester || this.getActiveSemester();
+    this.enrollStudentInTerm({
+      studentId: newItem.StudentID,
+      classId: newItem.ClassID,
+      rollNo: newItem.RollNo,
+      academicYear: year,
+      semester: sem,
+      enrollBothSemesters: targetTerm?.enrollBothSemesters ?? true,
+      createTuitionLedger: true,
+    });
+
     return newItem;
   },
-  saveStudentsBatch(items: Array<Omit<StudentItem, 'StudentID'>>): StudentItem[] {
+  saveStudentsBatch(items: Array<Omit<StudentItem, 'StudentID'>>, targetTerm?: { academicYear?: string; semester?: SemesterType }): StudentItem[] {
     const list = this.getStudents();
     let nextId = list.length > 0 ? Math.max(...list.map(s => s.StudentID)) + 1 : 1;
     const added: StudentItem[] = [];
@@ -1150,6 +865,21 @@ export const DataStore = {
       added.push(newItem);
     }
     setItem(KEYS.STUDENTS, list);
+
+    const year = targetTerm?.academicYear || this.getActiveAcademicYear();
+    const sem = targetTerm?.semester || this.getActiveSemester();
+    for (const s of added) {
+      this.enrollStudentInTerm({
+        studentId: s.StudentID,
+        classId: s.ClassID,
+        rollNo: s.RollNo,
+        academicYear: year,
+        semester: sem,
+        enrollBothSemesters: true,
+        createTuitionLedger: false,
+      });
+    }
+
     return added;
   },
   deleteStudent(id: number): void {
@@ -1170,6 +900,245 @@ export const DataStore = {
       return s;
     });
     setItem(KEYS.STUDENTS, list);
+  },
+
+  // Multi-Year & Semester Enrollment Management (Preserves Previous Academic Year Data)
+  getEnrollments(): StudentEnrollmentRecord[] {
+    if (typeof window === 'undefined') return [];
+    const raw = localStorage.getItem(KEYS.ENROLLMENTS);
+    if (!raw) {
+      // Backfill existing students into baseline SY 2025-2026 (1st & 2nd semester)
+      const students = this.getStudents();
+      const seeded: StudentEnrollmentRecord[] = [];
+      for (const s of students) {
+        seeded.push({
+          id: `enr-SY2025-2026-1st-${s.StudentID}`,
+          StudentID: s.StudentID,
+          AcademicYear: 'SY 2025-2026',
+          Semester: '1st',
+          ClassID: s.ClassID,
+          RollNo: s.RollNo,
+          Status: 'Active',
+          EnrolledAt: s.AdmissionDate || '2025-09-01',
+        });
+        seeded.push({
+          id: `enr-SY2025-2026-2nd-${s.StudentID}`,
+          StudentID: s.StudentID,
+          AcademicYear: 'SY 2025-2026',
+          Semester: '2nd',
+          ClassID: s.ClassID,
+          RollNo: s.RollNo,
+          Status: 'Active',
+          EnrolledAt: s.AdmissionDate || '2026-01-15',
+        });
+      }
+      setItem(KEYS.ENROLLMENTS, seeded);
+      return seeded;
+    }
+    try {
+      return JSON.parse(raw) as StudentEnrollmentRecord[];
+    } catch {
+      return [];
+    }
+  },
+  getEnrollmentsForTerm(academicYear?: string, semester?: SemesterType): StudentEnrollmentRecord[] {
+    const yr = academicYear || this.getActiveAcademicYear();
+    const sem = semester || this.getActiveSemester();
+    return this.getEnrollments().filter(e => e.AcademicYear === yr && e.Semester === sem);
+  },
+  getStudentEnrollmentHistory(studentId: number): StudentEnrollmentRecord[] {
+    return this.getEnrollments()
+      .filter(e => e.StudentID === studentId)
+      .sort((a, b) => {
+        if (a.AcademicYear !== b.AcademicYear) return b.AcademicYear.localeCompare(a.AcademicYear);
+        return b.Semester.localeCompare(a.Semester);
+      });
+  },
+  getStudentsForTerm(academicYear?: string, semester?: SemesterType): StudentItem[] {
+    const yr = academicYear || this.getActiveAcademicYear();
+    const sem = semester || this.getActiveSemester();
+    const enrollments = this.getEnrollmentsForTerm(yr, sem);
+    const allStudents = this.getStudents();
+    const studentMap = new Map(allStudents.map(s => [s.StudentID, s]));
+    const result: StudentItem[] = [];
+    for (const enr of enrollments) {
+      const base = studentMap.get(enr.StudentID);
+      if (base) {
+        result.push({
+          ...base,
+          ClassID: enr.ClassID,
+          RollNo: enr.RollNo || base.RollNo,
+        });
+      }
+    }
+    return result;
+  },
+  suggestNextClassId(currentClassId: number): number {
+    const classes = this.getClasses();
+    const current = classes.find(c => c.ClassID === currentClassId);
+    if (!current) return currentClassId;
+    const nextInSameLevel = classes.find(
+      c => c.Department === current.Department && c.Level === current.Level && c.YearGrade === current.YearGrade + 1
+    );
+    if (nextInSameLevel) return nextInSameLevel.ClassID;
+    // Level progression for 5-days: Ibtidaiyyah 6 -> Mutawassit 1 -> Thanawi 1
+    if (current.Department === '5-days') {
+      if (current.Level === 'Ibtidaiyyah' && current.YearGrade >= 6) {
+        const mut1 = classes.find(c => c.Department === '5-days' && c.Level === 'Mutawassit' && c.YearGrade === 1);
+        if (mut1) return mut1.ClassID;
+      }
+      if (current.Level === 'Mutawassit' && current.YearGrade >= 3) {
+        const thn1 = classes.find(c => c.Department === '5-days' && c.Level === 'Thanawi' && c.YearGrade === 1);
+        if (thn1) return thn1.ClassID;
+      }
+    }
+    return currentClassId;
+  },
+  enrollStudentInTerm(params: {
+    studentId: number;
+    classId: number;
+    rollNo?: string;
+    academicYear: string;
+    semester: SemesterType;
+    enrollBothSemesters?: boolean;
+    previousAcademicYear?: string;
+    previousClassId?: number;
+    remarks?: string;
+    createTuitionLedger?: boolean;
+  }): StudentEnrollmentRecord {
+    const list = this.getEnrollments();
+    const students = this.getStudents();
+    const student = students.find(s => s.StudentID === params.studentId);
+    const rollNo = params.rollNo || student?.RollNo || '';
+    const today = new Date().toISOString().split('T')[0];
+
+    // Preserve previous academic year data — only mark its status as 'Promoted' if transitioning years
+    if (params.previousAcademicYear && params.previousAcademicYear !== params.academicYear) {
+      list.forEach(e => {
+        if (
+          e.StudentID === params.studentId &&
+          e.AcademicYear === params.previousAcademicYear &&
+          e.Status === 'Active'
+        ) {
+          e.Status = 'Promoted';
+        }
+      });
+    }
+
+    const semestersToEnroll: SemesterType[] = params.enrollBothSemesters
+      ? ['1st', '2nd']
+      : [params.semester];
+
+    let primaryRecord: StudentEnrollmentRecord | null = null;
+    for (const sem of semestersToEnroll) {
+      const existingIdx = list.findIndex(
+        e => e.StudentID === params.studentId && e.AcademicYear === params.academicYear && e.Semester === sem
+      );
+      if (existingIdx >= 0) {
+        list[existingIdx] = {
+          ...list[existingIdx],
+          ClassID: params.classId,
+          RollNo: rollNo,
+          Status: 'Active',
+          Remarks: params.remarks ?? list[existingIdx].Remarks,
+        };
+        if (sem === params.semester || !primaryRecord) primaryRecord = list[existingIdx];
+      } else {
+        const rec: StudentEnrollmentRecord = {
+          id: `enr-${params.academicYear.replace(/\s+/g, '')}-${sem}-${params.studentId}-${Date.now()}`,
+          StudentID: params.studentId,
+          AcademicYear: params.academicYear,
+          Semester: sem,
+          ClassID: params.classId,
+          RollNo: rollNo,
+          Status: 'Active',
+          EnrolledAt: today,
+          PreviousAcademicYear: params.previousAcademicYear,
+          PreviousClassID: params.previousClassId,
+          Remarks: params.remarks,
+        };
+        list.push(rec);
+        if (sem === params.semester || !primaryRecord) primaryRecord = rec;
+      }
+    }
+
+    setItem(KEYS.ENROLLMENTS, list);
+    this.addAcademicYear(params.academicYear);
+
+    // Create fresh tuition ledger for the new academic year if one doesn't exist yet
+    if (params.createTuitionLedger !== false) {
+      const existingLedgers = this.getStudentPaymentLedgers(params.studentId);
+      const hasYearLedger = existingLedgers.some(l => l.AcademicYear === params.academicYear);
+      if (!hasYearLedger) {
+        this.renewStudentEnrollment(
+          params.studentId,
+          params.classId,
+          params.academicYear,
+          `${params.semester === '1st' ? '1st Semester' : '2nd Semester'} Enrollment`
+        );
+      }
+    }
+
+    return primaryRecord!;
+  },
+  promoteStudentsBatch(params: {
+    studentIds: number[];
+    fromAcademicYear: string;
+    fromSemester: SemesterType;
+    toAcademicYear: string;
+    toSemester: SemesterType;
+    enrollBothSemesters?: boolean;
+    targetClassMap?: Record<number, number>;
+    autoAdvanceGrade?: boolean;
+    createTuitionLedgers?: boolean;
+  }): { enrolledCount: number; skippedCount: number; records: StudentEnrollmentRecord[] } {
+    const prevEnrollments = this.getEnrollmentsForTerm(params.fromAcademicYear, params.fromSemester);
+    const existingTarget = this.getEnrollmentsForTerm(params.toAcademicYear, params.toSemester);
+    const alreadyEnrolledSet = new Set(existingTarget.map(e => e.StudentID));
+    const allStudents = this.getStudents();
+    const records: StudentEnrollmentRecord[] = [];
+    let skippedCount = 0;
+
+    for (const sid of params.studentIds) {
+      if (alreadyEnrolledSet.has(sid) && !params.targetClassMap?.[sid]) {
+        skippedCount++;
+        continue;
+      }
+      const prevEnr = prevEnrollments.find(e => e.StudentID === sid);
+      const baseStudent = allStudents.find(s => s.StudentID === sid);
+      const prevClassId = prevEnr?.ClassID ?? baseStudent?.ClassID ?? 1;
+      const targetClassId =
+        params.targetClassMap?.[sid] ??
+        (params.autoAdvanceGrade !== false ? this.suggestNextClassId(prevClassId) : prevClassId);
+
+      const rec = this.enrollStudentInTerm({
+        studentId: sid,
+        classId: targetClassId,
+        rollNo: prevEnr?.RollNo || baseStudent?.RollNo,
+        academicYear: params.toAcademicYear,
+        semester: params.toSemester,
+        enrollBothSemesters: params.enrollBothSemesters ?? true,
+        previousAcademicYear: params.fromAcademicYear,
+        previousClassId: prevClassId,
+        remarks: `Promoted from ${params.fromAcademicYear}`,
+        createTuitionLedger: params.createTuitionLedgers ?? true,
+      });
+      records.push(rec);
+    }
+
+    return {
+      enrolledCount: records.length,
+      skippedCount,
+      records,
+    };
+  },
+  updateEnrollmentStatus(enrollmentId: string, status: EnrollmentStatus): void {
+    const list = this.getEnrollments();
+    const idx = list.findIndex(e => e.id === enrollmentId);
+    if (idx >= 0) {
+      list[idx].Status = status;
+      setItem(KEYS.ENROLLMENTS, list);
+    }
   },
 
   // Grading Criteria
@@ -1198,12 +1167,16 @@ export const DataStore = {
     for (const initG of initialGrades) {
       const idx = list.findIndex(g => g.id === initG.id);
       if (idx === -1) {
-        list.push(initG);
+        list.push({ ...initG, AcademicYear: initG.AcademicYear || 'SY 2025-2026' });
         updated = true;
       }
     }
     if (updated) setItem(KEYS.GRADES, list);
     return list;
+  },
+  getGradesForTerm(academicYear?: string): StudentGradeItem[] {
+    const yr = academicYear || this.getActiveAcademicYear();
+    return this.getGrades().filter(g => (g.AcademicYear || 'SY 2025-2026') === yr);
   },
   // Grade Edit Time Window & Lock Controls
   getGradeEditWindowHours(): number {
@@ -1371,13 +1344,16 @@ export const DataStore = {
     const list = this.getGrades();
     const defaultHours = this.getGradeEditWindowHours();
     const nowIso = new Date().toISOString();
+    const targetYear = item.AcademicYear || this.getActiveAcademicYear();
+    const targetSem = item.Semester || this.getActiveSemester();
 
     const existingIdx = list.findIndex(
       g =>
         g.StudentID === item.StudentID &&
         g.ClassID === item.ClassID &&
         g.SubjectID === item.SubjectID &&
-        g.Period === item.Period
+        g.Period === item.Period &&
+        (g.AcademicYear || 'SY 2025-2026') === targetYear
     );
 
     if (existingIdx >= 0) {
@@ -1398,6 +1374,8 @@ export const DataStore = {
       list[existingIdx] = {
         ...item,
         id: existing.id,
+        AcademicYear: targetYear,
+        Semester: targetSem,
         SubmittedAt: existing.SubmittedAt || nowIso,
         AllowedEditHours: allowedHours,
         LockExpiresAt: lockExpiresAt,
@@ -1410,6 +1388,8 @@ export const DataStore = {
 
       list.push({
         ...item,
+        AcademicYear: targetYear,
+        Semester: targetSem,
         SubmittedAt: nowIso,
         AllowedEditHours: allowedHours,
         LockExpiresAt: lockExpiresAt,
@@ -1426,16 +1406,21 @@ export const DataStore = {
     const list = this.getGrades();
     const defaultHours = this.getGradeEditWindowHours();
     const nowIso = new Date().toISOString();
+    const activeYear = this.getActiveAcademicYear();
+    const activeSem = this.getActiveSemester();
     let savedCount = 0;
     const errors: string[] = [];
 
     for (const item of items) {
+      const targetYear = item.AcademicYear || activeYear;
+      const targetSem = item.Semester || activeSem;
       const existingIdx = list.findIndex(
         g =>
           g.StudentID === item.StudentID &&
           g.ClassID === item.ClassID &&
           g.SubjectID === item.SubjectID &&
-          g.Period === item.Period
+          g.Period === item.Period &&
+          (g.AcademicYear || 'SY 2025-2026') === targetYear
       );
 
       if (existingIdx >= 0) {
@@ -1453,6 +1438,8 @@ export const DataStore = {
         list[existingIdx] = {
           ...item,
           id: existing.id,
+          AcademicYear: targetYear,
+          Semester: targetSem,
           SubmittedAt: existing.SubmittedAt || nowIso,
           AllowedEditHours: allowedHours,
           LockExpiresAt: lockExpiresAt,
@@ -1465,6 +1452,8 @@ export const DataStore = {
 
         list.push({
           ...item,
+          AcademicYear: targetYear,
+          Semester: targetSem,
           SubmittedAt: nowIso,
           AllowedEditHours: allowedHours,
           LockExpiresAt: lockExpiresAt,

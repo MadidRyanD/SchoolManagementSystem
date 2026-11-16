@@ -10,6 +10,7 @@ import {
   SubjectTeacherItem,
 } from '@/lib/types';
 import { toHindiNumerals, formatTimeHindi } from '@/lib/numerals';
+import { buildScheduleTimeSlots } from '@/lib/scheduleData';
 import {
   Clock,
   Filter,
@@ -44,21 +45,10 @@ export default function TeacherScheduleView({
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
   // Department mode: 5-days (Sun-Thu) or 2-days (Fri-Sat)
-  const [deptMode, setDeptMode] = useState<'5-days' | '2-days'>('5-days');
+  const [deptMode, setDeptMode] = useState<'5-days' | '2-days'>('2-days');
 
   // Selected Subject for highlight (clicking highlights all cells with that subject)
   const [highlightedSubjectId, setHighlightedSubjectId] = useState<number | null>(null);
-
-  // Time periods definition matching StudentScheduleView and institution layout
-  const timeSlots = [
-    { label: '7:00 - 8:30', start: '07:00', end: '08:30', isBreak: false },
-    { label: '8:30 - 9:30', start: '08:30', end: '09:30', isBreak: false },
-    { label: '9:30 - 9:40', start: '09:30', end: '09:40', isBreak: true, titleArabic: 'فسحة' },
-    { label: '9:40 - 10:40', start: '09:40', end: '10:40', isBreak: false },
-    { label: '10:40 - 11:30', start: '10:40', end: '11:30', isBreak: false },
-    { label: '11:30 - 12:30', start: '11:30', end: '12:30', isBreak: false },
-    { label: '13:00 - 14:30', start: '13:00', end: '14:30', isBreak: false, titleArabic: 'الفترة المسائية' },
-  ];
 
   // Days columns based on department (5-Days: Sun-Thu | 2-Days: Fri-Sat)
   const fiveDaysList = [
@@ -79,16 +69,16 @@ export default function TeacherScheduleView({
   // Schedules for this teacher
   const teacherSchedules = schedules.filter(s => s.TeacherID === teacher.TeacherID);
 
+  const timeSlots = buildScheduleTimeSlots(teacherSchedules);
+
   const getSubject = (subjectId: number) => subjects.find(s => s.SubjectID === subjectId);
   const getClass = (classId: number) => classes.find(c => c.ClassID === classId);
 
   // Find schedule items for a specific day and time slot window
   const getSlotSchedules = (dayKey: string, slotStart: string, slotEnd: string) => {
-    return teacherSchedules.filter(s => {
-      if (s.Day !== dayKey) return false;
-      if (s.StartTime === slotStart) return true;
-      return s.StartTime >= slotStart && s.StartTime < slotEnd;
-    });
+    return teacherSchedules.filter(s =>
+      s.Day === dayKey && s.StartTime === slotStart && s.EndTime === slotEnd
+    );
   };
 
   const highlightedSubject = highlightedSubjectId ? getSubject(highlightedSubjectId) : null;

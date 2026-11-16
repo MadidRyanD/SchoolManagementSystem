@@ -8,6 +8,7 @@ import {
   TeacherItem,
 } from '@/lib/types';
 import { DataStore } from '@/lib/store';
+import { buildScheduleTimeSlots } from '@/lib/scheduleData';
 import { toHindiNumerals, formatTimeHindi } from '@/lib/numerals';
 import {
   Clock,
@@ -53,7 +54,7 @@ export default function PrincipalMasterScheduleView({
   const [selectedClassId, setSelectedClassId] = useState<number>(initialClassId);
 
   // Department mode filter: '5-days' | '2-days' | 'all'
-  const [deptFilter, setDeptFilter] = useState<'5-days' | '2-days' | 'all'>('all');
+  const [deptFilter, setDeptFilter] = useState<'5-days' | '2-days' | 'all'>('2-days');
 
   // Teacher filter: 0 = all teachers
   const [filterTeacherId, setFilterTeacherId] = useState<number>(0);
@@ -83,23 +84,13 @@ export default function PrincipalMasterScheduleView({
     ClassID: classes[0]?.ClassID || 1,
     SubjectID: subjects[0]?.SubjectID || 1,
     TeacherID: teachers[0]?.TeacherID || 1,
-    Day: 'Sunday' as any,
-    StartTime: '07:00',
-    EndTime: '08:30',
-    Room: 'Hall 101',
+    Day: 'Friday' as any,
+    StartTime: '07:15',
+    EndTime: '07:55',
+    Room: 'قاعة 1ث',
   });
   const [conflictError, setConflictError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
-  // Time periods definition
-  const timeSlots = [
-    { label: '7:00 - 8:30', start: '07:00', end: '08:30', isBreak: false },
-    { label: '8:30 - 9:30', start: '08:30', end: '09:30', isBreak: false },
-    { label: '9:30 - 9:40', start: '09:30', end: '09:40', isBreak: true, titleArabic: 'فسحة / استراحة' },
-    { label: '9:40 - 10:40', start: '09:40', end: '10:40', isBreak: false },
-    { label: '10:40 - 11:30', start: '10:40', end: '11:30', isBreak: false },
-    { label: '11:30 - 12:30', start: '11:30', end: '12:30', isBreak: false },
-  ];
 
   // Days list
   const fiveDaysList = [
@@ -144,14 +135,13 @@ export default function PrincipalMasterScheduleView({
     });
   }, [schedules, selectedClassId, deptFilter, filterTeacherId, classes]);
 
+  const timeSlots = useMemo(() => buildScheduleTimeSlots(filteredSchedules), [filteredSchedules]);
+
   // Find all schedule items that belong to a particular day and time range
   const getSlotSchedules = (dayKey: string, slotStart: string, slotEnd: string) => {
-    return filteredSchedules.filter(s => {
-      if (s.Day !== dayKey) return false;
-      if (s.StartTime === slotStart) return true;
-      // Overlap or containment in slot
-      return s.StartTime >= slotStart && s.StartTime < slotEnd;
-    });
+    return filteredSchedules.filter(s =>
+      s.Day === dayKey && s.StartTime === slotStart && s.EndTime === slotEnd
+    );
   };
 
   // Conflict detection overview
