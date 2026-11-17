@@ -5,6 +5,7 @@ import { DataStore } from '@/lib/store';
 import { AuthService } from '@/lib/auth';
 import { UserSession, TeacherItem, StudentItem, GradingPeriod, DawrDeadlineItem } from '@/lib/types';
 import { toHindiNumerals } from '@/lib/numerals';
+import StudentGradeView from '../grades/StudentGradeView';
 import {
   User,
   CheckCircle,
@@ -824,7 +825,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={handleSavePrincipalSettings}
-                className="px-6 py-2.5 bg-[#126b38] hover:bg-[#0e5830] text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md cursor-pointer flex items-center gap-2 transition-all active:scale-95"
+                className="px-6 py-2.5 bg-[#126b38] hover:bg-[#0e5830] text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-2 transition-all active:scale-95"
               >
                 <Save className="w-4 h-4 text-amber-300" />
                 <span>حفظ وتطبيق المواعيد والمهل الزمنية (Save Deadlines)</span>
@@ -833,6 +834,33 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* STUDENT PROFILE ACADEMIC GRADES & DAWR CARDS                              */}
+      {/* ========================================================================= */}
+      {currentUser?.role === 'student' && (() => {
+        const allStds = DataStore.getStudents();
+        const myStd =
+          allStds.find(s => s.StudentID === currentUser.linkedId) || allStds[0];
+        if (!myStd) return null;
+        return (
+          <div className="pt-4 border-t border-[#dfd4b8] space-y-4">
+            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-[#126b38]" />
+              <span>My Academic Grades (الدرجات الأكاديمية للطالب)</span>
+            </h2>
+            <StudentGradeView
+              student={myStd}
+              classes={DataStore.getClasses()}
+              subjects={DataStore.getSubjects()}
+              teachers={DataStore.getTeachers()}
+              subjectTeachers={DataStore.getSubjectTeachers()}
+              grades={DataStore.getGrades()}
+              allStudents={allStds}
+            />
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -527,24 +527,26 @@ export default function GradesPage() {
   // If normal student is logged in, immediately show the Student Grade View
   // SSG officers proceed to the Nashat grade editing portal
   const isStudent = role === 'student' && !isSSG;
-  const myStudentProfile = students.find(
-    s =>
-      s.StudentID === currentUser?.linkedId ||
-      s.RollNo.toLowerCase() === currentUser?.name?.toLowerCase() ||
-      s.Email?.toLowerCase() === currentUser?.email?.toLowerCase() ||
-      s.RollNo.toLowerCase() === 'r101'
-  ) || students[0];
+  const fallbackStudents = students.length > 0 ? students : DataStore.getStudents();
+  const myStudentProfile =
+    fallbackStudents.find(
+      s =>
+        s.StudentID === currentUser?.linkedId ||
+        s.RollNo.toLowerCase() === currentUser?.name?.toLowerCase() ||
+        s.Email?.toLowerCase() === currentUser?.email?.toLowerCase() ||
+        s.RollNo.toLowerCase() === 'r101'
+    ) || fallbackStudents[0];
 
   if (isStudent && myStudentProfile) {
     return (
       <StudentGradeView
         student={myStudentProfile}
-        classes={classes}
-        subjects={subjects}
-        teachers={teachers}
-        subjectTeachers={subjectTeachers}
-        grades={grades}
-        allStudents={students}
+        classes={classes.length > 0 ? classes : DataStore.getClasses()}
+        subjects={subjects.length > 0 ? subjects : DataStore.getSubjects()}
+        teachers={teachers.length > 0 ? teachers : DataStore.getTeachers()}
+        subjectTeachers={subjectTeachers.length > 0 ? subjectTeachers : DataStore.getSubjectTeachers()}
+        grades={grades.length > 0 ? grades : DataStore.getGrades()}
+        allStudents={fallbackStudents}
       />
     );
   }

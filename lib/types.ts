@@ -36,6 +36,22 @@ export interface SubjectItem {
   IsNashat?: boolean; // Managed & graded by SSG Student Council
   BookDriveUrl?: string;
   BookTitle?: string;
+  CustomColor?: string;
+}
+
+export interface SubjectEBookItem {
+  id: string;
+  SubjectID: number;
+  ClassID: number;
+  title: string;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+  driveUrl?: string;
+  hasLocalFile?: boolean;
+  uploadedBy: string;
+  uploadedByRole: UserRole;
+  uploadedAt: string;
 }
 
 export interface TeacherItem {
@@ -100,6 +116,7 @@ export interface ClassScheduleItem {
   StartTime: string;
   EndTime: string;
   Room: string;
+  CustomColor?: string;
 }
 
 export interface GradingCriteria {
@@ -242,6 +259,8 @@ export interface SystemSettings {
   availableAcademicYears?: string[]; // List of configured academic years
   gradeSubmissionDeadlines?: Partial<Record<GradingPeriod, DawrDeadlineItem>>;
   libraryDriveFolderUrl?: string; // Google Drive Central Library folder URL
+  scheduleNotice?: string; // Optional notice added by Principal/Admin at the top of the schedule
+  subjectColors?: Record<string, string>; // Custom color mapping by subject name or ID
 }
 
 // Backward-compatible types for legacy secondary routes

@@ -15,7 +15,7 @@ const ROUTE_LABELS: Record<string, { en: string; ar: string }> = {
   assignments: { en: 'Subject Allocations', ar: 'توزيع المواد' },
   classes: { en: 'Classes & Departments', ar: 'الأقسام والصفوف' },
   advisee: { en: 'Class Advisee', ar: 'الفصل المشرف عليه' },
-  subjects: { en: 'Curriculum & Subjects', ar: 'المناهج والمواد' },
+  subjects: { en: 'Subjects', ar: 'المواد الدراسية' },
   schedules: { en: 'Class Schedules', ar: 'جدول الحصص' },
   grades: { en: 'Grades Matrix', ar: 'سجل الدرجات' },
   finance: { en: 'Finance & Tuition', ar: 'المالية والرسوم' },

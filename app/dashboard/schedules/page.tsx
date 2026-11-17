@@ -18,23 +18,11 @@ import TeacherScheduleView from './TeacherScheduleView';
 import PrincipalMasterScheduleView from './PrincipalMasterScheduleView';
 import {
   Calendar,
-  Clock,
   AlertTriangle,
   ArrowLeft,
-  Plus,
-  Trash2,
-  Phone,
-  GraduationCap,
-  Building2,
-  CheckCircle,
   X,
   BookOpen,
   UserCheck,
-  Layers,
-  ArrowUpRight,
-  Filter,
-  CheckSquare,
-  Sparkles,
   Eye,
 } from 'lucide-react';
 
@@ -78,26 +66,10 @@ export default function SchedulesPage() {
     );
   }, [teachers, activeTeacherId, currentUser]);
 
-  // Display style: 'grid' (weekly columns) vs 'list' (detailed table)
-  const [displayLayout, setDisplayLayout] = useState<'grid' | 'list'>('grid');
-
-  // Filter states
-  const [filterSubjectId, setFilterSubjectId] = useState<number>(0);
-  const [filterClassId, setFilterClassId] = useState<number>(0);
-  const [filterDay, setFilterDay] = useState<string>('all');
-
+  // Default to 0 (All Grades Matrix) unless a specific classId query param was provided
   const [selectedClassId, setSelectedClassId] = useState<number>(
     initialClassId ? Number(initialClassId) : 0
   );
-
-  // Hover popover state
-  const [hoveredTeacher, setHoveredTeacher] = useState<{
-    teacher: TeacherItem;
-    subject: SubjectItem;
-    schedule: ClassScheduleItem;
-    x: number;
-    y: number;
-  } | null>(null);
 
   // Add schedule modal state
   const [isAdding, setIsAdding] = useState(false);
@@ -111,7 +83,6 @@ export default function SchedulesPage() {
     Room: 'Hall 101',
   });
   const [conflictError, setConflictError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -130,8 +101,7 @@ export default function SchedulesPage() {
     setSchedules(DataStore.getSchedules());
     setStudents(stds);
 
-    if (cls.length > 0 && selectedClassId === 0) {
-      setSelectedClassId(cls[0].ClassID);
+    if (cls.length > 0) {
       setFormData(prev => ({
         ...prev,
         ClassID: cls[0].ClassID,
@@ -163,66 +133,6 @@ export default function SchedulesPage() {
     'Saturday',
   ];
 
-  const daysArabic: Record<string, string> = {
-    Sunday: 'الأحد (Sunday)',
-    Monday: 'الإثنين (Monday)',
-    Tuesday: 'الثلاثاء (Tuesday)',
-    Wednesday: 'الأربعاء (Wednesday)',
-    Thursday: 'الخميس (Thursday)',
-    Friday: 'الجمعة (Friday)',
-    Saturday: 'السبت (Saturday)',
-  };
-
-  const getClass = (cid: number) => classes.find(c => c.ClassID === cid);
-  const getSubject = (sid: number) => subjects.find(s => s.SubjectID === sid);
-  const getTeacher = (tid: number) => teachers.find(t => t.TeacherID === tid);
-
-  // TEACHER'S SCHEDULE:
-  // All schedules assigned to the current active teacher
-  const teacherSchedules = useMemo(() => {
-    if (!currentTeacher) return [];
-    return schedules.filter(s => s.TeacherID === currentTeacher.TeacherID);
-  }, [schedules, currentTeacher]);
-
-  // Unique subjects taught by this teacher from schedules & mappings
-  const teacherSubjects = useMemo(() => {
-    const subIds = new Set<number>();
-    teacherSchedules.forEach(s => subIds.add(s.SubjectID));
-    if (currentTeacher) {
-      subjectTeachers
-        .filter(st => st.TeacherID === currentTeacher.TeacherID)
-        .forEach(st => subIds.add(st.SubjectID));
-    }
-    return subjects.filter(s => subIds.has(s.SubjectID));
-  }, [teacherSchedules, subjectTeachers, currentTeacher, subjects]);
-
-  // Unique classes/grade levels taught by this teacher
-  const teacherClasses = useMemo(() => {
-    const classIds = new Set<number>();
-    teacherSchedules.forEach(s => classIds.add(s.ClassID));
-    if (currentTeacher) {
-      subjectTeachers
-        .filter(st => st.TeacherID === currentTeacher.TeacherID)
-        .forEach(st => classIds.add(st.ClassID));
-    }
-    return classes.filter(c => classIds.has(c.ClassID));
-  }, [teacherSchedules, subjectTeachers, currentTeacher, classes]);
-
-  // Filtered teacher schedules according to dropdown filters
-  const filteredTeacherSchedules = useMemo(() => {
-    return teacherSchedules.filter(s => {
-      if (filterSubjectId > 0 && s.SubjectID !== filterSubjectId) return false;
-      if (filterClassId > 0 && s.ClassID !== filterClassId) return false;
-      if (filterDay !== 'all' && s.Day !== filterDay) return false;
-      return true;
-    });
-  }, [teacherSchedules, filterSubjectId, filterClassId, filterDay]);
-
-  // Active schedules for 'all-classes' view
-  const displayedClassSchedules = selectedClassId === 0
-    ? schedules
-    : schedules.filter(s => s.ClassID === selectedClassId);
-
   const handleSaveSchedule = (e: React.FormEvent) => {
     e.preventDefault();
     setConflictError(null);
@@ -242,48 +152,9 @@ export default function SchedulesPage() {
       return;
     }
 
-    setSuccessMsg('Class schedule session created successfully!');
     setIsAdding(false);
     loadData();
-    setTimeout(() => setSuccessMsg(null), 3500);
   };
-
-  const handleDelete = (id: number) => {
-    if (confirm('Delete this timetable session?')) {
-      DataStore.deleteSchedule(id);
-      loadData();
-    }
-  };
-
-  // Conflict detection overview across the entire institution
-  const detectInstitutionConflicts = () => {
-    const conflicts: { teacher: TeacherItem; day: string; time: string; classes: string[] }[] = [];
-    teachers.forEach(teacher => {
-      daysList.forEach(day => {
-        const teacherSlots = schedules.filter(s => s.TeacherID === teacher.TeacherID && s.Day === day);
-        const timeMap: Record<string, number[]> = {};
-        teacherSlots.forEach(s => {
-          if (!timeMap[s.StartTime]) timeMap[s.StartTime] = [];
-          timeMap[s.StartTime].push(s.ClassID);
-        });
-
-        Object.entries(timeMap).forEach(([time, cIds]) => {
-          if (cIds.length > 1) {
-            const classNames = cIds.map(cid => getClass(cid)?.ClassName || `Class #${cid}`);
-            conflicts.push({
-              teacher,
-              day,
-              time,
-              classes: classNames,
-            });
-          }
-        });
-      });
-    });
-    return conflicts;
-  };
-
-  const activeConflicts = detectInstitutionConflicts();
 
   // If the logged in user is a student, strictly show their schedule only!
   if (isStudent) {
@@ -308,9 +179,9 @@ export default function SchedulesPage() {
   return (
     <div className="space-y-6">
       {/* View Switcher: Master Timetable vs Teacher's Personal Schedule vs Student View */}
-      <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="no-print bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
-          {/* Tab 1: Master Timetable (Student Schedule style with All Schedules option) */}
+          {/* Tab 1: Master Timetable */}
           <button
             type="button"
             onClick={() => setViewMode('master-parchment')}
@@ -378,7 +249,7 @@ export default function SchedulesPage() {
 
       {/* Top Header & Navigation Bar (Shown on Teacher Inspector Mode) */}
       {viewMode === 'my-schedule' && (
-        <div className="space-y-4">
+        <div className="no-print space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -409,26 +280,6 @@ export default function SchedulesPage() {
               </Link>
             </div>
           </div>
-
-          {activeConflicts.length > 0 && (
-            <div className="p-4 bg-amber-50 border-l-4 border-amber-500 rounded-xl shadow-xs space-y-2">
-              <div className="flex items-center gap-2 text-amber-900 font-extrabold text-sm">
-                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-                <span>Schedule Overlap Conflict Warning ({activeConflicts.length} Detected)</span>
-              </div>
-              <p className="text-xs text-amber-800">
-                The system detected simultaneous teaching assignments for faculty members:
-              </p>
-              <div className="space-y-1 pl-6 text-xs text-amber-900">
-                {activeConflicts.map((c, i) => (
-                  <div key={i} className="list-disc">
-                    &bull; <span className="font-bold">{c.teacher.Name}</span> scheduled concurrently on{' '}
-                    <span className="font-semibold">{c.day} at {c.time}</span> across: {c.classes.join(' and ')}.
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -446,7 +297,7 @@ export default function SchedulesPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* SECTION B: PRINCIPAL & ADMIN MASTER SCHEDULE VIEW (WARM PARCHMENT AESTHETIC) */}
+      {/* SECTION B: PRINCIPAL & ADMIN MASTER SCHEDULE VIEW (MATRIX GRADES DESIGN)  */}
       {/* ========================================================================= */}
       {(viewMode === 'master-parchment' || viewMode === 'all-classes') && (
         <PrincipalMasterScheduleView
@@ -465,7 +316,7 @@ export default function SchedulesPage() {
       {/* ========================================================================= */}
       {viewMode === 'student-preview' && currentStudent && (
         <div className="space-y-4">
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 text-xs">
+          <div className="no-print bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 text-xs">
             <div className="flex items-center gap-2">
               <Eye className="w-4 h-4 text-amber-600 flex-shrink-0" />
               <span className="font-bold">معاينة واجهة جدول الطالب:</span>
@@ -488,7 +339,7 @@ export default function SchedulesPage() {
 
       {/* Add Timetable Slot Modal */}
       {isAdding && (
-        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 no-print">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="text-lg font-extrabold text-slate-900">Add Class Schedule Slot</h3>

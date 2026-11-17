@@ -17,20 +17,19 @@ import {
   Sparkles,
   CheckCircle2,
   AlertCircle,
-  RotateCcw,
-  Layers,
   Calendar,
   Lock,
   Unlock,
-  ChevronDown,
   Info,
   Clock,
   Hourglass,
   ShieldCheck,
   ShieldAlert,
   Send,
-  Check,
   Award,
+  Eye,
+  EyeOff,
+  AlertTriangle,
 } from 'lucide-react';
 import { toHindiNumerals } from '@/lib/numerals';
 
@@ -74,11 +73,14 @@ export default function ExcelGradeEditor({
   const [quickFillVal, setQuickFillVal] = useState<string>('85');
   const [showQuickFill, setShowQuickFill] = useState(false);
 
+  // Requirement 12: In the teacher's view, DRP students are automatically hidden unless teacher clicks "View All"
+  const [showAllStudentsWithDRP, setShowAllStudentsWithDRP] = useState(false);
+
   // Nashat Subject & SSG Permission Checks
   const isNashatSubject = Boolean(
     subject.IsNashat ||
-    subject.SubjectArabic === 'نشاط' ||
-    (subject.SubjectClass && subject.SubjectClass.toLowerCase().includes('nashat'))
+      subject.SubjectArabic === 'نشاط' ||
+      (subject.SubjectClass && subject.SubjectClass.toLowerCase().includes('nashat'))
   );
 
   // Permission logic:
@@ -88,7 +90,6 @@ export default function ExcelGradeEditor({
   const canUserEditThisSubject = useMemo(() => {
     if (isMudir) return false;
     if (isSSG) return isNashatSubject;
-    // Regular teacher cannot edit Nashat (it's managed exclusively by SSG)
     if (isNashatSubject) return false;
     return true;
   }, [isMudir, isSSG, isNashatSubject]);
@@ -108,6 +109,36 @@ export default function ExcelGradeEditor({
     '5th': 'دور الخامس',
     '6th': 'دور السادس',
   };
+
+  // Helper to check if a student is graded as DRP in the current view (Requirement 12)
+  const isStudentDRP = (studentId: number): boolean => {
+    const row = gridValues[studentId] || {};
+    if (viewMode === 'dawr') {
+      const currentVal = (row[selectedPeriod] || '').trim().toUpperCase();
+      if (currentVal === 'DRP') return true;
+      const saved = allGrades.find(
+        g =>
+          g.StudentID === studentId &&
+          g.SubjectID === subject.SubjectID &&
+          g.ClassID === classItem.ClassID &&
+          g.Period === selectedPeriod
+      );
+      return saved?.FinalGrade === 'DRP' && currentVal === '';
+    } else {
+      return activePeriods.some(p => (row[p] || '').trim().toUpperCase() === 'DRP');
+    }
+  };
+
+  // Count of DRP students in this class/subject
+  const drpStudentsList = useMemo(() => {
+    return students.filter(s => isStudentDRP(s.StudentID));
+  }, [students, gridValues, allGrades, viewMode, selectedPeriod, activePeriods, subject.SubjectID, classItem.ClassID]);
+
+  // Visible students list: automatically hides DRP students unless "View All" is clicked (Requirement 12)
+  const visibleStudents = useMemo(() => {
+    if (showAllStudentsWithDRP) return students;
+    return students.filter(s => !isStudentDRP(s.StudentID));
+  }, [students, showAllStudentsWithDRP, gridValues, allGrades, viewMode, selectedPeriod, activePeriods]);
 
   // Lock state & ticker
   const [nowTime, setNowTime] = useState<number>(Date.now());
@@ -326,27 +357,31 @@ export default function ExcelGradeEditor({
       return { labelAr: '—', pillClass: 'bg-slate-200 text-slate-500' };
     }
     if (avg >= 90) {
-      return { labelAr: 'ممتاز', pillClass: 'bg-[#3fd866] text-slate-950 font-black' };
+      return { labelAr: 'ممتاز', pillClass: 'bg-[#6bd953] text-slate-950 font-black' };
     }
     if (avg >= 80) {
-      return { labelAr: 'جيد جدا', pillClass: 'bg-[#f7d643] text-slate-950 font-black' };
+      return { labelAr: 'جيد جدا', pillClass: 'bg-[#f7d842] text-slate-950 font-black' };
     }
     if (avg >= 70) {
-      return { labelAr: 'جيد', pillClass: 'bg-[#fba248] text-slate-950 font-black' };
+      return { labelAr: 'جيد', pillClass: 'bg-[#fbbd4c] text-slate-950 font-black' };
     }
     if (avg >= 60) {
-      return { labelAr: 'مقبول', pillClass: 'bg-[#f97334] text-white font-black' };
+      return { labelAr: 'مقبول', pillClass: 'bg-[#fb8c44] text-slate-950 font-black' };
     }
-    return { labelAr: 'راسب', pillClass: 'bg-[#ef4444] text-white font-black' };
+    return { labelAr: 'راسب', pillClass: 'bg-[#fc5454] text-slate-950 font-black' };
   };
 
   const handleCellChange = (studentId: number, period: GradingPeriod, rawVal: string) => {
     const val = rawVal.trim().toUpperCase();
-    // Validate value
-    if (val !== '' && val !== 'INC' && val !== 'DRP') {
+    // Allow partial typing of INC or DRP or numeric 0-100
+    if (
+      val !== '' &&
+      !'INC'.startsWith(val) &&
+      !'DRP'.startsWith(val)
+    ) {
       const num = parseFloat(val);
-      if (isNaN(num)) return; // Don't accept invalid characters
-      if (num < 0 || num > 100) return; // Must be 0 to 100
+      if (isNaN(num)) return;
+      if (num < 0 || num > 100) return;
     }
 
     setGridValues(prev => ({
@@ -366,7 +401,7 @@ export default function ExcelGradeEditor({
     colIndex: number,
     periodsList: GradingPeriod[]
   ) => {
-    const totalRows = students.length;
+    const totalRows = visibleStudents.length;
     const totalCols = periodsList.length;
 
     let targetRow = rowIndex;
@@ -374,7 +409,6 @@ export default function ExcelGradeEditor({
 
     if (e.key === 'Enter') {
       e.preventDefault();
-      // Move down like Excel
       if (e.shiftKey) {
         targetRow = Math.max(0, rowIndex - 1);
       } else {
@@ -387,13 +421,11 @@ export default function ExcelGradeEditor({
       e.preventDefault();
       targetRow = Math.max(0, rowIndex - 1);
     } else if (e.key === 'ArrowLeft' && totalCols > 1) {
-      // In RTL, ArrowLeft moves forward in reading order (leftwards)
       const input = e.currentTarget;
       if (input.selectionStart === input.value.length) {
         targetCol = Math.min(totalCols - 1, colIndex + 1);
       }
     } else if (e.key === 'ArrowRight' && totalCols > 1) {
-      // In RTL, ArrowRight moves backward (rightwards)
       const input = e.currentTarget;
       if (input.selectionStart === 0) {
         targetCol = Math.max(0, colIndex - 1);
@@ -417,7 +449,7 @@ export default function ExcelGradeEditor({
 
     setGridValues(prev => {
       const updated = { ...prev };
-      students.forEach(s => {
+      visibleStudents.forEach(s => {
         const row = { ...(updated[s.StudentID] || {}) };
         if (viewMode === 'dawr') {
           if (!row[selectedPeriod]) row[selectedPeriod] = quickFillVal;
@@ -435,7 +467,7 @@ export default function ExcelGradeEditor({
     setShowQuickFill(false);
   };
 
-  // Save all changes in batch
+  // Save all changes in batch (Preserving or populating CriteriaScores for Student Subject Details Modal)
   const handleSaveAll = () => {
     if (isMudir) {
       setToastMsg({ type: 'error', text: 'حساب المدير في وضع القراءة والمعاينة فقط.' });
@@ -471,12 +503,34 @@ export default function ExcelGradeEditor({
         viewMode === 'dawr' ? [selectedPeriod] : activePeriods;
 
       targetPeriods.forEach(p => {
-        const rawVal = row[p];
-        if (rawVal !== undefined && rawVal !== '') {
+        const rawVal = (row[p] || '').trim().toUpperCase();
+        if (rawVal !== '') {
           let finalG: number | 'INC' | 'DRP' = 0;
           if (rawVal === 'INC') finalG = 'INC';
           else if (rawVal === 'DRP') finalG = 'DRP';
           else finalG = parseFloat(rawVal) || 0;
+
+          // Preserve existing criteria scores or auto-populate component breakdown for numeric grades
+          const existingGrade = allGrades.find(
+            g =>
+              g.StudentID === std.StudentID &&
+              g.SubjectID === subject.SubjectID &&
+              g.ClassID === classItem.ClassID &&
+              g.Period === p
+          );
+          const hasExistingCriteria =
+            existingGrade?.CriteriaScores && Object.keys(existingGrade.CriteriaScores).length > 0;
+          const criteriaScores =
+            typeof finalG === 'number'
+              ? hasExistingCriteria && existingGrade.FinalGrade === finalG
+                ? existingGrade.CriteriaScores
+                : {
+                    'crit-att': finalG,
+                    'crit-quiz': finalG,
+                    'crit-mid': finalG,
+                    'crit-final': finalG,
+                  }
+              : {};
 
           gradesToSave.push({
             id: `grd-${std.StudentID}-${subject.SubjectID}-${p}`,
@@ -485,7 +539,7 @@ export default function ExcelGradeEditor({
             SubjectID: subject.SubjectID,
             TeacherID: teacherId || 2,
             Period: p,
-            CriteriaScores: {},
+            CriteriaScores: criteriaScores,
             FinalGrade: finalG,
             GradedAt: new Date().toISOString(),
             IsLocked: false,
@@ -514,12 +568,12 @@ export default function ExcelGradeEditor({
   // Export to Excel file
   const handleExportExcel = async () => {
     const XLSX = await import('xlsx');
-    const dataToExport = students.map((s, idx) => {
+    const dataToExport = visibleStudents.map(s => {
       const row = gridValues[s.StudentID] || {};
       if (viewMode === 'dawr') {
         const val = row[selectedPeriod];
         const num = parseFloat(val);
-        const rating = !isNaN(num) ? getRating(num).labelAr : val === 'INC' ? 'معلق' : val === 'DRP' ? 'منسحب' : '—';
+        const rating = !isNaN(num) ? getRating(num).labelAr : val === 'INC' ? 'INC' : val === 'DRP' ? 'DRP' : '—';
         return {
           'الرقم (ID)': s.RollNo,
           'اسم الطالب': s.NameArabic || s.Name,
@@ -529,13 +583,23 @@ export default function ExcelGradeEditor({
           'التقدير': rating,
         };
       } else {
-        const d1 = parseFloat(row[activePeriods[0]]) || 0;
-        const d2 = parseFloat(row[activePeriods[1]]) || 0;
-        const d3 = parseFloat(row[activePeriods[2]]) || 0;
-        const hasAny = row[activePeriods[0]] !== '' || row[activePeriods[1]] !== '' || row[activePeriods[2]] !== '';
-        const sum = hasAny ? Math.round((d1 + d2 + d3) * 10) / 10 : '—';
-        const avg = hasAny ? Math.round(((d1 + d2 + d3) / 3) * 10) / 10 : '—';
-        const rating = hasAny && typeof avg === 'number' ? getRating(avg).labelAr : '—';
+        const rawList = activePeriods.map(p => (row[p] || '').trim().toUpperCase());
+        const hasINC = rawList.includes('INC');
+        const hasDRP = rawList.includes('DRP');
+        const validNums = rawList.map(v => parseFloat(v)).filter(n => !isNaN(n));
+        const sum =
+          !hasINC && !hasDRP && validNums.length > 0
+            ? Math.round(validNums.reduce((a, b) => a + b, 0) * 10) / 10
+            : '—';
+        const avg =
+          hasDRP
+            ? 'DRP'
+            : hasINC
+            ? 'INC'
+            : validNums.length > 0
+            ? Math.round((validNums.reduce((a, b) => a + b, 0) / validNums.length) * 10) / 10
+            : '—';
+        const rating = typeof avg === 'number' ? getRating(avg).labelAr : avg;
 
         return {
           'الرقم (ID)': s.RollNo,
@@ -629,7 +693,7 @@ export default function ExcelGradeEditor({
     reader.readAsBinaryString(file);
   };
 
-  // Class Summary Calculations
+  // Class Summary Calculations (Excludes ungraded, INC, and DRP per Requirement 4)
   const classSummary = useMemo(() => {
     let totalScore = 0;
     let validCount = 0;
@@ -637,20 +701,24 @@ export default function ExcelGradeEditor({
     let highest = -1;
     let lowest = 101;
 
-    students.forEach(s => {
+    visibleStudents.forEach(s => {
       const row = gridValues[s.StudentID] || {};
       let valNum: number | null = null;
 
       if (viewMode === 'dawr') {
-        const r = row[selectedPeriod];
-        if (r && !isNaN(parseFloat(r))) valNum = parseFloat(r);
+        const r = (row[selectedPeriod] || '').trim().toUpperCase();
+        if (r && r !== 'INC' && r !== 'DRP' && !isNaN(parseFloat(r))) {
+          valNum = parseFloat(r);
+        }
       } else {
-        const vals = activePeriods
-          .map(p => row[p])
-          .filter(v => v && !isNaN(parseFloat(v)))
-          .map(v => parseFloat(v));
-        if (vals.length > 0) {
-          valNum = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
+        const rawVals = activePeriods.map(p => (row[p] || '').trim().toUpperCase());
+        if (!rawVals.includes('INC') && !rawVals.includes('DRP')) {
+          const vals = rawVals
+            .filter(v => v && !isNaN(parseFloat(v)))
+            .map(v => parseFloat(v));
+          if (vals.length > 0) {
+            valNum = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
+          }
         }
       }
 
@@ -670,9 +738,9 @@ export default function ExcelGradeEditor({
       passRate: validCount > 0 ? Math.round((passCount / validCount) * 100) : 0,
       highest: highest >= 0 ? highest : '—',
       lowest: lowest <= 100 ? lowest : '—',
-      rating: getRating(average),
+      rating: getRating(validCount > 0 ? average : null),
     };
-  }, [students, gridValues, viewMode, selectedPeriod, activePeriods]);
+  }, [visibleStudents, gridValues, viewMode, selectedPeriod, activePeriods]);
 
   return (
     <div className="space-y-4">
@@ -793,14 +861,14 @@ export default function ExcelGradeEditor({
       )}
 
       {/* ========================================================================= */}
-      {/* MAIN EXCEL CARD CONTAINER - MATCHING EXACT VISUAL DESIGN FROM SCREENSHOT  */}
+      {/* MAIN EXCEL CARD CONTAINER                                                 */}
       {/* ========================================================================= */}
       <div className="bg-[#dfd4b8] border-2 border-[#ccbf99] rounded-3xl p-4 sm:p-6 shadow-sm space-y-3">
         {/* Card Header Pill Bar */}
         <div className="bg-white rounded-2xl p-3 sm:px-5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs border border-[#cfc39f]">
           {/* Action Buttons (Left) */}
           <div className="flex items-center flex-wrap gap-2">
-            {/* Primary Green Pill Edit / Save Button (Matches Screenshot) */}
+            {/* Primary Green Pill Edit / Save Button */}
             <button
               type="button"
               onClick={handleSaveAll}
@@ -814,15 +882,6 @@ export default function ExcelGradeEditor({
                   ? 'bg-emerald-700 hover:bg-emerald-600 ring-2 ring-amber-400 ring-offset-1 animate-pulse'
                   : 'bg-[#187d44] hover:bg-[#136838]'
               }`}
-              title={
-                !canUserEditThisSubject
-                  ? isSSG
-                    ? 'خاص بمادة النشاط فقط لمجلس الطلبة'
-                    : 'مادة النشاط مخصصة لمجلس الطلبة فقط'
-                  : activeLockInfo.isLocked
-                  ? 'سجل الدرجات مقفل (انتهت مهلة التعديل)'
-                  : 'Save Grades (Ctrl+S)'
-              }
             >
               {!canUserEditThisSubject ? (
                 <>
@@ -876,33 +935,38 @@ export default function ExcelGradeEditor({
                         تطبيق
                       </button>
                     </div>
-                    <div className="flex gap-1 justify-center pt-1 border-t border-slate-100">
-                      <button
-                        type="button"
-                        onClick={() => setQuickFillVal('95')}
-                        className="px-2 py-0.5 text-[11px] bg-slate-100 hover:bg-slate-200 rounded text-slate-700"
-                      >
-                        95 (ممتاز)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setQuickFillVal('85')}
-                        className="px-2 py-0.5 text-[11px] bg-slate-100 hover:bg-slate-200 rounded text-slate-700"
-                      >
-                        85 (جيد جدا)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setQuickFillVal('75')}
-                        className="px-2 py-0.5 text-[11px] bg-slate-100 hover:bg-slate-200 rounded text-slate-700"
-                      >
-                        75 (جيد)
-                      </button>
-                    </div>
                   </div>
                 )}
               </div>
             )}
+
+            {/* Requirement 12: View All / Hide DRP Students Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setShowAllStudentsWithDRP(!showAllStudentsWithDRP)}
+              className={`px-3.5 py-1.5 font-extrabold text-xs rounded-full shadow-xs cursor-pointer flex items-center gap-1.5 transition-colors border ${
+                showAllStudentsWithDRP
+                  ? 'bg-red-600 text-white border-red-700'
+                  : drpStudentsList.length > 0
+                  ? 'bg-red-50 hover:bg-red-100 text-red-800 border-red-300'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+              }`}
+              title="إظهار أو إخفاء الطلاب المنسحبين (DRP)"
+            >
+              {showAllStudentsWithDRP ? (
+                <>
+                  <EyeOff className="w-3.5 h-3.5" />
+                  <span>إخفاء المنسحبين DRP ({drpStudentsList.length})</span>
+                </>
+              ) : (
+                <>
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>
+                    عرض الكل (View All{drpStudentsList.length > 0 ? ` • ${drpStudentsList.length} DRP مخفي` : ''})
+                  </span>
+                </>
+              )}
+            </button>
 
             {/* Export to Excel */}
             <button
@@ -929,7 +993,7 @@ export default function ExcelGradeEditor({
             )}
           </div>
 
-          {/* Title Section (Right - Matching Screenshot: المادة: فقه مرحلة: 3 كلية | دور الأول) */}
+          {/* Title Section (Right) */}
           <div className="flex items-center gap-3 sm:gap-4 text-right justify-end" dir="rtl">
             <div className="flex items-center gap-2 text-slate-900 font-extrabold text-sm sm:text-base">
               <span className="font-serif">المادة: {subject.SubjectArabic || subject.SubjectClass}</span>
@@ -948,94 +1012,41 @@ export default function ExcelGradeEditor({
           </div>
         </div>
 
-        {/* SSG Role & Nashat Subject Status Banner */}
-        {isSSG ? (
-          isNashatSubject ? (
-            <div
-              className="bg-gradient-to-r from-rose-900 via-rose-950 to-slate-900 text-white p-4 rounded-2xl border-2 border-rose-500 shadow-sm flex items-center justify-between gap-4 text-right"
-              dir="rtl"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-400 flex items-center justify-center flex-shrink-0 text-rose-300">
-                  <Award className="w-6 h-6 text-rose-400" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-rose-200 font-serif text-sm sm:text-base">
-                      بوابة مجلس الطلبة (SSG) &bull; رصد درجات مادة النشاط
-                    </span>
-                    <span className="text-[11px] font-bold bg-rose-500/30 text-rose-300 px-2.5 py-0.5 rounded-full border border-rose-400/40">
-                      صلاحية كاملة للمجلس
-                    </span>
-                  </div>
-                  <p className="text-xs text-rose-200/90 leading-relaxed mt-0.5">
-                    بصفتك مسؤولاً في مجلس الطلبة (SSG)، يحق لك تقييم ورصد درجات مقرر النشاط والفعاليات لهذا الصف وتحديثها مباشرة.
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div
-              className="bg-gradient-to-r from-amber-900/90 via-slate-900 to-slate-950 text-white p-4 rounded-2xl border-2 border-amber-600/80 shadow-sm flex items-center justify-between gap-4 text-right"
-              dir="rtl"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400 flex items-center justify-center flex-shrink-0 text-amber-300">
-                  <ShieldAlert className="w-6 h-6 text-amber-400" />
-                </div>
-                <div>
-                  <span className="font-black text-amber-300 font-serif text-sm sm:text-base">
-                    تنبيه مجلس الطلبة: مادة أكاديمية عامة للقراءة فقط
-                  </span>
-                  <p className="text-xs text-amber-200/90 leading-relaxed mt-0.5">
-                    هذه المادة تابعة للأساتذة الأكاديميين. وفقاً للصلاحيات، يحق لمجلس الطلبة رصد وتعديل مادة <strong>(النشاط / Nashat)</strong> فقط.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )
-        ) : isNashatSubject && !isMudir ? (
+        {/* Requirement 12: Banner explaining automatic hiding of DRP students in Teacher's View */}
+        {drpStudentsList.length > 0 && (
           <div
-            className="bg-gradient-to-r from-rose-950 via-slate-900 to-slate-950 text-white p-4 rounded-2xl border-2 border-rose-700 shadow-sm flex items-center justify-between gap-4 text-right"
+            className={`px-4 py-2.5 rounded-2xl border-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-bold ${
+              showAllStudentsWithDRP
+                ? 'bg-red-100 border-red-400 text-red-950'
+                : 'bg-amber-50 border-amber-300 text-amber-950'
+            }`}
             dir="rtl"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-400 flex items-center justify-center flex-shrink-0 text-rose-300">
-                <Award className="w-6 h-6 text-rose-400" />
-              </div>
-              <div>
-                <span className="font-black text-rose-300 font-serif text-sm sm:text-base">
-                  مادة النشاط مسندة حصرياً لمجلس الطلبة (SSG)
-                </span>
-                <p className="text-xs text-rose-200/90 leading-relaxed mt-0.5">
-                  رصد وتقييم هذا المقرر تحت إشراف ومسؤولية مجلس الطلبة (SSG). السجل متاح للعرض فقط للكادر التعليمي.
-                </p>
-              </div>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>
+                {showAllStudentsWithDRP ? (
+                  <>
+                    يتم الآن عرض جميع الطلاب بما فيهم الطلاب المنسحبين <strong>(DRP - عددهم {drpStudentsList.length})</strong> وهم مظللون باللون الأحمر في الجدول أدناه.
+                  </>
+                ) : (
+                  <>
+                    تم إخفاء <strong>({drpStudentsList.length}) طالب مسجل كمنسحب [DRP]</strong> تلقائياً من قائمة الأستاذ. اضغط على زر <strong>&quot;عرض الكل (View All)&quot;</strong> لإظهارهم.
+                  </>
+                )}
+              </span>
             </div>
+            <button
+              type="button"
+              onClick={() => setShowAllStudentsWithDRP(!showAllStudentsWithDRP)}
+              className="px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-black text-xs cursor-pointer shrink-0"
+            >
+              {showAllStudentsWithDRP ? 'إخفاء المنسحبين (Hide DRP)' : 'عرض الكل (View All)'}
+            </button>
           </div>
-        ) : null}
+        )}
 
-        {/* Excel Instructions Banner */}
-        <div
-          className="bg-amber-100/70 text-amber-950 text-xs px-4 py-2 rounded-xl border border-amber-300/80 flex items-center justify-between"
-          dir="rtl"
-        >
-          <div className="flex items-center gap-2">
-            <Info className="w-4 h-4 text-amber-800 flex-shrink-0" />
-            <span>
-              <strong>طريقة الإدخال المباشر (مثل الإكسل):</strong> اكتب الدرجة مباشرة في الخلية (0-100 أو INC أو DRP)، واضغط <strong>Enter</strong> للانتقال للطالب التالي مباشرة. اضغط <strong>Ctrl+S</strong> للحفظ في أي وقت.
-            </span>
-          </div>
-          {hasUnsavedChanges && (
-            <span className="font-bold text-emerald-900 bg-emerald-200/80 px-2 py-0.5 rounded-md">
-              يوجد تعديلات غير محفوظة
-            </span>
-          )}
-        </div>
-
-        {/* ========================================================================= */}
-        {/* PRINCIPAL'S OFFICIAL SUBMISSION DEADLINE BANNER                           */}
-        {/* ========================================================================= */}
+        {/* Principal's Official Submission Deadline Banner */}
         {currentDawrDeadline && (
           <div
             className={`rounded-2xl p-4 border-2 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 text-right transition-all ${
@@ -1064,28 +1075,9 @@ export default function ExcelGradeEditor({
                   <span className="font-black text-white font-serif text-sm sm:text-base">
                     الموعد النهائي لتسليم درجات {dawrArabicNames[currentDawrDeadline.period]} (المحدد من المدير)
                   </span>
-                  <span
-                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
-                      currentDawrDeadline.isExpired
-                        ? 'bg-red-500/30 text-red-200 border-red-400/50'
-                        : 'bg-emerald-500/30 text-emerald-200 border-emerald-400/50'
-                    }`}
-                  >
-                    {currentDawrDeadline.isExpired ? 'انتهت المهلة الرسمية' : 'موعد تسليم معتمد'}
-                  </span>
                 </div>
-
-                <p className="text-xs text-slate-200/90 leading-relaxed font-sans">
-                  التاريخ النهائي للإغلاق: <strong className="text-amber-300 font-mono">{formatDateTimeArabic(currentDawrDeadline.deadlineIso)}</strong>
-                  {currentDawrDeadline.enforceLock && (
-                    <span className="text-slate-300 text-[11px] mr-2">
-                      &bull; القفل الإجباري مفعل لحفظ دقة النتائج
-                    </span>
-                  )}
-                </p>
-
                 {currentDawrDeadline.instructions && (
-                  <div className="bg-white/10 border border-amber-400/40 rounded-xl px-3 py-1.5 mt-1.5 text-xs text-amber-200 font-serif leading-relaxed">
+                  <div className="bg-white/10 border border-amber-400/40 rounded-xl px-3 py-1.5 mt-1 text-xs text-amber-200 font-serif">
                     <span className="font-bold text-amber-300">توجيهات المدير للأستاذ: </span>
                     &quot;{currentDawrDeadline.instructions}&quot;
                   </div>
@@ -1093,7 +1085,6 @@ export default function ExcelGradeEditor({
               </div>
             </div>
 
-            {/* Countdown Badge */}
             <div className="flex items-center gap-2 flex-shrink-0 self-end md:self-center">
               {currentDawrDeadline.isExpired ? (
                 <div className="px-4 py-2 bg-red-600/30 border border-red-500 text-red-200 rounded-xl text-xs font-black inline-flex items-center gap-1.5">
@@ -1103,9 +1094,9 @@ export default function ExcelGradeEditor({
               ) : (
                 <div className="px-4 py-2 bg-emerald-800/80 border border-emerald-400 text-white rounded-xl text-xs font-black inline-flex items-center gap-2 shadow-inner">
                   <Clock className="w-4 h-4 text-amber-300" />
-                  <span>متبقي على موعد التسليم:</span>
+                  <span>متبقي:</span>
                   <span className="text-amber-300 font-mono text-sm">
-                    {toHindiNumerals(currentDawrDeadline.days)} يوم و {toHindiNumerals(currentDawrDeadline.hours)} س و {toHindiNumerals(currentDawrDeadline.mins)} د
+                    {toHindiNumerals(currentDawrDeadline.days)} يوم و {toHindiNumerals(currentDawrDeadline.hours)} س
                   </span>
                 </div>
               )}
@@ -1113,243 +1104,39 @@ export default function ExcelGradeEditor({
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* TIME LOCK & ALLOWED EDIT WINDOW BANNER (Principal/Admin Lock Control)     */}
-        {/* ========================================================================= */}
-        {activeLockInfo.status === 'unsubmitted' ? (
-          /* Unsubmitted State: Info about allowed edit window upon first submission */
-          <div
-            className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300/80 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 text-right"
-            dir="rtl"
-          >
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400 flex items-center justify-center flex-shrink-0 text-amber-900 mt-0.5">
-                <Clock className="w-5 h-5 text-amber-800" />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-black text-slate-950 font-serif text-sm sm:text-base">
-                    مهلة التعديل المحددة من الإدارة: ({toHindiNumerals(activeLockInfo.allowedHours)} ساعة)
-                  </span>
-                  <span className="text-[11px] font-bold bg-amber-200/90 text-amber-950 px-2.5 py-0.5 rounded-full">
-                    قبل أول اعتماد
-                  </span>
-                </div>
-                <p className="text-xs text-slate-700 leading-relaxed">
-                  سيتم تفعيل العد التنازلي التلقائي لمهلة التعديل الممنوحة من المدير فور اعتماد وحفظ السجل. بعد انقضاء المهلة ({toHindiNumerals(activeLockInfo.allowedHours)} ساعة)، سيتم قفل السجل تلقائياً لحفظ موثوقية النتائج.
-                </p>
-              </div>
-            </div>
-
-            {/* If Mudir is viewing, allow setting the default allowed window */}
-            {isMudir && (
-              <div className="flex items-center gap-2 bg-white/80 p-2 rounded-xl border border-amber-200 flex-shrink-0">
-                <span className="text-xs font-bold text-slate-700">تحديد المهلة:</span>
-                <select
-                  value={activeLockInfo.allowedHours}
-                  onChange={e => {
-                    const h = Number(e.target.value);
-                    DataStore.setGradeEditWindowHours(h);
-                    onSaveSuccess();
-                  }}
-                  className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none cursor-pointer"
-                >
-                  <option value={6}>{toHindiNumerals(6)} ساعات (6h)</option>
-                  <option value={12}>{toHindiNumerals(12)} ساعة (12h)</option>
-                  <option value={24}>{toHindiNumerals(24)} ساعة (24h - الافتراضي)</option>
-                  <option value={48}>{toHindiNumerals(48)} ساعة (48h - يومان)</option>
-                  <option value={72}>{toHindiNumerals(72)} ساعة (72h - 3 أيام)</option>
-                  <option value={168}>{toHindiNumerals(168)} ساعة (7 أيام)</option>
-                </select>
-              </div>
-            )}
+        {/* Excel Instructions Banner */}
+        <div
+          className="bg-amber-100/70 text-amber-950 text-xs px-4 py-2 rounded-xl border border-amber-300/80 flex items-center justify-between"
+          dir="rtl"
+        >
+          <div className="flex items-center gap-2">
+            <Info className="w-4 h-4 text-amber-800 flex-shrink-0" />
+            <span>
+              <strong>طريقة الإدخال المباشر:</strong> اكتب الدرجة (0-100 أو INC أو DRP)، واضغط <strong>Enter</strong> للانتقال للطالب التالي. الطلاب الحاصلون على <strong>DRP</strong> يتم تظليلهم وإخفاؤهم تلقائياً إلا عند الضغط على <strong>عرض الكل</strong>.
+            </span>
           </div>
-        ) : activeLockInfo.status === 'expired_locked' || activeLockInfo.status === 'manually_locked' ? (
-          /* Expired / Locked State: Strong warning banner with Teacher Unlock Request or Mudir Unlock Controls */
-          <div
-            className="bg-gradient-to-r from-red-950 via-rose-950 to-slate-900 text-white border-2 border-red-700 rounded-2xl p-4 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 text-right"
-            dir="rtl"
-          >
-            <div className="flex items-start gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-red-600/30 border border-red-500 flex items-center justify-center flex-shrink-0 text-red-300 mt-0.5">
-                <ShieldAlert className="w-6 h-6 text-red-400" />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-black text-white font-serif text-base sm:text-lg text-red-200">
-                    انتهت المهلة المحددة للتعديل &bull; سجل الدرجات مقفل
-                  </span>
-                  <span className="text-[11px] font-bold bg-red-500/30 text-red-200 border border-red-400/50 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 font-mono">
-                    <Lock className="w-3 h-3" /> مقفل رسمياً
-                  </span>
-                </div>
-                <p className="text-xs text-rose-200/90 leading-relaxed">
-                  انقضت مهلة التعديل الممنوحة من المدير العام ({toHindiNumerals(activeLockInfo.allowedHours)} ساعة). أغلق السجل بتاريخ {formatDateTimeArabic(activeLockInfo.expiresAt)}. لا يمكن إدخال أو تعديل الدرجات حالياً دون إذن مسبق.
-                </p>
-                <div className="text-[11px] text-slate-300 flex items-center gap-3 pt-1">
-                  <span>تاريخ الاعتماد: <strong>{formatDateTimeArabic(activeLockInfo.submittedAt)}</strong></span>
-                  <span>&bull;</span>
-                  <span>المهلة الكلية: <strong>{toHindiNumerals(activeLockInfo.allowedHours)} ساعة</strong></span>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions for Locked State */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {isMudir ? (
-                /* Mudir Controls: Quick Grant Extension */
-                <div className="flex items-center gap-2 bg-slate-900/90 p-2 rounded-xl border border-rose-800">
-                  <select
-                    value={mudirGrantHours}
-                    onChange={e => setMudirGrantHours(Number(e.target.value))}
-                    className="px-2 py-1.5 bg-slate-800 text-white border border-slate-700 rounded-lg text-xs font-bold focus:outline-none cursor-pointer"
-                  >
-                    <option value={6}>تمديد {toHindiNumerals(6)} س</option>
-                    <option value={12}>تمديد {toHindiNumerals(12)} س</option>
-                    <option value={24}>تمديد {toHindiNumerals(24)} س (يوم)</option>
-                    <option value={48}>تمديد {toHindiNumerals(48)} س (يومان)</option>
-                    <option value={72}>تمديد {toHindiNumerals(72)} س (3 أيام)</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => handleMudirGrantUnlock(mudirGrantHours)}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-lg cursor-pointer flex items-center gap-1 transition-colors"
-                  >
-                    <Unlock className="w-3.5 h-3.5" />
-                    <span>منح تمديد</span>
-                  </button>
-                </div>
-              ) : (
-                /* Teacher Action: Request Unlock */
-                activeLockInfo.hasUnlockRequest ? (
-                  <div className="px-3.5 py-2 bg-amber-500/20 border border-amber-400 text-amber-300 rounded-xl text-xs font-bold flex items-center gap-2 animate-pulse">
-                    <Clock className="w-4 h-4" />
-                    <span>تم إرسال طلب تمديد للمدير &bull; بانتظار الموافقة</span>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleRequestUnlock}
-                    className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-md cursor-pointer flex items-center gap-1.5 transition-all active:scale-95"
-                  >
-                    <Send className="w-4 h-4" />
-                    <span>طلب فتح مهلة تعديل من المدير (Request Unlock)</span>
-                  </button>
-                )
-              )}
-            </div>
-          </div>
-        ) : (
-          /* Active Grace Period State: Live countdown ticker in Hindi numerals with elapsed/remaining progress bar */
-          <div
-            className="bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-950 text-white border-2 border-emerald-600 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3 text-right"
-            dir="rtl"
-          >
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              {/* Right Side: Headline and Info */}
-              <div className="flex items-start gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400 flex items-center justify-center flex-shrink-0 text-emerald-300 mt-0.5 shadow-inner">
-                  <Hourglass className="w-6 h-6 text-emerald-400 animate-spin" style={{ animationDuration: '8s' }} />
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-black text-white font-serif text-base sm:text-lg">
-                      مهلة تعديل الدرجات المتاحة من الإدارة
-                    </span>
-                    <span className="text-[11px] font-bold bg-emerald-500/30 text-emerald-300 border border-emerald-400/50 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 font-mono">
-                      <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                      {activeLockInfo.status === 'unlocked_by_admin' ? 'تمديد بإذن المدير' : 'مهلة نظامية جارية'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-emerald-200/90 leading-relaxed">
-                    يمكن للأستاذ تعديل الدرجات وحفظها بحرية خلال هذه المهلة. عند انتهاء الوقت سيتم قفل السجل تلقائياً.
-                  </p>
-                  <div className="text-[11px] text-slate-300 flex items-center gap-3 pt-1 flex-wrap font-sans">
-                    <span>المهلة الممنوحة: <strong className="text-amber-300">{toHindiNumerals(activeLockInfo.allowedHours)} ساعة</strong></span>
-                    <span>&bull;</span>
-                    <span>الاعتماد: <strong>{formatDateTimeArabic(activeLockInfo.submittedAt)}</strong></span>
-                    <span>&bull;</span>
-                    <span>موعد القفل: <strong className="text-rose-300">{formatDateTimeArabic(activeLockInfo.expiresAt)}</strong></span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Left Side: Prominent Live Digital Countdown Display in Hindi Numerals */}
-              <div className="flex flex-col items-center sm:items-end gap-1.5 flex-shrink-0 bg-slate-900/90 p-3 sm:px-4 rounded-2xl border border-emerald-700/60 shadow-inner">
-                <span className="text-[11px] font-black uppercase text-amber-300 tracking-wider flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 animate-pulse text-amber-400" />
-                  <span>الوقت المتبقي للتعديل (Remaining Time):</span>
-                </span>
-                <div className="flex items-center gap-1.5 font-mono text-lg sm:text-2xl font-black text-white" dir="ltr">
-                  <div className="bg-slate-950 px-2.5 py-1 rounded-xl border border-emerald-800 text-emerald-300">
-                    {countdown.h} <span className="text-[10px] text-slate-400 block -mt-1 font-sans">ساعة</span>
-                  </div>
-                  <span className="text-emerald-500 font-bold">:</span>
-                  <div className="bg-slate-950 px-2.5 py-1 rounded-xl border border-emerald-800 text-emerald-300">
-                    {countdown.m} <span className="text-[10px] text-slate-400 block -mt-1 font-sans">دقيقة</span>
-                  </div>
-                  <span className="text-emerald-500 font-bold">:</span>
-                  <div className="bg-slate-950 px-2.5 py-1 rounded-xl border border-emerald-800 text-amber-300 animate-pulse">
-                    {countdown.s} <span className="text-[10px] text-slate-400 block -mt-1 font-sans">ثانية</span>
-                  </div>
-                </div>
-
-                {/* Mudir Controls during active grace period */}
-                {isMudir && (
-                  <div className="flex items-center gap-1.5 pt-1 border-t border-slate-800 w-full justify-end">
-                    <button
-                      type="button"
-                      onClick={() => handleMudirGrantUnlock(24)}
-                      className="px-2 py-0.5 bg-emerald-700 hover:bg-emerald-600 text-[11px] text-white font-bold rounded cursor-pointer"
-                    >
-                      +٢٤س تمديد
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleMudirLockNow}
-                      className="px-2 py-0.5 bg-red-700 hover:bg-red-600 text-[11px] text-white font-bold rounded cursor-pointer"
-                    >
-                      قفل فوراً
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Visual Progress Bar */}
-            <div className="w-full bg-slate-950/80 rounded-full h-2.5 overflow-hidden border border-emerald-900/60 p-0.5">
-              <div
-                className={`h-full rounded-full transition-all duration-1000 ${
-                  countdown.percentRemaining > 40
-                    ? 'bg-gradient-to-l from-emerald-500 to-teal-400'
-                    : countdown.percentRemaining > 15
-                    ? 'bg-gradient-to-l from-amber-500 to-yellow-400'
-                    : 'bg-gradient-to-l from-red-500 to-rose-400 animate-pulse'
-                }`}
-                style={{ width: `${Math.max(2, countdown.percentRemaining)}%` }}
-              />
-            </div>
-          </div>
-        )}
+          {hasUnsavedChanges && (
+            <span className="font-bold text-emerald-900 bg-emerald-200/80 px-2 py-0.5 rounded-md">
+              يوجد تعديلات غير محفوظة
+            </span>
+          )}
+        </div>
 
         {/* ========================================================================= */}
         {/* SPREADSHEET TABLE - STRICT RTL (Names on Right)                           */}
         {/* ========================================================================= */}
         <div className="overflow-x-auto rounded-xl border border-[#c4b68e] bg-white shadow-xs">
           <table className="w-full text-right text-sm" dir="rtl">
-            {/* Header Row with Gold School Theme */}
             <thead className="bg-[#b79e55] text-slate-950 font-black text-xs sm:text-sm border-b border-[#a88f47]">
               {viewMode === 'dawr' ? (
-                /* Single Dawr View (Exact match to top card in screenshot) */
                 <tr>
                   <th className="py-3 px-3 text-center w-24">IdNumb</th>
                   <th className="py-3 px-4 text-right">أسماء الطلاب</th>
                   <th className="py-3 px-4 text-center w-36">الدرجة</th>
                   <th className="py-3 px-4 text-center w-32">تقدير</th>
-                  <th className="py-3 px-3 text-center w-24">حالة</th>
+                  <th className="py-3 px-3 text-center w-36">حالة / إجراء سريع</th>
                 </tr>
               ) : (
-                /* Semester Matrix View (Exact match to bottom card in screenshot) */
                 <tr>
                   <th className="py-3 px-3 text-center w-24">IdNumb</th>
                   <th className="py-3 px-4 text-right">أسماء الطلاب</th>
@@ -1359,35 +1146,48 @@ export default function ExcelGradeEditor({
                   <th className="py-3 px-3 text-center w-24">مجموع</th>
                   <th className="py-3 px-3 text-center w-24">معدل</th>
                   <th className="py-3 px-4 text-center w-32">تقدير</th>
-                  <th className="py-3 px-3 text-center w-24">حالة</th>
+                  <th className="py-3 px-3 text-center w-28">حالة</th>
                 </tr>
               )}
             </thead>
 
             <tbody className="divide-y divide-[#e7dfc8] font-medium">
-              {students.length === 0 ? (
+              {visibleStudents.length === 0 ? (
                 <tr>
                   <td
                     colSpan={viewMode === 'dawr' ? 5 : 9}
                     className="py-8 text-center text-slate-400 font-medium"
                   >
-                    لا يوجد طلاب مسجلين في هذا الصف حالياً.
+                    {students.length > 0 && !showAllStudentsWithDRP ? (
+                      <div className="space-y-2">
+                        <p>جميع الطلاب في هذا السجل مسجلون كمنسحبين (DRP).</p>
+                        <button
+                          type="button"
+                          onClick={() => setShowAllStudentsWithDRP(true)}
+                          className="px-4 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold cursor-pointer"
+                        >
+                          عرض الكل (View All Students)
+                        </button>
+                      </div>
+                    ) : (
+                      'لا يوجد طلاب مسجلين في هذا الصف حالياً.'
+                    )}
                   </td>
                 </tr>
               ) : (
-                students.map((student, rowIndex) => {
+                visibleStudents.map((student, rowIndex) => {
                   const row = gridValues[student.StudentID] || {};
+                  const rowIsDRP = isStudentDRP(student.StudentID);
 
                   if (viewMode === 'dawr') {
-                    // Single Dawr Row
-                    const rawVal = row[selectedPeriod] || '';
+                    const rawVal = (row[selectedPeriod] || '').trim().toUpperCase();
                     const num = parseFloat(rawVal);
                     const rating = !isNaN(num)
                       ? getRating(num)
                       : rawVal === 'INC'
-                      ? { labelAr: 'INC', pillClass: 'bg-amber-200 text-amber-900 font-bold' }
+                      ? { labelAr: 'غير مكتمل (INC)', pillClass: 'bg-amber-200 text-amber-900 font-black' }
                       : rawVal === 'DRP'
-                      ? { labelAr: 'DRP', pillClass: 'bg-red-200 text-red-900 font-bold' }
+                      ? { labelAr: 'منسحب (DRP)', pillClass: 'bg-red-600 text-white font-black' }
                       : getRating(null);
 
                     const refKey = `${rowIndex}-0`;
@@ -1395,18 +1195,31 @@ export default function ExcelGradeEditor({
                     return (
                       <tr
                         key={student.StudentID}
-                        className="hover:bg-[#faf7f0] transition-colors group"
+                        className={`transition-colors group ${
+                          rowIsDRP
+                            ? 'bg-red-100 hover:bg-red-200/80 text-red-950 border-y-2 border-red-400 font-black'
+                            : 'hover:bg-[#faf7f0]'
+                        }`}
                       >
-                        {/* 1. IdNumb (Rightmost) */}
-                        <td className="py-2.5 px-3 text-center font-mono font-bold text-xs text-slate-600 bg-slate-50/50">
+                        <td
+                          className={`py-2.5 px-3 text-center font-mono font-bold text-xs ${
+                            rowIsDRP ? 'bg-red-200 text-red-950' : 'text-slate-600 bg-slate-50/50'
+                          }`}
+                        >
                           {student.RollNo || student.StudentID}
                         </td>
 
-                        {/* 2. Student Name (أسماء الطلاب - On the Right) */}
                         <td className="py-2.5 px-4 text-right">
-                          <span className="font-bold text-slate-950 font-serif text-base block">
-                            {student.NameArabic || student.Name}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-950 font-serif text-base">
+                              {student.NameArabic || student.Name}
+                            </span>
+                            {rowIsDRP && (
+                              <span className="px-2 py-0.5 text-[10px] rounded-full bg-red-600 text-white font-sans font-black">
+                                DRP منسحب
+                              </span>
+                            )}
+                          </div>
                           {student.NameArabic && student.Name && (
                             <span className="text-[11px] text-slate-500 font-sans block" dir="ltr">
                               {student.Name}
@@ -1414,7 +1227,6 @@ export default function ExcelGradeEditor({
                           )}
                         </td>
 
-                        {/* 3. Grade Cell (الدرجة - Editable Input) */}
                         <td className="py-2 px-3 text-center">
                           <input
                             ref={el => {
@@ -1429,23 +1241,15 @@ export default function ExcelGradeEditor({
                             className={`w-28 py-1.5 px-2 text-center font-mono font-bold text-sm rounded-lg border transition-all ${
                               !canUserEditThisSubject || activeLockInfo.isLocked
                                 ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
+                                : rowIsDRP
+                                ? 'bg-red-600 text-white border-red-800'
                                 : rawVal !== ''
                                 ? 'bg-white border-slate-300 text-slate-950 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
                                 : 'bg-slate-50 border-dashed border-slate-300 text-slate-400 focus:bg-white focus:border-emerald-600'
                             }`}
-                            title={
-                              !canUserEditThisSubject
-                                ? isSSG
-                                  ? 'يحق لمجلس الطلبة تعديل مادة النشاط فقط'
-                                  : 'مادة النشاط مخصصة لمجلس الطلبة فقط'
-                                : activeLockInfo.isLocked
-                                ? 'سجل الدرجات مقفل (انتهت مهلة التعديل المحددة من الإدارة)'
-                                : ''
-                            }
                           />
                         </td>
 
-                        {/* 4. Rating Badge (تقدير) */}
                         <td className="py-2.5 px-4 text-center">
                           <span
                             className={`inline-block w-full py-1 px-2.5 text-center text-xs font-black rounded-sm shadow-xs ${rating.pillClass}`}
@@ -1454,60 +1258,108 @@ export default function ExcelGradeEditor({
                           </span>
                         </td>
 
-                        {/* 5. Status / Lock */}
                         <td className="py-2.5 px-3 text-center text-xs">
-                          {activeLockInfo.isLocked ? (
-                            <span className="text-red-700 font-bold inline-flex items-center gap-1 bg-red-100/80 px-2 py-0.5 rounded-md border border-red-200">
-                              <Lock className="w-3 h-3 text-red-600" /> مقفل
-                            </span>
-                          ) : activeLockInfo.hasUnlockRequest ? (
-                            <span className="text-amber-800 font-bold inline-flex items-center gap-1 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200">
-                              <Clock className="w-3 h-3 text-amber-600" /> طلب تمديد
-                            </span>
-                          ) : rawVal !== '' ? (
-                            <span className="text-emerald-700 font-bold inline-flex items-center gap-1 bg-emerald-100/70 px-2 py-0.5 rounded-md border border-emerald-200">
-                              <Unlock className="w-3 h-3 text-emerald-600" /> متاح ({countdown.h}س)
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 italic">معلق</span>
-                          )}
+                          <div className="flex items-center justify-center gap-1">
+                            {canUserEditThisSubject && !activeLockInfo.isLocked && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleCellChange(
+                                      student.StudentID,
+                                      selectedPeriod,
+                                      rawVal === 'INC' ? '' : 'INC'
+                                    )
+                                  }
+                                  className={`px-2 py-0.5 rounded text-[10px] font-black cursor-pointer border ${
+                                    rawVal === 'INC'
+                                      ? 'bg-amber-500 text-slate-950 border-amber-600'
+                                      : 'bg-slate-100 hover:bg-amber-100 text-slate-600 border-slate-300'
+                                  }`}
+                                  title="تحديد غير مكتمل (INC)"
+                                >
+                                  INC
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleCellChange(
+                                      student.StudentID,
+                                      selectedPeriod,
+                                      rawVal === 'DRP' ? '' : 'DRP'
+                                    )
+                                  }
+                                  className={`px-2 py-0.5 rounded text-[10px] font-black cursor-pointer border ${
+                                    rawVal === 'DRP'
+                                      ? 'bg-red-600 text-white border-red-700'
+                                      : 'bg-slate-100 hover:bg-red-100 text-slate-600 border-slate-300'
+                                  }`}
+                                  title="تحديد منسحب (DRP) - سيتم إخفاؤه تلقائياً إلا عند عرض الكل"
+                                >
+                                  DRP
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
                   } else {
-                    // Semester View Row (دور 1, 2, 3 with Sum, Avg, Rating)
-                    const d1Raw = row[activePeriods[0]] || '';
-                    const d2Raw = row[activePeriods[1]] || '';
-                    const d3Raw = row[activePeriods[2]] || '';
+                    const d1Raw = (row[activePeriods[0]] || '').trim().toUpperCase();
+                    const d2Raw = (row[activePeriods[1]] || '').trim().toUpperCase();
+                    const d3Raw = (row[activePeriods[2]] || '').trim().toUpperCase();
+
+                    const hasINC = [d1Raw, d2Raw, d3Raw].includes('INC');
+                    const hasDRP = [d1Raw, d2Raw, d3Raw].includes('DRP');
 
                     const d1Num = parseFloat(d1Raw);
                     const d2Num = parseFloat(d2Raw);
                     const d3Num = parseFloat(d3Raw);
 
+                    // Requirement 4: Exclude ungraded or INC from average
                     const validScores = [d1Num, d2Num, d3Num].filter(n => !isNaN(n));
-                    const sum = validScores.length > 0
-                      ? Math.round(validScores.reduce((a, b) => a + b, 0) * 10) / 10
-                      : null;
-                    const avg = validScores.length > 0
-                      ? Math.round((validScores.reduce((a, b) => a + b, 0) / validScores.length) * 10) / 10
-                      : null;
-                    const rating = getRating(avg);
+                    const sum =
+                      !hasINC && !hasDRP && validScores.length > 0
+                        ? Math.round(validScores.reduce((a, b) => a + b, 0) * 10) / 10
+                        : null;
+                    const avg =
+                      !hasINC && !hasDRP && validScores.length > 0
+                        ? Math.round((validScores.reduce((a, b) => a + b, 0) / validScores.length) * 10) / 10
+                        : null;
+                    const rating = hasDRP
+                      ? { labelAr: 'منسحب (DRP)', pillClass: 'bg-red-600 text-white font-black' }
+                      : hasINC
+                      ? { labelAr: 'غير مكتمل (INC)', pillClass: 'bg-amber-200 text-amber-900 font-black' }
+                      : getRating(avg);
 
                     return (
                       <tr
                         key={student.StudentID}
-                        className="hover:bg-[#faf7f0] transition-colors group"
+                        className={`transition-colors group ${
+                          rowIsDRP
+                            ? 'bg-red-100 hover:bg-red-200/80 text-red-950 border-y-2 border-red-400 font-black'
+                            : 'hover:bg-[#faf7f0]'
+                        }`}
                       >
-                        {/* 1. IdNumb (Rightmost) */}
-                        <td className="py-2.5 px-3 text-center font-mono font-bold text-xs text-slate-600 bg-slate-50/50">
+                        <td
+                          className={`py-2.5 px-3 text-center font-mono font-bold text-xs ${
+                            rowIsDRP ? 'bg-red-200 text-red-950' : 'text-slate-600 bg-slate-50/50'
+                          }`}
+                        >
                           {student.RollNo || student.StudentID}
                         </td>
 
-                        {/* 2. Student Name (أسماء الطلاب - On the Right) */}
                         <td className="py-2.5 px-4 text-right">
-                          <span className="font-bold text-slate-950 font-serif text-base block">
-                            {student.NameArabic || student.Name}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-950 font-serif text-base">
+                              {student.NameArabic || student.Name}
+                            </span>
+                            {rowIsDRP && (
+                              <span className="px-2 py-0.5 text-[10px] rounded-full bg-red-600 text-white font-sans font-black">
+                                DRP منسحب
+                              </span>
+                            )}
+                          </div>
                           {student.NameArabic && student.Name && (
                             <span className="text-[11px] text-slate-500 font-sans block" dir="ltr">
                               {student.Name}
@@ -1515,104 +1367,41 @@ export default function ExcelGradeEditor({
                           )}
                         </td>
 
-                        {/* 3. Dawr 1 Input */}
-                        <td className="py-2 px-2 text-center">
-                          <input
-                            ref={el => {
-                              inputRefs.current[`${rowIndex}-0`] = el;
-                            }}
-                            type="text"
-                            disabled={!canUserEditThisSubject || activeLockInfo.isLocked}
-                            value={d1Raw}
-                            placeholder="—"
-                            onChange={e => handleCellChange(student.StudentID, activePeriods[0], e.target.value)}
-                            onKeyDown={e => handleKeyDown(e, rowIndex, 0, activePeriods)}
-                            className={`w-20 py-1.5 px-1 text-center font-mono font-bold text-sm rounded-lg border transition-all ${
-                              !canUserEditThisSubject || activeLockInfo.isLocked
-                                ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
-                                : 'border-slate-300 bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
-                            }`}
-                            title={
-                              !canUserEditThisSubject
-                                ? isSSG
-                                  ? 'خاص بمادة النشاط فقط'
-                                  : 'مادة النشاط مخصصة لمجلس الطلبة'
-                                : activeLockInfo.isLocked
-                                ? 'سجل الدرجات مقفل (انتهت مهلة التعديل)'
-                                : ''
-                            }
-                          />
-                        </td>
+                        {[0, 1, 2].map(colIdx => {
+                          const p = activePeriods[colIdx];
+                          const valStr = (row[p] || '').trim().toUpperCase();
+                          return (
+                            <td key={p} className="py-2 px-2 text-center">
+                              <input
+                                ref={el => {
+                                  inputRefs.current[`${rowIndex}-${colIdx}`] = el;
+                                }}
+                                type="text"
+                                disabled={!canUserEditThisSubject || activeLockInfo.isLocked}
+                                value={valStr}
+                                placeholder="—"
+                                onChange={e => handleCellChange(student.StudentID, p, e.target.value)}
+                                onKeyDown={e => handleKeyDown(e, rowIndex, colIdx, activePeriods)}
+                                className={`w-20 py-1.5 px-1 text-center font-mono font-bold text-sm rounded-lg border transition-all ${
+                                  !canUserEditThisSubject || activeLockInfo.isLocked
+                                    ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
+                                    : valStr === 'DRP'
+                                    ? 'bg-red-600 text-white border-red-800'
+                                    : 'border-slate-300 bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
+                                }`}
+                              />
+                            </td>
+                          );
+                        })}
 
-                        {/* 4. Dawr 2 Input */}
-                        <td className="py-2 px-2 text-center">
-                          <input
-                            ref={el => {
-                              inputRefs.current[`${rowIndex}-1`] = el;
-                            }}
-                            type="text"
-                            disabled={!canUserEditThisSubject || activeLockInfo.isLocked}
-                            value={d2Raw}
-                            placeholder="—"
-                            onChange={e => handleCellChange(student.StudentID, activePeriods[1], e.target.value)}
-                            onKeyDown={e => handleKeyDown(e, rowIndex, 1, activePeriods)}
-                            className={`w-20 py-1.5 px-1 text-center font-mono font-bold text-sm rounded-lg border transition-all ${
-                              !canUserEditThisSubject || activeLockInfo.isLocked
-                                ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
-                                : 'border-slate-300 bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
-                            }`}
-                            title={
-                              !canUserEditThisSubject
-                                ? isSSG
-                                  ? 'خاص بمادة النشاط فقط'
-                                  : 'مادة النشاط مخصصة لمجلس الطلبة'
-                                : activeLockInfo.isLocked
-                                ? 'سجل الدرجات مقفل (انتهت مهلة التعديل)'
-                                : ''
-                            }
-                          />
-                        </td>
-
-                        {/* 5. Dawr 3 Input */}
-                        <td className="py-2 px-2 text-center">
-                          <input
-                            ref={el => {
-                              inputRefs.current[`${rowIndex}-2`] = el;
-                            }}
-                            type="text"
-                            disabled={!canUserEditThisSubject || activeLockInfo.isLocked}
-                            value={d3Raw}
-                            placeholder="—"
-                            onChange={e => handleCellChange(student.StudentID, activePeriods[2], e.target.value)}
-                            onKeyDown={e => handleKeyDown(e, rowIndex, 2, activePeriods)}
-                            className={`w-20 py-1.5 px-1 text-center font-mono font-bold text-sm rounded-lg border transition-all ${
-                              !canUserEditThisSubject || activeLockInfo.isLocked
-                                ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
-                                : 'border-slate-300 bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
-                            }`}
-                            title={
-                              !canUserEditThisSubject
-                                ? isSSG
-                                  ? 'خاص بمادة النشاط فقط'
-                                  : 'مادة النشاط مخصصة لمجلس الطلبة'
-                                : activeLockInfo.isLocked
-                                ? 'سجل الدرجات مقفل (انتهت مهلة التعديل)'
-                                : ''
-                            }
-                          />
-                        </td>
-
-                        {/* 6. Total (مجموع - Live calculated) */}
                         <td className="py-2.5 px-3 text-center font-mono font-bold text-sm text-slate-900 bg-amber-50/40">
                           {sum !== null ? sum : '—'}
                         </td>
 
-                        {/* 7. Average (معدل - Live calculated) */}
                         <td className="py-2.5 px-3 text-center font-mono font-extrabold text-sm text-slate-950 bg-amber-50/70">
-                          {avg !== null ? avg : '—'}
+                          {hasDRP ? 'DRP' : hasINC ? 'INC' : avg !== null ? avg : '—'}
                         </td>
 
-                        {/* 8. Rating Badge (تقدير - Live calculated) */}
                         <td className="py-2.5 px-4 text-center">
                           <span
                             className={`inline-block w-full py-1 px-2.5 text-center text-xs font-black rounded-sm shadow-xs ${rating.pillClass}`}
@@ -1621,20 +1410,17 @@ export default function ExcelGradeEditor({
                           </span>
                         </td>
 
-                        {/* 9. Status */}
                         <td className="py-2.5 px-3 text-center text-xs">
-                          {activeLockInfo.isLocked ? (
-                            <span className="text-red-700 font-bold inline-flex items-center gap-1 bg-red-100/80 px-2 py-0.5 rounded-md border border-red-200">
-                              <Lock className="w-3 h-3 text-red-600" /> مقفل
+                          {rowIsDRP ? (
+                            <span className="px-2 py-0.5 bg-red-600 text-white rounded font-black text-[10px]">
+                              DRP
                             </span>
-                          ) : activeLockInfo.hasUnlockRequest ? (
-                            <span className="text-amber-800 font-bold inline-flex items-center gap-1 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200">
-                              <Clock className="w-3 h-3 text-amber-600" /> طلب تمديد
+                          ) : hasINC ? (
+                            <span className="px-2 py-0.5 bg-amber-200 text-amber-950 rounded font-black text-[10px]">
+                              INC
                             </span>
                           ) : validScores.length > 0 ? (
-                            <span className="text-emerald-700 font-bold inline-flex items-center gap-1 bg-emerald-100/70 px-2 py-0.5 rounded-md border border-emerald-200">
-                              <Unlock className="w-3 h-3 text-emerald-600" /> متاح ({countdown.h}س)
-                            </span>
+                            <span className="text-emerald-700 font-bold">مرصود</span>
                           ) : (
                             <span className="text-slate-400 italic">معلق</span>
                           )}
@@ -1646,14 +1432,14 @@ export default function ExcelGradeEditor({
               )}
             </tbody>
 
-            {/* Summary Footer Row (Excel Summary Totals) */}
+            {/* Summary Footer Row */}
             <tfoot className="bg-[#ede5d1] text-slate-950 font-bold border-t-2 border-[#b79e55]">
               <tr>
                 <td className="py-3 px-3 text-center font-mono text-xs text-slate-600">
-                  {students.length}
+                  {visibleStudents.length}
                 </td>
                 <td className="py-3 px-4 text-right font-black">
-                  إحصائيات المادة العامة (Class Average & Stats)
+                  إحصائيات المادة العامة (Class Average &amp; Stats)
                 </td>
                 {viewMode === 'dawr' ? (
                   <>
@@ -1697,41 +1483,6 @@ export default function ExcelGradeEditor({
               </tr>
             </tfoot>
           </table>
-        </div>
-
-        {/* Footer Shortcut Helper */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-700 pt-1 px-1 font-medium">
-          <div className="flex items-center gap-3">
-            <span>
-              <strong>ملاحظة:</strong> يتم حفظ جميع الدرجات مباشرة في قاعدة بيانات المدرسة.
-            </span>
-            <span className="hidden md:inline text-slate-400">&bull;</span>
-            <span className="hidden md:inline">
-              اضغط على أي خلية للكتابة، واستخدم أسهم الكيبورد أو Enter للتنقل.
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleSaveAll}
-              disabled={isMudir || activeLockInfo.isLocked}
-              className={`px-4 py-1.5 font-bold rounded-lg text-xs cursor-pointer shadow-xs flex items-center gap-1.5 transition-colors ${
-                activeLockInfo.isLocked
-                  ? 'bg-slate-600 text-slate-300 cursor-not-allowed opacity-80'
-                  : 'bg-emerald-800 hover:bg-emerald-700 text-white'
-              }`}
-            >
-              {activeLockInfo.isLocked ? (
-                <>
-                  <Lock className="w-3.5 h-3.5 text-red-300" />
-                  <span>السجل مقفل (Locked)</span>
-                </>
-              ) : (
-                <span>حفظ الكل الآن (Save All)</span>
-              )}
-            </button>
-          </div>
         </div>
       </div>
     </div>

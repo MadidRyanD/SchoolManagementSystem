@@ -282,7 +282,7 @@ export default function DashboardOverviewPage() {
                 : [
                     { href: '/dashboard/grades', icon: ClipboardList, labelEn: 'My Grades', labelAr: 'الدرجات الأكاديمية', color: 'bg-rose-50 border-rose-200 text-rose-800' },
                     { href: '/dashboard/schedules', icon: Calendar, labelEn: 'Schedule', labelAr: 'جدول الحصص', color: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
-                    { href: '/dashboard/subjects', icon: BookOpen, labelEn: 'Books & E-Library', labelAr: 'المناهج والكتب الدراسية', color: 'bg-amber-50 border-amber-200 text-amber-900' },
+                    { href: '/dashboard/subjects', icon: BookOpen, labelEn: 'Subjects', labelAr: 'المواد الدراسية', color: 'bg-amber-50 border-amber-200 text-amber-900' },
                     { href: '/dashboard/finance', icon: Wallet, labelEn: 'Billing', labelAr: 'الرسوم والمستحقات', color: 'bg-blue-50 border-blue-200 text-blue-800' },
                   ]
               ).map(item => (

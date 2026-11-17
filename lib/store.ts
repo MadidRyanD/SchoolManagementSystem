@@ -1,6 +1,7 @@
 import {
   ClassItem,
   SubjectItem,
+  SubjectEBookItem,
   TeacherItem,
   StudentItem,
   SubjectTeacherItem,
@@ -24,6 +25,7 @@ import {
   FeesItem,
   ExamItem,
   ExpenseItem,
+  UserRole,
 } from './types';
 import {
   scheduleClasses,
@@ -311,60 +313,74 @@ export const initialCriteria: GradingCriteria[] = [
   { id: 'crit-final', name: 'Final Dawr Exam (امتحان نهائي)', weight: 40 },
 ];
 
+// Helper to look up Class 1 SubjectID by Arabic name from scheduleSubjects
+function getClassSubId(classId: number, arabicName: string, fallbackId: number): number {
+  const found = scheduleSubjects.find(s => s.ClassID === classId && s.SubjectArabic === arabicName);
+  return found ? found.SubjectID : fallbackId;
+}
+
+const c1FiqhId = getClassSubId(1, 'فقه', 1);
+const c1TawheedId = getClassSubId(1, 'توحيد', 2);
+const c1QuranId = getClassSubId(1, 'قرآن', 1);
+const c1TabeerId = getClassSubId(1, 'تعبير', 4);
+const c1HadithId = getClassSubId(1, 'حديث', 18);
+const c1NashatId = getClassSubId(1, 'نشاط', 21);
+
 // 8. 6-Period Student Grades Seed
 export const initialGrades: StudentGradeItem[] = [
   // Student 1 (Aarav Al-Husseini - Class 1)
-  // Subject 1: فقه (Fiqh) -> ممتاز
-  { id: 'grd-s1-sub1-p1', StudentID: 1, ClassID: 1, SubjectID: 1, TeacherID: 1, Period: '1st', CriteriaScores: { 'crit-att': 98, 'crit-quiz': 95, 'crit-mid': 96, 'crit-final': 97 }, FinalGrade: 96, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub1-p2', StudentID: 1, ClassID: 1, SubjectID: 1, TeacherID: 1, Period: '2nd', CriteriaScores: { 'crit-att': 96, 'crit-quiz': 94, 'crit-mid': 95, 'crit-final': 95 }, FinalGrade: 95, GradedAt: '2026-09-05T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub1-p3', StudentID: 1, ClassID: 1, SubjectID: 1, TeacherID: 1, Period: '3rd', CriteriaScores: { 'crit-att': 100, 'crit-quiz': 98, 'crit-mid': 97, 'crit-final': 98 }, FinalGrade: 98, GradedAt: '2026-09-10T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub1-p4', StudentID: 1, ClassID: 1, SubjectID: 1, TeacherID: 1, Period: '4th', CriteriaScores: { 'crit-att': 95, 'crit-quiz': 92, 'crit-mid': 94, 'crit-final': 93 }, FinalGrade: 93, GradedAt: '2026-09-15T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub1-p5', StudentID: 1, ClassID: 1, SubjectID: 1, TeacherID: 1, Period: '5th', CriteriaScores: { 'crit-att': 96, 'crit-quiz': 95, 'crit-mid': 96, 'crit-final': 96 }, FinalGrade: 96, GradedAt: '2026-09-20T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub1-p6', StudentID: 1, ClassID: 1, SubjectID: 1, TeacherID: 1, Period: '6th', CriteriaScores: { 'crit-att': 98, 'crit-quiz': 97, 'crit-mid': 98, 'crit-final': 97 }, FinalGrade: 97, GradedAt: '2026-09-25T11:00:00Z', IsLocked: false },
+  // Subject: فقه (Fiqh) -> ممتاز
+  { id: 'grd-s1-fiqh-p1', StudentID: 1, ClassID: 1, SubjectID: c1FiqhId, TeacherID: 8, Period: '1st', CriteriaScores: { 'crit-att': 98, 'crit-quiz': 95, 'crit-mid': 96, 'crit-final': 97 }, FinalGrade: 96, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
+  { id: 'grd-s1-fiqh-p2', StudentID: 1, ClassID: 1, SubjectID: c1FiqhId, TeacherID: 8, Period: '2nd', CriteriaScores: { 'crit-att': 96, 'crit-quiz': 94, 'crit-mid': 95, 'crit-final': 95 }, FinalGrade: 95, GradedAt: '2026-09-05T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-fiqh-p3', StudentID: 1, ClassID: 1, SubjectID: c1FiqhId, TeacherID: 8, Period: '3rd', CriteriaScores: { 'crit-att': 100, 'crit-quiz': 98, 'crit-mid': 97, 'crit-final': 98 }, FinalGrade: 98, GradedAt: '2026-09-10T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-fiqh-p4', StudentID: 1, ClassID: 1, SubjectID: c1FiqhId, TeacherID: 8, Period: '4th', CriteriaScores: { 'crit-att': 95, 'crit-quiz': 92, 'crit-mid': 94, 'crit-final': 93 }, FinalGrade: 93, GradedAt: '2026-09-15T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-fiqh-p5', StudentID: 1, ClassID: 1, SubjectID: c1FiqhId, TeacherID: 8, Period: '5th', CriteriaScores: { 'crit-att': 96, 'crit-quiz': 95, 'crit-mid': 96, 'crit-final': 96 }, FinalGrade: 96, GradedAt: '2026-09-20T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-fiqh-p6', StudentID: 1, ClassID: 1, SubjectID: c1FiqhId, TeacherID: 8, Period: '6th', CriteriaScores: { 'crit-att': 98, 'crit-quiz': 97, 'crit-mid': 98, 'crit-final': 97 }, FinalGrade: 97, GradedAt: '2026-09-25T11:00:00Z', IsLocked: false },
 
-  // Subject 2: توحيد (Tawheed) -> جيد جدا
-  { id: 'grd-s1-sub2-p1', StudentID: 1, ClassID: 1, SubjectID: 2, TeacherID: 2, Period: '1st', CriteriaScores: { 'crit-att': 90, 'crit-quiz': 88, 'crit-mid': 86, 'crit-final': 88 }, FinalGrade: 88, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub2-p2', StudentID: 1, ClassID: 1, SubjectID: 2, TeacherID: 2, Period: '2nd', CriteriaScores: { 'crit-att': 92, 'crit-quiz': 85, 'crit-mid': 87, 'crit-final': 86 }, FinalGrade: 86, GradedAt: '2026-09-05T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub2-p3', StudentID: 1, ClassID: 1, SubjectID: 2, TeacherID: 2, Period: '3rd', CriteriaScores: { 'crit-att': 90, 'crit-quiz': 89, 'crit-mid': 88, 'crit-final': 89 }, FinalGrade: 89, GradedAt: '2026-09-10T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub2-p4', StudentID: 1, ClassID: 1, SubjectID: 2, TeacherID: 2, Period: '4th', CriteriaScores: { 'crit-att': 88, 'crit-quiz': 86, 'crit-mid': 85, 'crit-final': 87 }, FinalGrade: 86, GradedAt: '2026-09-15T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub2-p5', StudentID: 1, ClassID: 1, SubjectID: 2, TeacherID: 2, Period: '5th', CriteriaScores: { 'crit-att': 90, 'crit-quiz': 88, 'crit-mid': 88, 'crit-final': 88 }, FinalGrade: 88, GradedAt: '2026-09-20T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub2-p6', StudentID: 1, ClassID: 1, SubjectID: 2, TeacherID: 2, Period: '6th', CriteriaScores: { 'crit-att': 92, 'crit-quiz': 90, 'crit-mid': 89, 'crit-final': 89 }, FinalGrade: 89, GradedAt: '2026-09-25T11:00:00Z', IsLocked: false },
+  // Subject: توحيد (Tawheed) -> جيد جدا
+  { id: 'grd-s1-tawheed-p1', StudentID: 1, ClassID: 1, SubjectID: c1TawheedId, TeacherID: 24, Period: '1st', CriteriaScores: { 'crit-att': 90, 'crit-quiz': 88, 'crit-mid': 86, 'crit-final': 88 }, FinalGrade: 88, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
+  { id: 'grd-s1-tawheed-p2', StudentID: 1, ClassID: 1, SubjectID: c1TawheedId, TeacherID: 24, Period: '2nd', CriteriaScores: { 'crit-att': 92, 'crit-quiz': 85, 'crit-mid': 87, 'crit-final': 86 }, FinalGrade: 86, GradedAt: '2026-09-05T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-tawheed-p3', StudentID: 1, ClassID: 1, SubjectID: c1TawheedId, TeacherID: 24, Period: '3rd', CriteriaScores: { 'crit-att': 90, 'crit-quiz': 89, 'crit-mid': 88, 'crit-final': 89 }, FinalGrade: 89, GradedAt: '2026-09-10T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-tawheed-p4', StudentID: 1, ClassID: 1, SubjectID: c1TawheedId, TeacherID: 24, Period: '4th', CriteriaScores: { 'crit-att': 88, 'crit-quiz': 86, 'crit-mid': 85, 'crit-final': 87 }, FinalGrade: 86, GradedAt: '2026-09-15T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-tawheed-p5', StudentID: 1, ClassID: 1, SubjectID: c1TawheedId, TeacherID: 24, Period: '5th', CriteriaScores: { 'crit-att': 90, 'crit-quiz': 88, 'crit-mid': 88, 'crit-final': 88 }, FinalGrade: 88, GradedAt: '2026-09-20T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-tawheed-p6', StudentID: 1, ClassID: 1, SubjectID: c1TawheedId, TeacherID: 24, Period: '6th', CriteriaScores: { 'crit-att': 92, 'crit-quiz': 90, 'crit-mid': 89, 'crit-final': 89 }, FinalGrade: 89, GradedAt: '2026-09-25T11:00:00Z', IsLocked: false },
 
-  // Subject 3: قرآن (Quran) -> جيد
-  { id: 'grd-s1-sub3-p1', StudentID: 1, ClassID: 1, SubjectID: 3, TeacherID: 2, Period: '1st', CriteriaScores: { 'crit-att': 85, 'crit-quiz': 78, 'crit-mid': 76, 'crit-final': 78 }, FinalGrade: 78, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub3-p2', StudentID: 1, ClassID: 1, SubjectID: 3, TeacherID: 2, Period: '2nd', CriteriaScores: { 'crit-att': 82, 'crit-quiz': 75, 'crit-mid': 77, 'crit-final': 76 }, FinalGrade: 76, GradedAt: '2026-09-05T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub3-p3', StudentID: 1, ClassID: 1, SubjectID: 3, TeacherID: 2, Period: '3rd', CriteriaScores: { 'crit-att': 85, 'crit-quiz': 80, 'crit-mid': 78, 'crit-final': 79 }, FinalGrade: 79, GradedAt: '2026-09-10T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub3-p4', StudentID: 1, ClassID: 1, SubjectID: 3, TeacherID: 2, Period: '4th', CriteriaScores: { 'crit-att': 80, 'crit-quiz': 76, 'crit-mid': 78, 'crit-final': 77 }, FinalGrade: 77, GradedAt: '2026-09-15T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub3-p5', StudentID: 1, ClassID: 1, SubjectID: 3, TeacherID: 2, Period: '5th', CriteriaScores: { 'crit-att': 84, 'crit-quiz': 80, 'crit-mid': 81, 'crit-final': 80 }, FinalGrade: 80, GradedAt: '2026-09-20T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub3-p6', StudentID: 1, ClassID: 1, SubjectID: 3, TeacherID: 2, Period: '6th', CriteriaScores: { 'crit-att': 85, 'crit-quiz': 78, 'crit-mid': 79, 'crit-final': 78 }, FinalGrade: 78, GradedAt: '2026-09-25T11:00:00Z', IsLocked: false },
+  // Subject: قرآن (Quran) -> جيد
+  { id: 'grd-s1-quran-p1', StudentID: 1, ClassID: 1, SubjectID: c1QuranId, TeacherID: 2, Period: '1st', CriteriaScores: { 'crit-att': 85, 'crit-quiz': 78, 'crit-mid': 76, 'crit-final': 78 }, FinalGrade: 78, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
+  { id: 'grd-s1-quran-p2', StudentID: 1, ClassID: 1, SubjectID: c1QuranId, TeacherID: 2, Period: '2nd', CriteriaScores: { 'crit-att': 82, 'crit-quiz': 75, 'crit-mid': 77, 'crit-final': 76 }, FinalGrade: 76, GradedAt: '2026-09-05T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-quran-p3', StudentID: 1, ClassID: 1, SubjectID: c1QuranId, TeacherID: 2, Period: '3rd', CriteriaScores: { 'crit-att': 85, 'crit-quiz': 80, 'crit-mid': 78, 'crit-final': 79 }, FinalGrade: 79, GradedAt: '2026-09-10T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-quran-p4', StudentID: 1, ClassID: 1, SubjectID: c1QuranId, TeacherID: 2, Period: '4th', CriteriaScores: { 'crit-att': 80, 'crit-quiz': 76, 'crit-mid': 78, 'crit-final': 77 }, FinalGrade: 77, GradedAt: '2026-09-15T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-quran-p5', StudentID: 1, ClassID: 1, SubjectID: c1QuranId, TeacherID: 2, Period: '5th', CriteriaScores: { 'crit-att': 84, 'crit-quiz': 80, 'crit-mid': 81, 'crit-final': 80 }, FinalGrade: 80, GradedAt: '2026-09-20T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-quran-p6', StudentID: 1, ClassID: 1, SubjectID: c1QuranId, TeacherID: 2, Period: '6th', CriteriaScores: { 'crit-att': 85, 'crit-quiz': 78, 'crit-mid': 79, 'crit-final': 78 }, FinalGrade: 78, GradedAt: '2026-09-25T11:00:00Z', IsLocked: false },
 
-  // Subject 4: تعبير (Tabeer) -> مقبول
-  { id: 'grd-s1-sub4-p1', StudentID: 1, ClassID: 1, SubjectID: 4, TeacherID: 4, Period: '1st', CriteriaScores: { 'crit-att': 75, 'crit-quiz': 68, 'crit-mid': 66, 'crit-final': 68 }, FinalGrade: 68, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub4-p2', StudentID: 1, ClassID: 1, SubjectID: 4, TeacherID: 4, Period: '2nd', CriteriaScores: { 'crit-att': 70, 'crit-quiz': 65, 'crit-mid': 64, 'crit-final': 65 }, FinalGrade: 65, GradedAt: '2026-09-05T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub4-p3', StudentID: 1, ClassID: 1, SubjectID: 4, TeacherID: 4, Period: '3rd', CriteriaScores: { 'crit-att': 74, 'crit-quiz': 67, 'crit-mid': 66, 'crit-final': 67 }, FinalGrade: 67, GradedAt: '2026-09-10T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub4-p4', StudentID: 1, ClassID: 1, SubjectID: 4, TeacherID: 4, Period: '4th', CriteriaScores: { 'crit-att': 72, 'crit-quiz': 69, 'crit-mid': 70, 'crit-final': 69 }, FinalGrade: 69, GradedAt: '2026-09-15T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub4-p5', StudentID: 1, ClassID: 1, SubjectID: 4, TeacherID: 4, Period: '5th', CriteriaScores: { 'crit-att': 75, 'crit-quiz': 68, 'crit-mid': 68, 'crit-final': 68 }, FinalGrade: 68, GradedAt: '2026-09-20T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub4-p6', StudentID: 1, ClassID: 1, SubjectID: 4, TeacherID: 4, Period: '6th', CriteriaScores: { 'crit-att': 78, 'crit-quiz': 72, 'crit-mid': 70, 'crit-final': 71 }, FinalGrade: 71, GradedAt: '2026-09-25T11:00:00Z', IsLocked: false },
+  // Subject: تعبير (Tabeer) -> مقبول
+  { id: 'grd-s1-tabeer-p1', StudentID: 1, ClassID: 1, SubjectID: c1TabeerId, TeacherID: 20, Period: '1st', CriteriaScores: { 'crit-att': 75, 'crit-quiz': 68, 'crit-mid': 66, 'crit-final': 68 }, FinalGrade: 68, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
+  { id: 'grd-s1-tabeer-p2', StudentID: 1, ClassID: 1, SubjectID: c1TabeerId, TeacherID: 20, Period: '2nd', CriteriaScores: { 'crit-att': 70, 'crit-quiz': 65, 'crit-mid': 64, 'crit-final': 65 }, FinalGrade: 65, GradedAt: '2026-09-05T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-tabeer-p3', StudentID: 1, ClassID: 1, SubjectID: c1TabeerId, TeacherID: 20, Period: '3rd', CriteriaScores: { 'crit-att': 74, 'crit-quiz': 67, 'crit-mid': 66, 'crit-final': 67 }, FinalGrade: 67, GradedAt: '2026-09-10T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-tabeer-p4', StudentID: 1, ClassID: 1, SubjectID: c1TabeerId, TeacherID: 20, Period: '4th', CriteriaScores: { 'crit-att': 72, 'crit-quiz': 69, 'crit-mid': 70, 'crit-final': 69 }, FinalGrade: 69, GradedAt: '2026-09-15T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-tabeer-p5', StudentID: 1, ClassID: 1, SubjectID: c1TabeerId, TeacherID: 20, Period: '5th', CriteriaScores: { 'crit-att': 75, 'crit-quiz': 68, 'crit-mid': 68, 'crit-final': 68 }, FinalGrade: 68, GradedAt: '2026-09-20T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-tabeer-p6', StudentID: 1, ClassID: 1, SubjectID: c1TabeerId, TeacherID: 20, Period: '6th', CriteriaScores: { 'crit-att': 78, 'crit-quiz': 72, 'crit-mid': 70, 'crit-final': 71 }, FinalGrade: 71, GradedAt: '2026-09-25T11:00:00Z', IsLocked: false },
 
-  // Subject 5: نصوص (Nusoos) -> راسب
-  { id: 'grd-s1-sub5-p1', StudentID: 1, ClassID: 1, SubjectID: 5, TeacherID: 4, Period: '1st', CriteriaScores: { 'crit-att': 65, 'crit-quiz': 56, 'crit-mid': 58, 'crit-final': 57 }, FinalGrade: 58, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub5-p2', StudentID: 1, ClassID: 1, SubjectID: 5, TeacherID: 4, Period: '2nd', CriteriaScores: { 'crit-att': 60, 'crit-quiz': 54, 'crit-mid': 55, 'crit-final': 55 }, FinalGrade: 55, GradedAt: '2026-09-05T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub5-p3', StudentID: 1, ClassID: 1, SubjectID: 5, TeacherID: 4, Period: '3rd', CriteriaScores: { 'crit-att': 62, 'crit-quiz': 55, 'crit-mid': 57, 'crit-final': 56 }, FinalGrade: 56, GradedAt: '2026-09-10T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub5-p4', StudentID: 1, ClassID: 1, SubjectID: 5, TeacherID: 4, Period: '4th', CriteriaScores: { 'crit-att': 68, 'crit-quiz': 60, 'crit-mid': 62, 'crit-final': 61 }, FinalGrade: 61, GradedAt: '2026-09-15T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub5-p5', StudentID: 1, ClassID: 1, SubjectID: 5, TeacherID: 4, Period: '5th', CriteriaScores: { 'crit-att': 64, 'crit-quiz': 59, 'crit-mid': 60, 'crit-final': 59 }, FinalGrade: 59, GradedAt: '2026-09-20T11:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub5-p6', StudentID: 1, ClassID: 1, SubjectID: 5, TeacherID: 4, Period: '6th', CriteriaScores: { 'crit-att': 66, 'crit-quiz': 62, 'crit-mid': 63, 'crit-final': 62 }, FinalGrade: 62, GradedAt: '2026-09-25T11:00:00Z', IsLocked: false },
+  // Subject: حديث (Hadith) -> ممتاز / جيد جدا
+  { id: 'grd-s1-hadith-p1', StudentID: 1, ClassID: 1, SubjectID: c1HadithId, TeacherID: 19, Period: '1st', CriteriaScores: { 'crit-att': 95, 'crit-quiz': 90, 'crit-mid': 92, 'crit-final': 91 }, FinalGrade: 92, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
+  { id: 'grd-s1-hadith-p2', StudentID: 1, ClassID: 1, SubjectID: c1HadithId, TeacherID: 19, Period: '2nd', CriteriaScores: { 'crit-att': 94, 'crit-quiz': 88, 'crit-mid': 90, 'crit-final': 90 }, FinalGrade: 90, GradedAt: '2026-09-05T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-hadith-p3', StudentID: 1, ClassID: 1, SubjectID: c1HadithId, TeacherID: 19, Period: '3rd', CriteriaScores: { 'crit-att': 96, 'crit-quiz': 92, 'crit-mid': 93, 'crit-final': 94 }, FinalGrade: 94, GradedAt: '2026-09-10T11:00:00Z', IsLocked: false },
 
-  // Subject 21: نشاط (Nashat - Student Activity / مجلس الطلبة) -> ممتاز
-  { id: 'grd-s1-sub21-p1', StudentID: 1, ClassID: 1, SubjectID: 21, TeacherID: 88, Period: '1st', CriteriaScores: { 'crit-att': 98, 'crit-quiz': 95, 'crit-mid': 94, 'crit-final': 96 }, FinalGrade: 96, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
-  { id: 'grd-s1-sub21-p2', StudentID: 1, ClassID: 1, SubjectID: 21, TeacherID: 88, Period: '2nd', CriteriaScores: { 'crit-att': 96, 'crit-quiz': 94, 'crit-mid': 95, 'crit-final': 95 }, FinalGrade: 95, GradedAt: '2026-09-05T11:00:00Z', IsLocked: false },
+  // Subject: نشاط (Nashat - Student Activity / مجلس الطلبة) -> ممتاز
+  { id: 'grd-s1-nashat-p1', StudentID: 1, ClassID: 1, SubjectID: c1NashatId, TeacherID: 88, Period: '1st', CriteriaScores: { 'crit-att': 98, 'crit-quiz': 95, 'crit-mid': 94, 'crit-final': 96 }, FinalGrade: 96, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
+  { id: 'grd-s1-nashat-p2', StudentID: 1, ClassID: 1, SubjectID: c1NashatId, TeacherID: 88, Period: '2nd', CriteriaScores: { 'crit-att': 96, 'crit-quiz': 94, 'crit-mid': 95, 'crit-final': 95 }, FinalGrade: 95, GradedAt: '2026-09-05T11:00:00Z', IsLocked: false },
+  { id: 'grd-s1-nashat-p3', StudentID: 1, ClassID: 1, SubjectID: c1NashatId, TeacherID: 88, Period: '3rd', CriteriaScores: { 'crit-att': 99, 'crit-quiz': 97, 'crit-mid': 96, 'crit-final': 97 }, FinalGrade: 97, GradedAt: '2026-09-10T11:00:00Z', IsLocked: false },
 
   // Student 2 (Priya Al-Kindi - Class 1)
-  { id: 'grd-s2-sub1-p1', StudentID: 2, ClassID: 1, SubjectID: 1, TeacherID: 1, Period: '1st', CriteriaScores: { 'crit-att': 100, 'crit-quiz': 97, 'crit-mid': 98, 'crit-final': 99 }, FinalGrade: 98, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
-  { id: 'grd-s2-sub2-p1', StudentID: 2, ClassID: 1, SubjectID: 2, TeacherID: 2, Period: '1st', CriteriaScores: { 'crit-att': 95, 'crit-quiz': 92, 'crit-mid': 94, 'crit-final': 95 }, FinalGrade: 94, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
-  { id: 'grd-s2-sub3-p1', StudentID: 2, ClassID: 1, SubjectID: 3, TeacherID: 2, Period: '1st', CriteriaScores: { 'crit-att': 92, 'crit-quiz': 90, 'crit-mid': 91, 'crit-final': 90 }, FinalGrade: 91, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
-  { id: 'grd-s2-sub4-p1', StudentID: 2, ClassID: 1, SubjectID: 4, TeacherID: 4, Period: '1st', CriteriaScores: { 'crit-att': 88, 'crit-quiz': 85, 'crit-mid': 87, 'crit-final': 86 }, FinalGrade: 86, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
-  { id: 'grd-s2-sub5-p1', StudentID: 2, ClassID: 1, SubjectID: 5, TeacherID: 4, Period: '1st', CriteriaScores: { 'crit-att': 85, 'crit-quiz': 82, 'crit-mid': 84, 'crit-final': 83 }, FinalGrade: 83, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
-  { id: 'grd-s2-sub21-p1', StudentID: 2, ClassID: 1, SubjectID: 21, TeacherID: 88, Period: '1st', CriteriaScores: { 'crit-att': 95, 'crit-quiz': 98, 'crit-mid': 97, 'crit-final': 98 }, FinalGrade: 97, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
+  { id: 'grd-s2-fiqh-p1', StudentID: 2, ClassID: 1, SubjectID: c1FiqhId, TeacherID: 8, Period: '1st', CriteriaScores: { 'crit-att': 100, 'crit-quiz': 97, 'crit-mid': 98, 'crit-final': 99 }, FinalGrade: 98, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
+  { id: 'grd-s2-tawheed-p1', StudentID: 2, ClassID: 1, SubjectID: c1TawheedId, TeacherID: 24, Period: '1st', CriteriaScores: { 'crit-att': 95, 'crit-quiz': 92, 'crit-mid': 94, 'crit-final': 95 }, FinalGrade: 94, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
+  { id: 'grd-s2-quran-p1', StudentID: 2, ClassID: 1, SubjectID: c1QuranId, TeacherID: 2, Period: '1st', CriteriaScores: { 'crit-att': 92, 'crit-quiz': 90, 'crit-mid': 91, 'crit-final': 90 }, FinalGrade: 91, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
+  { id: 'grd-s2-tabeer-p1', StudentID: 2, ClassID: 1, SubjectID: c1TabeerId, TeacherID: 20, Period: '1st', CriteriaScores: { 'crit-att': 88, 'crit-quiz': 85, 'crit-mid': 87, 'crit-final': 86 }, FinalGrade: 86, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
+  { id: 'grd-s2-hadith-p1', StudentID: 2, ClassID: 1, SubjectID: c1HadithId, TeacherID: 19, Period: '1st', CriteriaScores: { 'crit-att': 90, 'crit-quiz': 88, 'crit-mid': 89, 'crit-final': 90 }, FinalGrade: 89, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
+  { id: 'grd-s2-nashat-p1', StudentID: 2, ClassID: 1, SubjectID: c1NashatId, TeacherID: 88, Period: '1st', CriteriaScores: { 'crit-att': 95, 'crit-quiz': 98, 'crit-mid': 97, 'crit-final': 98 }, FinalGrade: 97, GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
+
+  // Student 8 (Bilal Al-Habashi - Class 1 - Example DRP grade in Quran for DRP highlight & teacher filter)
+  { id: 'grd-s8-quran-p1', StudentID: 8, ClassID: 1, SubjectID: c1QuranId, TeacherID: 2, Period: '1st', CriteriaScores: {}, FinalGrade: 'DRP', GradedAt: '2026-09-01T10:00:00Z', IsLocked: false },
 
   // Student 3 (Rohan Al-Baghdadi - Class 7)
   { id: 'grd-s3-sub7-p1', StudentID: 3, ClassID: 7, SubjectID: 7, TeacherID: 1, Period: '1st', CriteriaScores: { 'crit-att': 92, 'crit-quiz': 90, 'crit-mid': 91, 'crit-final': 90 }, FinalGrade: 90, GradedAt: '2026-09-01T12:00:00Z', IsLocked: true, UnlockRequested: false },
@@ -573,6 +589,7 @@ const KEYS = {
   CLASSES: 'jmaa_classes',
   TEACHERS: 'jmaa_teachers',
   SUBJECTS: 'jmaa_subjects',
+  SUBJECT_EBOOKS: 'jmaa_subject_ebooks',
   SUBJECT_TEACHERS: 'jmaa_sub_teachers',
   SCHEDULES: 'jmaa_schedules',
   STUDENTS: 'jmaa_students',
@@ -587,6 +604,90 @@ const KEYS = {
   TEACHER_ATTENDANCE: 'jmaa_teacher_attendance',
   STUDENT_ATTENDANCE: 'jmaa_student_attendance',
 };
+
+const CENTRAL_FOLDER_ID = '1fCXKezhMzm93fm9S98keWyxLfG-N2NDf';
+export function isSubjectSpecificUrl(url?: string): boolean {
+  if (!url || !url.trim()) return false;
+  if (url.includes(CENTRAL_FOLDER_ID)) return false;
+  return true;
+}
+
+const EBOOK_IDB_NAME = 'jmaa_ebooks_db';
+const EBOOK_IDB_STORE = 'ebook_files';
+
+function openEBookIDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined' || !window.indexedDB) {
+      reject(new Error('IndexedDB not supported'));
+      return;
+    }
+    const req = window.indexedDB.open(EBOOK_IDB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(EBOOK_IDB_STORE)) {
+        db.createObjectStore(EBOOK_IDB_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function saveEBookBlob(id: string, blob: Blob): Promise<void> {
+  const db = await openEBookIDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(EBOOK_IDB_STORE, 'readwrite');
+    tx.objectStore(EBOOK_IDB_STORE).put(blob, id);
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error);
+    };
+  });
+}
+
+export async function getEBookBlob(id: string): Promise<Blob | null> {
+  try {
+    const db = await openEBookIDB();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(EBOOK_IDB_STORE, 'readonly');
+      const req = tx.objectStore(EBOOK_IDB_STORE).get(id);
+      req.onsuccess = () => {
+        db.close();
+        resolve((req.result as Blob) || null);
+      };
+      req.onerror = () => {
+        db.close();
+        reject(req.error);
+      };
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteEBookBlob(id: string): Promise<void> {
+  try {
+    const db = await openEBookIDB();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(EBOOK_IDB_STORE, 'readwrite');
+      tx.objectStore(EBOOK_IDB_STORE).delete(id);
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = () => {
+        db.close();
+        reject(tx.error);
+      };
+    });
+  } catch {
+    // Ignore IDB delete error
+  }
+}
 
 const DATA_VERSION_KEY = 'jmaa_data_version';
 const CURRENT_DATA_VERSION = 'v2_schedule_reset';
@@ -730,7 +831,22 @@ export const DataStore = {
 
   // Subjects
   getSubjects(): SubjectItem[] {
-    return getItem<SubjectItem[]>(KEYS.SUBJECTS, initialSubjects);
+    const list = getItem<SubjectItem[]>(KEYS.SUBJECTS, initialSubjects);
+    let updated = false;
+    for (const initSub of initialSubjects) {
+      const exists = list.some(
+        s =>
+          s.SubjectID === initSub.SubjectID ||
+          (s.ClassID === initSub.ClassID &&
+            (s.SubjectArabic || s.SubjectClass) === (initSub.SubjectArabic || initSub.SubjectClass))
+      );
+      if (!exists) {
+        list.push(initSub);
+        updated = true;
+      }
+    }
+    if (updated) setItem(KEYS.SUBJECTS, list);
+    return list;
   },
   saveSubject(item: Omit<SubjectItem, 'SubjectID'> & { SubjectID?: number }): SubjectItem {
     const list = this.getSubjects();
@@ -751,11 +867,70 @@ export const DataStore = {
   deleteSubject(id: number): void {
     const list = this.getSubjects().filter(s => s.SubjectID !== id);
     setItem(KEYS.SUBJECTS, list);
+    const ebooks = this.getSubjectEBooks().filter(b => b.SubjectID !== id);
+    setItem(KEYS.SUBJECT_EBOOKS, ebooks);
+  },
+
+  // Subject E-Books (Strictly scoped per SubjectID; upload restricted to Ustadh / Admin / Principal)
+  getSubjectEBooks(subjectId?: number): SubjectEBookItem[] {
+    const all = getItem<SubjectEBookItem[]>(KEYS.SUBJECT_EBOOKS, []);
+    if (typeof subjectId === 'number') {
+      return all.filter(b => b.SubjectID === subjectId);
+    }
+    return all;
+  },
+  saveSubjectEBook(
+    item: Omit<SubjectEBookItem, 'id' | 'uploadedAt'> & { id?: string; uploadedAt?: string }
+  ): SubjectEBookItem {
+    const allowedRoles: UserRole[] = ['teacher', 'admin', 'mudir'];
+    if (!allowedRoles.includes(item.uploadedByRole)) {
+      throw new Error('Permission denied: Only Ustadh, Admin, or Principal can upload books.');
+    }
+    const list = this.getSubjectEBooks();
+    if (item.id) {
+      const idx = list.findIndex(b => b.id === item.id);
+      if (idx >= 0) {
+        const updated: SubjectEBookItem = {
+          ...list[idx],
+          ...item,
+          id: item.id,
+          uploadedAt: item.uploadedAt || list[idx].uploadedAt,
+        };
+        list[idx] = updated;
+        setItem(KEYS.SUBJECT_EBOOKS, list);
+        return updated;
+      }
+    }
+    const newBook: SubjectEBookItem = {
+      ...item,
+      id: item.id || `ebook-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      uploadedAt: item.uploadedAt || new Date().toISOString(),
+    };
+    list.push(newBook);
+    setItem(KEYS.SUBJECT_EBOOKS, list);
+    return newBook;
+  },
+  deleteSubjectEBook(id: string): void {
+    const list = this.getSubjectEBooks().filter(b => b.id !== id);
+    setItem(KEYS.SUBJECT_EBOOKS, list);
+    deleteEBookBlob(id);
   },
 
   // Subject Teachers
   getSubjectTeachers(): SubjectTeacherItem[] {
-    return getItem<SubjectTeacherItem[]>(KEYS.SUBJECT_TEACHERS, initialSubjectTeachers);
+    const list = getItem<SubjectTeacherItem[]>(KEYS.SUBJECT_TEACHERS, initialSubjectTeachers);
+    let updated = false;
+    for (const initST of initialSubjectTeachers) {
+      const exists = list.some(
+        st => st.ClassID === initST.ClassID && st.SubjectID === initST.SubjectID
+      );
+      if (!exists) {
+        list.push(initST);
+        updated = true;
+      }
+    }
+    if (updated) setItem(KEYS.SUBJECT_TEACHERS, list);
+    return list;
   },
   saveSubjectTeacher(item: Omit<SubjectTeacherItem, 'ID'> & { ID?: number }): SubjectTeacherItem {
     const list = this.getSubjectTeachers();
@@ -767,6 +942,29 @@ export const DataStore = {
         return list[idx];
       }
     }
+    // If Principal changes/edits the teacher for an existing (ClassID, SubjectID), update that mapping directly
+    const existingPairIdx = list.findIndex(
+      st => st.ClassID === item.ClassID && st.SubjectID === item.SubjectID
+    );
+    if (existingPairIdx >= 0) {
+      list[existingPairIdx] = {
+        ...list[existingPairIdx],
+        TeacherID: item.TeacherID,
+      };
+      setItem(KEYS.SUBJECT_TEACHERS, list);
+      // Also update TeacherID on existing grade records for this ClassID + SubjectID when edited by Principal
+      const allGrades = this.getGrades();
+      let gradesUpdated = false;
+      allGrades.forEach(g => {
+        if (g.ClassID === item.ClassID && g.SubjectID === item.SubjectID) {
+          g.TeacherID = item.TeacherID;
+          gradesUpdated = true;
+        }
+      });
+      if (gradesUpdated) setItem(KEYS.GRADES, allGrades);
+      return list[existingPairIdx];
+    }
+
     const nextId = list.length > 0 ? Math.max(...list.map(st => st.ID)) + 1 : 1;
     const newItem: SubjectTeacherItem = { ...item, ID: nextId };
     list.push(newItem);
@@ -778,27 +976,70 @@ export const DataStore = {
     setItem(KEYS.SUBJECT_TEACHERS, list);
   },
 
-  // Schedules & Conflict Detection
+  // Schedules, Notices, Colors & Conflict Detection
+  getScheduleNotice(): string {
+    return this.getSettings().scheduleNotice || '';
+  },
+  setScheduleNotice(notice: string): void {
+    this.updateSettings({ scheduleNotice: notice });
+  },
+  getSubjectColors(): Record<string, string> {
+    return this.getSettings().subjectColors || {};
+  },
+  setSubjectColor(subjectKey: string, color: string): void {
+    const current = { ...this.getSubjectColors() };
+    if (!color) {
+      delete current[subjectKey];
+    } else {
+      current[subjectKey] = color;
+    }
+    this.updateSettings({ subjectColors: current });
+  },
+  resetSubjectColors(): void {
+    this.updateSettings({ subjectColors: {} });
+    const schedules = this.getSchedules().map(s => {
+      const copy = { ...s };
+      delete copy.CustomColor;
+      return copy;
+    });
+    setItem(KEYS.SCHEDULES, schedules);
+    const subjects = this.getSubjects().map(sub => {
+      const copy = { ...sub };
+      delete copy.CustomColor;
+      return copy;
+    });
+    setItem(KEYS.SUBJECTS, subjects);
+  },
   getSchedules(): ClassScheduleItem[] {
     return getItem<ClassScheduleItem[]>(KEYS.SCHEDULES, initialSchedules);
   },
-  saveSchedule(item: Omit<ClassScheduleItem, 'ID'> & { ID?: number }): { success: boolean; conflict?: string; schedule?: ClassScheduleItem } {
+  saveSchedule(
+    item: Omit<ClassScheduleItem, 'ID'> & { ID?: number },
+    options?: { ignoreConflict?: boolean }
+  ): { success: boolean; conflict?: string; conflictingSlot?: ClassScheduleItem; schedule?: ClassScheduleItem } {
     const list = this.getSchedules();
 
-    // Check for Teacher Scheduling Conflicts (same teacher assigned to same day & overlapping time in different class)
+    // Check for Teacher Scheduling Conflicts (same teacher assigned to same day & overlapping time in another class)
     const hasConflict = list.find(s =>
       s.ID !== item.ID &&
       s.TeacherID === item.TeacherID &&
       s.Day === item.Day &&
-      s.StartTime === item.StartTime
+      ((s.StartTime < item.EndTime && s.EndTime > item.StartTime) || s.StartTime === item.StartTime)
     );
 
-    if (hasConflict) {
+    if (hasConflict && !options?.ignoreConflict) {
       const classes = this.getClasses();
+      const teachers = this.getTeachers();
+      const subjects = this.getSubjects();
       const conflictClass = classes.find(c => c.ClassID === hasConflict.ClassID)?.ClassName || `Class #${hasConflict.ClassID}`;
+      const teacherObj = teachers.find(t => t.TeacherID === item.TeacherID);
+      const teacherName = teacherObj?.NameArabic || teacherObj?.Name || 'الأستاذ';
+      const subObj = subjects.find(sub => sub.SubjectID === hasConflict.SubjectID);
+      const subName = subObj?.SubjectArabic || subObj?.SubjectClass || '';
       return {
         success: false,
-        conflict: `Schedule Conflict! This teacher is already scheduled for ${conflictClass} on ${item.Day} at ${item.StartTime}.`,
+        conflictingSlot: hasConflict,
+        conflict: `تضارب في جدول الأستاذ (${teacherName}): لديه حصة (${subName}) في نفس اليوم (${item.Day}) والوقت (${hasConflict.StartTime} - ${hasConflict.EndTime}) في فصل (${conflictClass}).`,
       };
     }
 
@@ -807,6 +1048,11 @@ export const DataStore = {
       if (idx >= 0) {
         list[idx] = { ...list[idx], ...item, ID: item.ID };
         setItem(KEYS.SCHEDULES, list);
+        this.saveSubjectTeacher({
+          ClassID: item.ClassID,
+          SubjectID: item.SubjectID,
+          TeacherID: item.TeacherID,
+        });
         return { success: true, schedule: list[idx] };
       }
     }
@@ -814,7 +1060,173 @@ export const DataStore = {
     const newItem: ClassScheduleItem = { ...item, ID: nextId };
     list.push(newItem);
     setItem(KEYS.SCHEDULES, list);
+    this.saveSubjectTeacher({
+      ClassID: item.ClassID,
+      SubjectID: item.SubjectID,
+      TeacherID: item.TeacherID,
+    });
     return { success: true, schedule: newItem };
+  },
+  moveOrSwapScheduleSlot(params: {
+    sourceId: number;
+    targetClassId: number;
+    targetDay: ClassScheduleItem['Day'];
+    targetStartTime: string;
+    targetEndTime: string;
+    targetSlotId?: number;
+    ignoreConflict?: boolean;
+  }): {
+    success: boolean;
+    conflicts?: Array<{
+      teacherName: string;
+      day: string;
+      time: string;
+      conflictClassName: string;
+      conflictSubjectName: string;
+    }>;
+  } {
+    const list = this.getSchedules();
+    const classes = this.getClasses();
+    const teachers = this.getTeachers();
+    const subjects = this.getSubjects();
+
+    const sourceIdx = list.findIndex(s => s.ID === params.sourceId);
+    if (sourceIdx === -1) return { success: false };
+    const sourceSlot = list[sourceIdx];
+
+    const targetIdx = params.targetSlotId
+      ? list.findIndex(s => s.ID === params.targetSlotId)
+      : list.findIndex(
+          s =>
+            s.ID !== params.sourceId &&
+            s.ClassID === params.targetClassId &&
+            s.Day === params.targetDay &&
+            s.StartTime === params.targetStartTime
+        );
+    const targetSlot = targetIdx >= 0 ? list[targetIdx] : undefined;
+
+    const conflicts: Array<{
+      teacherName: string;
+      day: string;
+      time: string;
+      conflictClassName: string;
+      conflictSubjectName: string;
+    }> = [];
+
+    // 1. Check if sourceSlot teacher has conflict at target day/time
+    const sourceTeacherConflicts = list.filter(
+      s =>
+        s.ID !== sourceSlot.ID &&
+        s.ID !== targetSlot?.ID &&
+        s.TeacherID === sourceSlot.TeacherID &&
+        s.Day === params.targetDay &&
+        ((s.StartTime < params.targetEndTime && s.EndTime > params.targetStartTime) ||
+          s.StartTime === params.targetStartTime)
+    );
+
+    for (const c of sourceTeacherConflicts) {
+      const t = teachers.find(x => x.TeacherID === c.TeacherID);
+      const cls = classes.find(x => x.ClassID === c.ClassID);
+      const sub = subjects.find(x => x.SubjectID === c.SubjectID);
+      conflicts.push({
+        teacherName: t?.NameArabic || t?.Name || 'الأستاذ',
+        day: c.Day,
+        time: `${c.StartTime} - ${c.EndTime}`,
+        conflictClassName: cls?.ClassName || `Class #${c.ClassID}`,
+        conflictSubjectName: sub?.SubjectArabic || sub?.SubjectClass || 'مادة',
+      });
+    }
+
+    // 2. If swapping with targetSlot, check if targetSlot teacher has conflict at source day/time
+    if (targetSlot) {
+      const targetTeacherConflicts = list.filter(
+        s =>
+          s.ID !== sourceSlot.ID &&
+          s.ID !== targetSlot.ID &&
+          s.TeacherID === targetSlot.TeacherID &&
+          s.Day === sourceSlot.Day &&
+          ((s.StartTime < sourceSlot.EndTime && s.EndTime > sourceSlot.StartTime) ||
+            s.StartTime === sourceSlot.StartTime)
+      );
+
+      for (const c of targetTeacherConflicts) {
+        const t = teachers.find(x => x.TeacherID === c.TeacherID);
+        const cls = classes.find(x => x.ClassID === c.ClassID);
+        const sub = subjects.find(x => x.SubjectID === c.SubjectID);
+        conflicts.push({
+          teacherName: t?.NameArabic || t?.Name || 'الأستاذ',
+          day: c.Day,
+          time: `${c.StartTime} - ${c.EndTime}`,
+          conflictClassName: cls?.ClassName || `Class #${c.ClassID}`,
+          conflictSubjectName: sub?.SubjectArabic || sub?.SubjectClass || 'مادة',
+        });
+      }
+    }
+
+    if (conflicts.length > 0 && !params.ignoreConflict) {
+      return { success: false, conflicts };
+    }
+
+    if (targetSlot && targetIdx >= 0) {
+      const origSource = { ...sourceSlot };
+      list[sourceIdx] = {
+        ...sourceSlot,
+        ClassID: params.targetClassId,
+        Day: params.targetDay,
+        StartTime: params.targetStartTime,
+        EndTime: params.targetEndTime,
+      };
+      list[targetIdx] = {
+        ...targetSlot,
+        ClassID: origSource.ClassID,
+        Day: origSource.Day,
+        StartTime: origSource.StartTime,
+        EndTime: origSource.EndTime,
+      };
+    } else {
+      list[sourceIdx] = {
+        ...sourceSlot,
+        ClassID: params.targetClassId,
+        Day: params.targetDay,
+        StartTime: params.targetStartTime,
+        EndTime: params.targetEndTime,
+      };
+    }
+
+    setItem(KEYS.SCHEDULES, list);
+    return { success: true };
+  },
+  updateTimeSlotAcrossRow(params: {
+    oldStartTime: string;
+    oldEndTime: string;
+    newStartTime: string;
+    newEndTime: string;
+    day?: string;
+    classIds?: number[];
+  }): number {
+    const list = this.getSchedules();
+    const classSet = params.classIds ? new Set(params.classIds) : null;
+    let count = 0;
+    const updated = list.map(s => {
+      if (
+        s.StartTime === params.oldStartTime &&
+        s.EndTime === params.oldEndTime &&
+        (!params.day || params.day === 'all' || s.Day === params.day) &&
+        (!classSet || classSet.has(s.ClassID))
+      ) {
+        count++;
+        return {
+          ...s,
+          StartTime: params.newStartTime,
+          EndTime: params.newEndTime,
+        };
+      }
+      return s;
+    });
+    if (count > 0) {
+      setItem(KEYS.SCHEDULES, updated);
+    }
+    return count;
   },
   deleteSchedule(id: number): void {
     const list = this.getSchedules().filter(s => s.ID !== id);
@@ -958,12 +1370,16 @@ export const DataStore = {
     const yr = academicYear || this.getActiveAcademicYear();
     const sem = semester || this.getActiveSemester();
     const enrollments = this.getEnrollmentsForTerm(yr, sem);
+    const allEnrollments = this.getEnrollments();
     const allStudents = this.getStudents();
     const studentMap = new Map(allStudents.map(s => [s.StudentID, s]));
+    const addedIds = new Set<number>();
     const result: StudentItem[] = [];
+
     for (const enr of enrollments) {
       const base = studentMap.get(enr.StudentID);
       if (base) {
+        addedIds.add(base.StudentID);
         result.push({
           ...base,
           ClassID: enr.ClassID,
@@ -971,6 +1387,23 @@ export const DataStore = {
         });
       }
     }
+
+    // Ensure students remain present across terms/enrollments unless explicitly dropped
+    for (const s of allStudents) {
+      if (!addedIds.has(s.StudentID)) {
+        const studentHistory = allEnrollments
+          .filter(e => e.StudentID === s.StudentID)
+          .sort((a, b) => b.AcademicYear.localeCompare(a.AcademicYear));
+        const latest = studentHistory[0];
+        if (latest && latest.Status === 'Dropped') continue;
+        result.push({
+          ...s,
+          ClassID: latest ? latest.ClassID : s.ClassID,
+          RollNo: latest?.RollNo || s.RollNo,
+        });
+      }
+    }
+
     return result;
   },
   suggestNextClassId(currentClassId: number): number {
@@ -1176,7 +1609,26 @@ export const DataStore = {
   },
   getGradesForTerm(academicYear?: string): StudentGradeItem[] {
     const yr = academicYear || this.getActiveAcademicYear();
-    return this.getGrades().filter(g => (g.AcademicYear || 'SY 2025-2026') === yr);
+    const all = this.getGrades();
+    const byKey = new Map<string, StudentGradeItem>();
+
+    // First, load all completed grades so completed subjects & their Ustadh remain preserved after new enrollment
+    for (const g of all) {
+      const key = `${g.StudentID}-${g.SubjectID}-${g.Period}`;
+      if (!byKey.has(key)) {
+        byKey.set(key, g);
+      }
+    }
+
+    // Then, override with grades explicitly recorded for the active/selected academic year
+    for (const g of all) {
+      if ((g.AcademicYear || 'SY 2025-2026') === yr) {
+        const key = `${g.StudentID}-${g.SubjectID}-${g.Period}`;
+        byKey.set(key, g);
+      }
+    }
+
+    return Array.from(byKey.values());
   },
   // Grade Edit Time Window & Lock Controls
   getGradeEditWindowHours(): number {

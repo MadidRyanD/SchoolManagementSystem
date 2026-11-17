@@ -447,11 +447,58 @@ for (const [classCode, day, startTime, endTime, subjectAr, teacherAr, room] of R
     ClassID: classId,
     SubjectID: subject.SubjectID,
     TeacherID: teacherId,
+    Room: room,
     Day: day,
     StartTime: startTime,
     EndTime: endTime,
-    Room: room,
   });
+}
+
+// Add core subjects for Class 1 (فقه، توحيد، تعبير) if not already present so student transcript matches Screenshot 3
+const extraClass1Subjects: Array<{ ar: string; teacherAr: string }> = [
+  { ar: 'فقه', teacherAr: 'محمد سلطان' },
+  { ar: 'توحيد', teacherAr: 'أمر الدين' },
+  { ar: 'تعبير', teacherAr: 'صادق' },
+];
+
+for (const extra of extraClass1Subjects) {
+  const subKey = `1::${extra.ar}`;
+  if (!subjectMap.has(subKey)) {
+    const id = nextSubjectId++;
+    const subject: SubjectItem = {
+      SubjectID: id,
+      ClassID: 1,
+      SubjectClass: extra.ar,
+      SubjectCode: `SUB-${String(id).padStart(3, '0')}`,
+      SubjectArabic: extra.ar,
+      Semester: 'Both',
+    };
+    subjectMap.set(subKey, subject);
+    const teacherId = TEACHER_NAME_TO_ID[extra.teacherAr] || 2;
+    subjectTeacherMap.set(`1::${id}::${teacherId}`, {
+      ID: nextSTId++,
+      ClassID: 1,
+      SubjectID: id,
+      TeacherID: teacherId,
+    });
+  }
+}
+
+// Add "نشاط" (Nashat - Student Activity graded by SSG Officers) for every class
+for (const cls of scheduleClasses) {
+  const subKey = `${cls.ClassID}::نشاط`;
+  if (!subjectMap.has(subKey)) {
+    const id = nextSubjectId++;
+    subjectMap.set(subKey, {
+      SubjectID: id,
+      ClassID: cls.ClassID,
+      SubjectClass: 'نشاط (Student Activity)',
+      SubjectCode: `NSH-${String(cls.ClassID).padStart(2, '0')}`,
+      SubjectArabic: 'نشاط',
+      Semester: 'Both',
+      IsNashat: true,
+    });
+  }
 }
 
 export const scheduleSubjects: SubjectItem[] = Array.from(subjectMap.values());
