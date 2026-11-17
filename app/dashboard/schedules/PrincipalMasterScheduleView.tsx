@@ -6,6 +6,9 @@ import {
   ClassItem,
   SubjectItem,
   TeacherItem,
+  ManagementScope,
+  KulliyahDivisionId,
+  UserRole,
 } from '@/lib/types';
 import { DataStore } from '@/lib/store';
 import SchoolArabicTitle from '@/app/components/SchoolArabicTitle';
@@ -33,6 +36,9 @@ import {
   ChevronLeft,
   ArrowLeftRight,
   Check,
+  Lock,
+  Eye,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface PrincipalMasterScheduleViewProps {
@@ -42,7 +48,83 @@ interface PrincipalMasterScheduleViewProps {
   schedules: ClassScheduleItem[];
   onRefresh: () => void;
   canManage?: boolean;
+  userRole?: UserRole;
+  userScope?: ManagementScope;
   initialClassId?: number;
+}
+
+export const KULLIYAH_COLLEGES: Array<{
+  id: KulliyahDivisionId;
+  num: string;
+  titleAr: string;
+  titleEn: string;
+  dept: '2-days' | '5-days';
+  deanTitleAr: string;
+  headerBg: string;
+  borderHex: string;
+}> = [
+  {
+    id: 'kulliyah-tarbiyah-2days',
+    num: '١',
+    titleAr: 'كلية التربية والدراسات الإسلامية - يومين',
+    titleEn: 'Kulliyatu Tarbiyah & Islamic Studies (2-Days)',
+    dept: '2-days',
+    deanTitleAr: 'عميد كلية التربية والدراسات الإسلامية (يومين)',
+    headerBg: '#126b38',
+    borderHex: '#0d522a',
+  },
+  {
+    id: 'kulliyah-shariah-5days',
+    num: '٢',
+    titleAr: 'كلية الشريعة - خمسة أيام',
+    titleEn: 'Kulliyatu Shariah (5-Days)',
+    dept: '5-days',
+    deanTitleAr: 'عميد كلية الشريعة (خمسة أيام)',
+    headerBg: '#0f5257',
+    borderHex: '#09383b',
+  },
+  {
+    id: 'kulliyah-dawah-5days',
+    num: '٣',
+    titleAr: 'كلية الدعوة - خمسة أيام',
+    titleEn: "Kulliyatu Da'wah (5-Days)",
+    dept: '5-days',
+    deanTitleAr: 'عميد كلية الدعوة (خمسة أيام)',
+    headerBg: '#854d0e',
+    borderHex: '#713f12',
+  },
+  {
+    id: 'kulliyah-tarbiyah-5days',
+    num: '٤',
+    titleAr: 'كلية التربية - خمسة أيام',
+    titleEn: 'Kulliyatu Tarbiyah (5-Days)',
+    dept: '5-days',
+    deanTitleAr: 'عميد كلية التربية (خمسة أيام)',
+    headerBg: '#3730a3',
+    borderHex: '#312e81',
+  },
+];
+
+export const SCOPE_LABELS_AR: Record<ManagementScope, string> = {
+  all: 'المدير العام / المشرف العام (كافة الصلاحيات)',
+  'general-2days': 'مدير القسم الأسبوعي - يومين (المراحل العامة)',
+  'general-5days': 'مدير القسم الصباحي - خمسة أيام (المراحل العامة)',
+  'kulliyah-tarbiyah-2days': 'عميد كلية التربية والدراسات الإسلامية - يومين',
+  'kulliyah-shariah-5days': 'عميد كلية الشريعة - خمسة أيام',
+  'kulliyah-dawah-5days': 'عميد كلية الدعوة - خمسة أيام',
+  'kulliyah-tarbiyah-5days': 'عميد كلية التربية - خمسة أيام',
+};
+
+function getKulliyahCollegeForClass(cls: ClassItem): KulliyahDivisionId | null {
+  if (!isKulliyahClass(cls)) return null;
+  const lvl = (cls.Level || '').toLowerCase();
+  const name = cls.ClassName || '';
+  if (lvl.includes('shariah') || name.includes('الشريعة')) return 'kulliyah-shariah-5days';
+  if (lvl.includes('dawah') || name.includes('الدعوة')) return 'kulliyah-dawah-5days';
+  if (lvl.includes('5-days') || (name.includes('التربية') && cls.Department === '5-days')) {
+    return 'kulliyah-tarbiyah-5days';
+  }
+  return 'kulliyah-tarbiyah-2days';
 }
 
 interface TimeSlotRow {
@@ -113,17 +195,23 @@ function isKulliyahClass(cls: ClassItem): boolean {
 
 function getStageBadgeColor(cls: ClassItem): { headerBg: string; border: string; labelAr: string } {
   const lvl = (cls.Level || '').toLowerCase();
-  if (lvl.includes('kulliya') || cls.ClassName.includes('كلية')) {
+  const shortCode = getShortClassCode(cls);
+  const kulId = getKulliyahCollegeForClass(cls);
+  if (kulId) {
+    const col = KULLIYAH_COLLEGES.find(k => k.id === kulId);
+    if (col) {
+      return { headerBg: col.headerBg, border: col.borderHex, labelAr: col.titleAr.split(' - ')[0] };
+    }
     return { headerBg: '#126b38', border: '#0d522a', labelAr: 'كلية التربية' };
   }
-  if (lvl.includes('thanawi') || cls.ClassName.includes('ث')) {
+  if (lvl.includes('thanawi') || shortCode.includes('ث')) {
     return { headerBg: '#3b7a57', border: '#2d5f43', labelAr: 'الثانوي' };
   }
-  if (lvl.includes('mutawassit') || cls.ClassName.includes('م')) {
+  if (lvl.includes('mutawassit') || shortCode.includes('م')) {
     return { headerBg: '#c86d51', border: '#a8573e', labelAr: 'المتوسط' };
   }
-  if (lvl.includes('tamhidi') || cls.ClassName.includes('ج')) {
-    return { headerBg: '#c8648c', border: '#a64d71', labelAr: 'التمهيدي' };
+  if (lvl.includes('tamhidi') || lvl.includes('hadhana') || shortCode.includes('ج') || shortCode.includes('ح')) {
+    return { headerBg: '#c8648c', border: '#a64d71', labelAr: 'الحضانة' };
   }
   // Default: Ibtidaiyyah (Primary purple from 2nd picture)
   return { headerBg: '#635994', border: '#4e457a', labelAr: 'الابتدائي' };
@@ -135,19 +223,104 @@ export default function PrincipalMasterScheduleView({
   teachers,
   schedules,
   onRefresh,
-  canManage = true,
+  canManage: canManageProp = true,
+  userRole = 'admin',
+  userScope = 'all',
   initialClassId = 0,
 }: PrincipalMasterScheduleViewProps) {
-  // 1. Division Tab: Separate General Grades (ابتدائي • متوسط • ثانوي • تمهيدي) vs Kulliyah (كلية التربية)
-  const [divisionTab, setDivisionTab] = useState<'general' | 'kulliyah'>('general');
+  // Effective jurisdiction scope (Admin / General Mudir can also preview any Dean/Principal scope)
+  const [simulatedScope, setSimulatedScope] = useState<ManagementScope>(userScope || 'all');
+  const activeScope: ManagementScope =
+    userRole === 'admin' || !userScope || userScope === 'all' ? simulatedScope : userScope;
 
-  // 2. Column Order: 'asc' (1ب -> 2ب -> 3ب ... -> متوسط -> ثانوي) vs 'board' (1ث -> 1م -> 6ب -> 1ج like 2nd image)
+  const isKulliyahScope = (s: ManagementScope): s is KulliyahDivisionId =>
+    s.startsWith('kulliyah-');
+
+  // 1. Division Tab & Selected Kulliyah College (Defaulted to the user's own power/position!)
+  const [divisionTab, setDivisionTab] = useState<'general' | 'kulliyah'>(() =>
+    isKulliyahScope(activeScope) ? 'kulliyah' : 'general'
+  );
+  const [selectedKulliyah, setSelectedKulliyah] = useState<KulliyahDivisionId>(() =>
+    isKulliyahScope(activeScope) ? activeScope : 'kulliyah-tarbiyah-2days'
+  );
+
+  // 2. Column Order & Custom Dragged Default Order
   const [columnOrder, setColumnOrder] = useState<'asc' | 'board'>('asc');
+  const [customClassOrder, setCustomClassOrder] = useState<number[]>([]);
+  const [draggedGradeClassId, setDraggedGradeClassId] = useState<number | null>(null);
+  const [dragOverGradeClassId, setDragOverGradeClassId] = useState<number | null>(null);
 
-  // 3. Department & Day Selection
-  const [deptFilter, setDeptFilter] = useState<'2-days' | '5-days' | 'all'>('2-days');
-  const [selectedDay, setSelectedDay] = useState<string>('Friday');
+  // 3. Department & Day Selection (Defaulted to the user's own power/position!)
+  const [deptFilter, setDeptFilter] = useState<'2-days' | '5-days' | 'all'>(() => {
+    if (activeScope === 'general-5days') return '5-days';
+    if (activeScope === 'general-2days') return '2-days';
+    if (isKulliyahScope(activeScope)) {
+      const col = KULLIYAH_COLLEGES.find(k => k.id === activeScope);
+      return col?.dept || '2-days';
+    }
+    return '2-days';
+  });
+  const [selectedDay, setSelectedDay] = useState<string>(() => {
+    if (
+      activeScope === 'general-5days' ||
+      activeScope === 'kulliyah-shariah-5days' ||
+      activeScope === 'kulliyah-dawah-5days' ||
+      activeScope === 'kulliyah-tarbiyah-5days'
+    ) {
+      return 'Sunday';
+    }
+    return 'Friday';
+  });
   const [sessionFilter, setSessionFilter] = useState<'all' | 'morning' | 'afternoon'>('all');
+
+  // Sync default schedule view whenever the logged-in user's scope or simulated scope changes
+  const jumpToScopeDefault = (scope: ManagementScope) => {
+    setSelectedClassId(0);
+    if (isKulliyahScope(scope)) {
+      const col = KULLIYAH_COLLEGES.find(k => k.id === scope) || KULLIYAH_COLLEGES[0];
+      setDivisionTab('kulliyah');
+      setSelectedKulliyah(col.id);
+      setDeptFilter(col.dept);
+      setSelectedDay(col.dept === '5-days' ? 'Sunday' : 'Friday');
+    } else if (scope === 'general-5days') {
+      setDivisionTab('general');
+      setDeptFilter('5-days');
+      setSelectedDay('Sunday');
+    } else if (scope === 'general-2days') {
+      setDivisionTab('general');
+      setDeptFilter('2-days');
+      setSelectedDay('Friday');
+    }
+  };
+
+  useEffect(() => {
+    if (userScope && userScope !== 'all') {
+      setSimulatedScope(userScope);
+      jumpToScopeDefault(userScope);
+    }
+  }, [userScope]);
+
+  // Determine the required scope of whichever schedule is currently being viewed
+  const currentViewRequiredScope: ManagementScope = useMemo(() => {
+    if (divisionTab === 'kulliyah') {
+      return selectedKulliyah;
+    }
+    if (deptFilter === '5-days') return 'general-5days';
+    if (deptFilter === '2-days') return 'general-2days';
+    return 'all';
+  }, [divisionTab, selectedKulliyah, deptFilter]);
+
+  // Strict Edit Permission: Deans can ONLY edit their college; Principals (2-days / 5-days) can ONLY edit their department
+  const canManage = useMemo(() => {
+    if (!canManageProp) return false;
+    if (activeScope === 'all') return true;
+    return activeScope === currentViewRequiredScope;
+  }, [canManageProp, activeScope, currentViewRequiredScope]);
+
+  const activeKulliyahMeta = useMemo(
+    () => KULLIYAH_COLLEGES.find(k => k.id === selectedKulliyah) || KULLIYAH_COLLEGES[0],
+    [selectedKulliyah]
+  );
 
   // 4. Stage / Class / Teacher Filters
   const [stageFilter, setStageFilter] = useState<string>('all');
@@ -226,6 +399,7 @@ export default function PrincipalMasterScheduleView({
   useEffect(() => {
     setScheduleNotice(DataStore.getScheduleNotice());
     setSubjectColors(DataStore.getSubjectColors());
+    setCustomClassOrder(DataStore.getScheduleClassOrder());
   }, [schedules]);
 
   const showToast = (msg: string) => {
@@ -271,59 +445,73 @@ export default function PrincipalMasterScheduleView({
     return availableDays.filter(d => d.key === selectedDay);
   }, [selectedDay, availableDays]);
 
-  // Separate classes into General Grades vs Kulliyah
+  // Separate classes into General Grades vs the 4 Specific Kulliyah Colleges
   const divisionClasses = useMemo(() => {
     const filtered = classes.filter(cls => {
       const isKul = isKulliyahClass(cls);
-      if (divisionTab === 'kulliyah' && !isKul) return false;
-      if (divisionTab === 'general' && isKul) return false;
-      if (deptFilter !== 'all' && cls.Department !== deptFilter) return false;
+      if (divisionTab === 'kulliyah') {
+        if (!isKul) return false;
+        if (getKulliyahCollegeForClass(cls) !== selectedKulliyah) return false;
+      } else {
+        if (isKul) return false;
+        if (deptFilter !== 'all' && cls.Department !== deptFilter) return false;
+      }
       if (selectedClassId > 0 && cls.ClassID !== selectedClassId) return false;
       if (divisionTab === 'general' && stageFilter !== 'all') {
         if (stageFilter === 'ibtidaiyyah' && cls.Level !== 'Ibtidaiyyah') return false;
         if (stageFilter === 'mutawassit' && cls.Level !== 'Mutawassit') return false;
         if (stageFilter === 'thanawi' && cls.Level !== 'Thanawi') return false;
-        if (stageFilter === 'tamhidi' && cls.Level !== 'Tamhidi') return false;
+        if (stageFilter === 'tamhidi' && cls.Level !== 'Tamhidi' && cls.Level !== 'Hadhana') return false;
       }
       return true;
     });
 
-    // Sort columns according to user preference
+    // Sort columns: first apply preset order as baseline, then apply saved customClassOrder (new default)
     const sorted = [...filtered];
     if (divisionTab === 'kulliyah') {
       sorted.sort((a, b) => a.YearGrade - b.YearGrade || a.ClassID - b.ClassID);
     } else if (columnOrder === 'asc') {
-      // Ascending order from right to left:
-      // 1ب-أ، 1ب-ب، 2ب-أ، 2ب-ب، 3ب، 4ب، 5ب، 6ب -> 1م، 2م، 3م -> 1ث، 2ث، 3ث -> 1ج، 2ج، 3ج
       const stageRank: Record<string, number> = {
+        Hadhana: 0,
+        Tamhidi: 0,
         Ibtidaiyyah: 1,
         Mutawassit: 2,
         Thanawi: 3,
-        Tamhidi: 4,
       };
       sorted.sort((a, b) => {
         const rA = stageRank[a.Level] || 5;
         const rB = stageRank[b.Level] || 5;
         if (rA !== rB) return rA - rB;
         if (a.YearGrade !== b.YearGrade) return a.YearGrade - b.YearGrade;
-        // For 1ب-أ (ClassID 14) before 1ب-ب (ClassID 13)
         return b.ClassID - a.ClassID;
       });
     } else {
-      // Picture 2 board order from right to left:
-      // 1ث، 2ث، 3ث -> 1م، 2م، 3م -> 6ب..1ب -> 1ج..3ج
       sorted.sort((a, b) => a.ClassID - b.ClassID);
     }
 
+    if (customClassOrder.length > 0) {
+      const posMap = new Map<number, number>();
+      customClassOrder.forEach((cid, idx) => posMap.set(cid, idx));
+      sorted.sort((a, b) => {
+        const idxA = posMap.has(a.ClassID) ? posMap.get(a.ClassID)! : 9999;
+        const idxB = posMap.has(b.ClassID) ? posMap.get(b.ClassID)! : 9999;
+        if (idxA !== idxB) return idxA - idxB;
+        return 0;
+      });
+    }
+
     return sorted;
-  }, [classes, divisionTab, deptFilter, selectedClassId, stageFilter, columnOrder]);
+  }, [classes, divisionTab, selectedKulliyah, deptFilter, selectedClassId, stageFilter, columnOrder, customClassOrder]);
 
   // All classes in current division (ignoring single-class filter) for dropdowns
   const allClassesInDivision = useMemo(() => {
-    return classes.filter(cls =>
-      divisionTab === 'kulliyah' ? isKulliyahClass(cls) : !isKulliyahClass(cls)
-    );
-  }, [classes, divisionTab]);
+    return classes.filter(cls => {
+      if (divisionTab === 'kulliyah') {
+        return getKulliyahCollegeForClass(cls) === selectedKulliyah;
+      }
+      return !isKulliyahClass(cls) && (deptFilter === 'all' || cls.Department === deptFilter);
+    });
+  }, [classes, divisionTab, selectedKulliyah, deptFilter]);
 
   // Build time slots for a specific day and division
   const getTimeSlotsForDay = (dayKey: string): { morning: TimeSlotRow[]; afternoon: TimeSlotRow[] } => {
@@ -616,9 +804,55 @@ export default function PrincipalMasterScheduleView({
     );
   };
 
-  // Handle Drag Start / Over / Drop
+  // Handle Grade Column Drag & Drop (Reorders Grade Columns and saves as New Default)
+  const handleGradeDragStart = (e: React.DragEvent, classId: number) => {
+    if (!canManage) return;
+    setDraggedSlot(null);
+    setDraggedGradeClassId(classId);
+    e.dataTransfer.setData('application/x-grade-col', String(classId));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleGradeDropOnColumn = (e: React.DragEvent, targetClassId: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverGradeClassId(null);
+    if (!canManage || draggedGradeClassId === null) return;
+    if (draggedGradeClassId === targetClassId) {
+      setDraggedGradeClassId(null);
+      return;
+    }
+
+    const currentDivIds = divisionClasses.map(c => c.ClassID);
+    const fromIdx = currentDivIds.indexOf(draggedGradeClassId);
+    const toIdx = currentDivIds.indexOf(targetClassId);
+    if (fromIdx === -1 || toIdx === -1) {
+      setDraggedGradeClassId(null);
+      return;
+    }
+
+    const reorderedDivIds = [...currentDivIds];
+    const [movedId] = reorderedDivIds.splice(fromIdx, 1);
+    reorderedDivIds.splice(toIdx, 0, movedId);
+
+    const divSet = new Set(reorderedDivIds);
+    const otherIds = (customClassOrder.length > 0 ? customClassOrder : classes.map(c => c.ClassID)).filter(
+      id => !divSet.has(id)
+    );
+    const nextOrder = [...reorderedDivIds, ...otherIds];
+
+    DataStore.setScheduleClassOrder(nextOrder);
+    setCustomClassOrder(nextOrder);
+    setDraggedGradeClassId(null);
+
+    const movedClass = getClass(movedId);
+    showToast(`تم تحريك الصف (${movedClass ? getShortClassCode(movedClass) : movedId}) وحفظ الترتيب الجديد كافتراضي!`);
+  };
+
+  // Handle Subject Slot Drag Start / Over / Drop
   const handleDragStart = (e: React.DragEvent, slot: ClassScheduleItem) => {
     if (!canManage) return;
+    setDraggedGradeClassId(null);
     setDraggedSlot(slot);
     e.dataTransfer.setData('text/plain', String(slot.ID));
     e.dataTransfer.effectAllowed = 'move';
@@ -634,6 +868,10 @@ export default function PrincipalMasterScheduleView({
   ) => {
     e.preventDefault();
     setDragOverCellKey(null);
+    if (draggedGradeClassId !== null) {
+      handleGradeDropOnColumn(e, targetClassId);
+      return;
+    }
     if (!canManage || !draggedSlot) return;
 
     // Ignore dropping onto the exact same cell
@@ -753,22 +991,56 @@ export default function PrincipalMasterScheduleView({
                   </div>
                 </th>
 
-                {/* 2. Grade Columns across from right to left */}
+                {/* 2. Draggable Grade Columns across from right to left */}
                 {divisionClasses.map(cls => {
                   const stageStyle = getStageBadgeColor(cls);
                   const shortCode = getShortClassCode(cls);
+                  const isGradeBeingDragged = draggedGradeClassId === cls.ClassID;
+                  const isGradeDragTarget =
+                    dragOverGradeClassId === cls.ClassID && draggedGradeClassId !== cls.ClassID;
+
                   return (
                     <th
                       key={cls.ClassID}
+                      draggable={canManage}
+                      onDragStart={e => handleGradeDragStart(e, cls.ClassID)}
+                      onDragEnd={() => {
+                        setDraggedGradeClassId(null);
+                        setDragOverGradeClassId(null);
+                      }}
+                      onDragOver={e => {
+                        if (!canManage || draggedGradeClassId === null) return;
+                        e.preventDefault();
+                        if (dragOverGradeClassId !== cls.ClassID) {
+                          setDragOverGradeClassId(cls.ClassID);
+                        }
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverGradeClassId === cls.ClassID) {
+                          setDragOverGradeClassId(null);
+                        }
+                      }}
+                      onDrop={e => handleGradeDropOnColumn(e, cls.ClassID)}
                       style={{
                         backgroundColor: stageStyle.headerBg,
                         borderColor: stageStyle.border,
                       }}
-                      className="py-2.5 px-2 border-l border-white/25 min-w-[92px] sm:min-w-[104px] select-none"
-                      title={cls.ClassName}
+                      className={`py-2.5 px-2 border-l border-white/25 min-w-[92px] sm:min-w-[104px] select-none relative group transition-all ${
+                        canManage ? 'cursor-grab active:cursor-grabbing' : ''
+                      } ${isGradeBeingDragged ? 'opacity-50 scale-95' : ''} ${
+                        isGradeDragTarget ? 'ring-4 ring-inset ring-amber-300 brightness-110' : ''
+                      }`}
+                      title={
+                        canManage
+                          ? `${cls.ClassName} — اسحب العمود لتغيير مكانه وحفظه كترتيب افتراضي`
+                          : cls.ClassName
+                      }
                     >
-                      <div className="font-serif text-sm sm:text-base font-black tracking-wide leading-tight">
-                        {toHindiNumerals(shortCode)}
+                      <div className="flex items-center justify-center gap-0.5 font-serif text-sm sm:text-base font-black tracking-wide leading-tight">
+                        {canManage && (
+                          <GripVertical className="w-3.5 h-3.5 text-white/60 group-hover:text-amber-200 transition-colors no-print flex-shrink-0" />
+                        )}
+                        <span>{toHindiNumerals(shortCode)}</span>
                       </div>
                       <div className="text-[10px] font-serif font-normal opacity-85 mt-0.5 truncate max-w-[96px] mx-auto">
                         {stageStyle.labelAr}
@@ -1054,8 +1326,8 @@ export default function PrincipalMasterScheduleView({
             </p>
             <p className="text-xs font-serif font-bold text-emerald-900">
               {divisionTab === 'kulliyah'
-                ? 'قسم الكلية: كلية التربية والدراسات الإسلامية'
-                : 'المراحل الدراسية العامة: الابتدائي • المتوسط • الثانوي • التمهيدي'}
+                ? `قسم الكليات: ${activeKulliyahMeta.titleAr}`
+                : `المراحل الدراسية العامة (${deptFilter === '5-days' ? 'خمسة أيام' : 'يومين'}): الابتدائي • المتوسط • الثانوي • الحضانة`}
             </p>
           </div>
 
@@ -1132,8 +1404,13 @@ export default function PrincipalMasterScheduleView({
               <span>القسم المعروض:</span>
               <span className="font-bold text-amber-300">
                 {divisionTab === 'kulliyah'
-                  ? 'كلية التربية والدراسات الإسلامية (Kulliyatu Tarbiyah)'
-                  : 'المراحل الدراسية العامة (الابتدائي • المتوسط • الثانوي • التمهيدي)'}
+                  ? `${activeKulliyahMeta.titleAr} (${activeKulliyahMeta.titleEn})`
+                  : `المراحل الدراسية العامة - ${deptFilter === '5-days' ? 'خمسة أيام' : 'يومين'}`}
+              </span>
+              <span>&bull;</span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-black/30 text-amber-200 font-bold">
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                <span>صلاحية الحساب: {SCOPE_LABELS_AR[activeScope]}</span>
               </span>
             </p>
           </div>
@@ -1290,92 +1567,320 @@ export default function PrincipalMasterScheduleView({
       )}
 
       {/* ===================================================================== */}
-      {/* 3. SEPARATE DIVISION TABS: GENERAL GRADES VS. KULLIYAH (Task 1)       */}
+      {/* 3. SEPARATE DIVISION TABS + 4 KULLIYAH COLLEGES & JURISDICTION BAR    */}
       {/* ===================================================================== */}
-      <div className="no-print grid grid-cols-1 md:grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={() => {
-            setDivisionTab('general');
-            setSelectedClassId(0);
-          }}
-          className={`p-4 rounded-2xl border-2 text-right transition-all cursor-pointer flex items-center justify-between ${
-            divisionTab === 'general'
-              ? 'bg-[#126b38] text-white border-amber-400 shadow-lg ring-2 ring-amber-400/40'
-              : 'bg-white hover:bg-[#f5efe0] text-slate-800 border-[#cfc39f]'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-11 h-11 rounded-xl flex items-center justify-center ${
-                divisionTab === 'general' ? 'bg-amber-400 text-slate-950' : 'bg-[#dfd4b8] text-[#126b38]'
-              }`}
-            >
-              <BookOpen className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="font-serif font-black text-base sm:text-lg">
-                جدول المراحل الدراسية العامة
-              </div>
+      <div className="no-print space-y-3">
+        {/* Role Jurisdiction Switcher for Admin / General Mudir (or Status Bar for Specific Dean/Principal) */}
+        {canManageProp && (
+          <div className="bg-white border border-[#cfc39f] rounded-2xl p-3 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 text-xs font-serif">
               <div
-                className={`text-xs font-serif ${
-                  divisionTab === 'general' ? 'text-emerald-100' : 'text-slate-500'
+                className={`p-2 rounded-xl ${
+                  canManage ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
                 }`}
               >
-                الابتدائي (١ب - ٦ب) &bull; المتوسط (١م - ٣م) &bull; الثانوي (١ث - ٣ث) &bull; التمهيدي (١ج - ٣ج)
+                {canManage ? <ShieldCheck className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+              </div>
+              <div>
+                <div className="font-black text-slate-900 flex flex-wrap items-center gap-2">
+                  <span>المنصب والصلاحية النشطة:</span>
+                  <span className="text-emerald-800">{SCOPE_LABELS_AR[activeScope]}</span>
+                  {canManage ? (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[11px] font-black">
+                      ✏️ صلاحية التعديل مفعّلة لهذا الجدول
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-black">
+                      👁️ وضع الاطلاع فقط (لا يمكن التعديل خارج نطاق صلاحيتك)
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  كل عميد كلية ومدير قسم (يومين / خمسة أيام) يظهر له جدوله المختص افتراضياً مع صلاحية التعديل، ويمكنه الاطلاع على بقية الجداول دون تعديلها.
+                </p>
               </div>
             </div>
-          </div>
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-mono font-black ${
-              divisionTab === 'general' ? 'bg-black/25 text-amber-300' : 'bg-slate-100 text-slate-700'
-            }`}
-          >
-            {toHindiNumerals(classes.filter(c => !isKulliyahClass(c)).length)} فصول
-          </span>
-        </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            setDivisionTab('kulliyah');
-            setSelectedClassId(0);
-          }}
-          className={`p-4 rounded-2xl border-2 text-right transition-all cursor-pointer flex items-center justify-between ${
-            divisionTab === 'kulliyah'
-              ? 'bg-[#126b38] text-white border-amber-400 shadow-lg ring-2 ring-amber-400/40'
-              : 'bg-white hover:bg-[#f5efe0] text-slate-800 border-[#cfc39f]'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-11 h-11 rounded-xl flex items-center justify-center ${
-                divisionTab === 'kulliyah' ? 'bg-amber-400 text-slate-950' : 'bg-[#dfd4b8] text-[#126b38]'
-              }`}
-            >
-              <GraduationCap className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="font-serif font-black text-base sm:text-lg">
-                جدول قسم الكلية (كلية التربية)
-              </div>
-              <div
-                className={`text-xs font-serif ${
-                  divisionTab === 'kulliyah' ? 'text-emerald-100' : 'text-slate-500'
-                }`}
-              >
-                المستوى الأول &bull; المستوى الثالث &bull; المستوى الخامس &bull; المستوى السابع (مستقل عن المراحل العامة)
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {!canManage && activeScope !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => jumpToScopeDefault(activeScope)}
+                  className="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-serif font-black cursor-pointer shadow-xs"
+                >
+                  العودة إلى جدولي المختص
+                </button>
+              )}
+
+              {(userRole === 'admin' || !userScope || userScope === 'all') && (
+                <div className="flex items-center gap-1.5 bg-[#f8f5ec] border border-[#cfc39f] rounded-xl px-2.5 py-1.5">
+                  <span className="text-[11px] font-serif font-bold text-slate-600">
+                    معاينة صلاحية المنصب:
+                  </span>
+                  <select
+                    value={simulatedScope}
+                    onChange={e => {
+                      const nextScope = e.target.value as ManagementScope;
+                      setSimulatedScope(nextScope);
+                      jumpToScopeDefault(nextScope);
+                    }}
+                    className="text-xs font-serif font-black bg-transparent text-emerald-950 focus:outline-none cursor-pointer"
+                  >
+                    <option value="all">🌟 المشرف / المدير العام (تعديل الكل)</option>
+                    <optgroup label="─── مديرو المراحل العامة ───">
+                      <option value="general-2days">مدير القسم الأسبوعي - يومين</option>
+                      <option value="general-5days">مدير القسم الصباحي - خمسة أيام</option>
+                    </optgroup>
+                    <optgroup label="─── عمداء الكليات الأربع (Kulliyah Deans) ───">
+                      <option value="kulliyah-tarbiyah-2days">١. عميد كلية التربية والدراسات الإسلامية - يومين</option>
+                      <option value="kulliyah-shariah-5days">٢. عميد كلية الشريعة - خمسة أيام</option>
+                      <option value="kulliyah-dawah-5days">٣. عميد كلية الدعوة - خمسة أيام</option>
+                      <option value="kulliyah-tarbiyah-5days">٤. عميد كلية التربية - خمسة أيام</option>
+                    </optgroup>
+                  </select>
+                </div>
+              )}
             </div>
           </div>
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-mono font-black ${
-              divisionTab === 'kulliyah' ? 'bg-black/25 text-amber-300' : 'bg-slate-100 text-slate-700'
+        )}
+
+        {/* Main Division Switcher: General Stages vs. The 4 Kulliyah Colleges */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setDivisionTab('general');
+              setSelectedClassId(0);
+              const nextDept =
+                activeScope === 'general-5days'
+                  ? '5-days'
+                  : activeScope === 'general-2days'
+                  ? '2-days'
+                  : deptFilter === 'all'
+                  ? '2-days'
+                  : deptFilter;
+              setDeptFilter(nextDept);
+              setSelectedDay(nextDept === '5-days' ? 'Sunday' : 'Friday');
+            }}
+            className={`p-4 rounded-2xl border-2 text-right transition-all cursor-pointer flex items-center justify-between ${
+              divisionTab === 'general'
+                ? 'bg-[#126b38] text-white border-amber-400 shadow-lg ring-2 ring-amber-400/40'
+                : 'bg-white hover:bg-[#f5efe0] text-slate-800 border-[#cfc39f]'
             }`}
           >
-            {toHindiNumerals(classes.filter(c => isKulliyahClass(c)).length)} مستويات
-          </span>
-        </button>
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center ${
+                  divisionTab === 'general' ? 'bg-amber-400 text-slate-950' : 'bg-[#dfd4b8] text-[#126b38]'
+                }`}
+              >
+                <BookOpen className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="font-serif font-black text-base sm:text-lg">
+                  جدول المراحل الدراسية العامة (يومين / خمسة أيام)
+                </div>
+                <div
+                  className={`text-xs font-serif ${
+                    divisionTab === 'general' ? 'text-emerald-100' : 'text-slate-500'
+                  }`}
+                >
+                  الابتدائي (١ب - ٦ب) &bull; المتوسط (١م - ٣م) &bull; الثانوي (١ث - ٣ث) &bull; الحضانة (١ج - ٣ج)
+                </div>
+              </div>
+            </div>
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-mono font-black ${
+                divisionTab === 'general' ? 'bg-black/25 text-amber-300' : 'bg-slate-100 text-slate-700'
+              }`}
+            >
+              قسمين (يومين / ٥ أيام)
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setDivisionTab('kulliyah');
+              setSelectedClassId(0);
+              const targetKul = isKulliyahScope(activeScope) ? activeScope : selectedKulliyah;
+              const col = KULLIYAH_COLLEGES.find(k => k.id === targetKul) || KULLIYAH_COLLEGES[0];
+              setSelectedKulliyah(col.id);
+              setDeptFilter(col.dept);
+              setSelectedDay(col.dept === '5-days' ? 'Sunday' : 'Friday');
+            }}
+            className={`p-4 rounded-2xl border-2 text-right transition-all cursor-pointer flex items-center justify-between ${
+              divisionTab === 'kulliyah'
+                ? 'bg-[#126b38] text-white border-amber-400 shadow-lg ring-2 ring-amber-400/40'
+                : 'bg-white hover:bg-[#f5efe0] text-slate-800 border-[#cfc39f]'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center ${
+                  divisionTab === 'kulliyah' ? 'bg-amber-400 text-slate-950' : 'bg-[#dfd4b8] text-[#126b38]'
+                }`}
+              >
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="font-serif font-black text-base sm:text-lg">
+                  جداول الكليات الجامعية الأربع (Kulliyah Divisions)
+                </div>
+                <div
+                  className={`text-xs font-serif ${
+                    divisionTab === 'kulliyah' ? 'text-emerald-100' : 'text-slate-500'
+                  }`}
+                >
+                  ١. التربية والدراسات الإسلامية (يومين) &bull; ٢. الشريعة (٥ أيام) &bull; ٣. الدعوة (٥ أيام) &bull; ٤. التربية (٥ أيام)
+                </div>
+              </div>
+            </div>
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-mono font-black ${
+                divisionTab === 'kulliyah' ? 'bg-black/25 text-amber-300' : 'bg-slate-100 text-slate-700'
+              }`}
+            >
+              {toHindiNumerals(4)} كليات
+            </span>
+          </button>
+        </div>
+
+        {/* Sub-Tabs for the 4 Kulliyah Colleges when Kulliyah Division is selected */}
+        {divisionTab === 'kulliyah' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 bg-white/80 p-3 rounded-2xl border border-[#cfc39f]">
+            {KULLIYAH_COLLEGES.map(col => {
+              const isSelected = selectedKulliyah === col.id;
+              const isEditableByMe =
+                canManageProp && (activeScope === 'all' || activeScope === col.id);
+              return (
+                <button
+                  key={col.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedKulliyah(col.id);
+                    setDeptFilter(col.dept);
+                    setSelectedDay(col.dept === '5-days' ? 'Sunday' : 'Friday');
+                    setSelectedClassId(0);
+                  }}
+                  style={
+                    isSelected
+                      ? { backgroundColor: col.headerBg, borderColor: '#fbbf24' }
+                      : undefined
+                  }
+                  className={`p-3 rounded-xl border-2 text-right transition-all cursor-pointer flex flex-col justify-between gap-2 ${
+                    isSelected
+                      ? 'text-white shadow-md ring-2 ring-amber-400/50'
+                      : 'bg-white hover:bg-[#f5efe0] text-slate-800 border-slate-200'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-serif font-black text-xs sm:text-sm leading-snug">
+                      {col.num}. {col.titleAr}
+                    </span>
+                    {isEditableByMe ? (
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-serif font-black flex-shrink-0 ${
+                          isSelected
+                            ? 'bg-amber-400 text-slate-950'
+                            : 'bg-emerald-100 text-emerald-900'
+                        }`}
+                      >
+                        تعديل ✏️
+                      </span>
+                    ) : (
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-serif font-bold flex-shrink-0 ${
+                          isSelected ? 'bg-black/30 text-amber-200' : 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        عرض فقط 🔒
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    className={`text-[11px] font-serif flex items-center justify-between ${
+                      isSelected ? 'text-amber-200' : 'text-slate-500'
+                    }`}
+                  >
+                    <span>{col.deanTitleAr}</span>
+                    <span className="font-mono font-bold">
+                      {col.dept === '5-days' ? '٥ أيام' : 'يومين'}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          /* Sub-Tabs for General Stages: 2-Days (Yawmain) vs 5-Days (Khamsat Ayyam) */
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-white/80 p-3 rounded-2xl border border-[#cfc39f]">
+            {[
+              {
+                dept: '2-days' as const,
+                scope: 'general-2days' as ManagementScope,
+                titleAr: '١. المراحل العامة - القسم الأسبوعي (يومين)',
+                subAr: 'مدير قسم يومين • الجمعة والسبت (الابتدائي • المتوسط • الثانوي • الحضانة)',
+              },
+              {
+                dept: '5-days' as const,
+                scope: 'general-5days' as ManagementScope,
+                titleAr: '٢. المراحل العامة - القسم الصباحي (خمسة أيام)',
+                subAr: 'مدير قسم خمسة أيام • الأحد إلى الخميس (الابتدائي • المتوسط • الثانوي)',
+              },
+            ].map(item => {
+              const isSelected = deptFilter === item.dept;
+              const isEditableByMe =
+                canManageProp && (activeScope === 'all' || activeScope === item.scope);
+              return (
+                <button
+                  key={item.dept}
+                  type="button"
+                  onClick={() => {
+                    setDeptFilter(item.dept);
+                    setSelectedDay(item.dept === '5-days' ? 'Sunday' : 'Friday');
+                    setSelectedClassId(0);
+                  }}
+                  className={`p-3 rounded-xl border-2 text-right transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                    isSelected
+                      ? 'bg-[#3b5366] text-white border-amber-400 shadow-md'
+                      : 'bg-white hover:bg-[#f5efe0] text-slate-800 border-slate-200'
+                  }`}
+                >
+                  <div>
+                    <div className="font-serif font-black text-xs sm:text-sm">{item.titleAr}</div>
+                    <div
+                      className={`text-[11px] font-serif mt-0.5 ${
+                        isSelected ? 'text-slate-200' : 'text-slate-500'
+                      }`}
+                    >
+                      {item.subAr}
+                    </div>
+                  </div>
+                  {isEditableByMe ? (
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-serif font-black flex-shrink-0 ${
+                        isSelected
+                          ? 'bg-amber-400 text-slate-950'
+                          : 'bg-emerald-100 text-emerald-900'
+                      }`}
+                    >
+                      تعديل ✏️
+                    </span>
+                  ) : (
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-serif font-bold flex-shrink-0 ${
+                        isSelected ? 'bg-black/30 text-amber-200' : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      عرض فقط 🔒
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ===================================================================== */}
@@ -1464,11 +1969,11 @@ export default function PrincipalMasterScheduleView({
                   }}
                   className="text-xs font-serif font-bold bg-transparent text-slate-900 focus:outline-none cursor-pointer"
                 >
-                  <option value="all">جميع المراحل (الابتدائي • المتوسط • الثانوي • التمهيدي)</option>
+                  <option value="all">جميع المراحل (الابتدائي • المتوسط • الثانوي • الحضانة)</option>
                   <option value="ibtidaiyyah">المرحلة الابتدائية (١ب - ٦ب)</option>
                   <option value="mutawassit">المرحلة المتوسطة (١م - ٣م)</option>
                   <option value="thanawi">المرحلة الثانوية (١ث - ٣ث)</option>
-                  <option value="tamhidi">المرحلة التمهيدية (١ج - ٣ج)</option>
+                  <option value="tamhidi">المرحلة الحضانةة (١ج - ٣ج)</option>
                 </select>
               </div>
             )}
@@ -1513,48 +2018,55 @@ export default function PrincipalMasterScheduleView({
             {divisionTab === 'general' && (
               <button
                 type="button"
-                onClick={() => setColumnOrder(prev => (prev === 'asc' ? 'board' : 'asc'))}
+                onClick={() => {
+                  const nextPreset = columnOrder === 'asc' ? 'board' : 'asc';
+                  setColumnOrder(nextPreset);
+                  DataStore.setScheduleClassOrder([]);
+                  setCustomClassOrder([]);
+                  showToast('تم تبديل ترتيب الصفوف الافتراضي.');
+                }}
                 className="px-3 py-1.5 bg-white hover:bg-amber-50 text-slate-800 border border-[#cfc39f] rounded-xl text-xs font-serif font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                title="تبديل ترتيب أعمدة الصفوف"
+                title="تبديل الترتيب أو اسحب أي صف مباشرة لتخصيص مكانه"
               >
                 <ArrowLeftRight className="w-3.5 h-3.5 text-[#126b38]" />
                 <span>
-                  {columnOrder === 'asc'
-                    ? 'الترتيب: ١ب ← ٦ب ← متوسط ← ثانوي'
+                  {customClassOrder.length > 0
+                    ? 'ترتيب صفوف مخصص (افتراضي) • إعادة ضبط'
+                    : columnOrder === 'asc'
+                    ? 'الترتيب: حضانة (١ج-٣ج) ← ابتدائي (١ب-٦ب) ← متوسط ← ثانوي'
                     : 'الترتيب: ١ث ← ١م ← ٦ب ← ١ج'}
                 </span>
               </button>
             )}
 
-            <div className="flex items-center bg-white p-1 rounded-xl border border-[#cfc39f] text-xs font-serif font-bold">
-              <button
-                type="button"
-                onClick={() => setDeptFilter('2-days')}
-                className={`px-2.5 py-1 rounded-lg cursor-pointer ${
-                  deptFilter === '2-days' ? 'bg-amber-500 text-slate-950 font-black' : 'text-slate-600'
-                }`}
-              >
-                يومين
-              </button>
-              <button
-                type="button"
-                onClick={() => setDeptFilter('5-days')}
-                className={`px-2.5 py-1 rounded-lg cursor-pointer ${
-                  deptFilter === '5-days' ? 'bg-amber-500 text-slate-950 font-black' : 'text-slate-600'
-                }`}
-              >
-                ٥ أيام
-              </button>
-              <button
-                type="button"
-                onClick={() => setDeptFilter('all')}
-                className={`px-2.5 py-1 rounded-lg cursor-pointer ${
-                  deptFilter === 'all' ? 'bg-amber-500 text-slate-950 font-black' : 'text-slate-600'
-                }`}
-              >
-                الكل
-              </button>
-            </div>
+            {divisionTab === 'general' && (
+              <div className="flex items-center bg-white p-1 rounded-xl border border-[#cfc39f] text-xs font-serif font-bold">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeptFilter('2-days');
+                    setSelectedDay('Friday');
+                  }}
+                  className={`px-2.5 py-1 rounded-lg cursor-pointer ${
+                    deptFilter === '2-days' ? 'bg-amber-500 text-slate-950 font-black' : 'text-slate-600'
+                  }`}
+                >
+                  يومين
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeptFilter('5-days');
+                    setSelectedDay('Sunday');
+                  }}
+                  className={`px-2.5 py-1 rounded-lg cursor-pointer ${
+                    deptFilter === '5-days' ? 'bg-amber-500 text-slate-950 font-black' : 'text-slate-600'
+                  }`}
+                >
+                  ٥ أيام
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

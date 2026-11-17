@@ -252,6 +252,43 @@ export default function LoginPage() {
                 <span>مجلس الطلبة</span>
               </button>
             </div>
+
+            {/* Principal (Yawmain / Khamsat Ayyam) & 4 College Deans Selector */}
+            {selectedRole === 'mudir' && (
+              <div className="mt-3 p-3 rounded-2xl bg-amber-50/90 border border-amber-200 space-y-2" dir="rtl">
+                <div className="text-[11px] font-serif font-black text-amber-950 flex items-center justify-between">
+                  <span>اختر حساب المدير أو عميد الكلية المختص:</span>
+                  <span className="font-mono text-[10px] text-amber-800">Password: mudir123</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs font-serif">
+                  {[
+                    { user: 'mudir', label: '🌟 المدير العام (كامل الصلاحيات)' },
+                    { user: 'mudir.2days@jmaa.edu', label: 'مدير القسم الأسبوعي - يومين' },
+                    { user: 'mudir.5days@jmaa.edu', label: 'مدير القسم الصباحي - خمسة أيام' },
+                    { user: 'dean.tarbiyah2@jmaa.edu', label: '١. عميد كلية التربية والدراسات - يومين' },
+                    { user: 'dean.shariah@jmaa.edu', label: '٢. عميد كلية الشريعة - خمسة أيام' },
+                    { user: 'dean.dawah@jmaa.edu', label: '٣. عميد كلية الدعوة - خمسة أيام' },
+                    { user: 'dean.tarbiyah5@jmaa.edu', label: '٤. عميد كلية التربية - خمسة أيام' },
+                  ].map(item => (
+                    <button
+                      key={item.user}
+                      type="button"
+                      onClick={() => {
+                        setUsername(item.user);
+                        setPassword('mudir123');
+                      }}
+                      className={`px-2.5 py-1.5 rounded-xl border text-right font-bold transition-all cursor-pointer ${
+                        username === item.user
+                          ? 'bg-amber-600 text-white border-amber-700 shadow-2xs'
+                          : 'bg-white hover:bg-amber-100/70 text-slate-800 border-amber-200'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Error Banner */}

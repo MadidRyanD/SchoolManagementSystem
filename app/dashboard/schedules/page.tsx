@@ -307,6 +307,8 @@ export default function SchedulesPage() {
           schedules={schedules}
           onRefresh={loadData}
           canManage={canManage}
+          userRole={currentUser?.role}
+          userScope={currentUser?.managementScope}
           initialClassId={selectedClassId}
         />
       )}

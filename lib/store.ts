@@ -20,6 +20,7 @@ import {
   SemesterType,
   DepartmentType,
   DawrDeadlineItem,
+  SubjectUnlockOverride,
   StudentEnrollmentRecord,
   EnrollmentStatus,
   FeesItem,
@@ -603,6 +604,7 @@ const KEYS = {
   FORMS: 'jmaa_forms',
   TEACHER_ATTENDANCE: 'jmaa_teacher_attendance',
   STUDENT_ATTENDANCE: 'jmaa_student_attendance',
+  SUBJECT_UNLOCKS: 'jmaa_subject_unlocks',
 };
 
 const CENTRAL_FOLDER_ID = '1fCXKezhMzm93fm9S98keWyxLfG-N2NDf';
@@ -774,7 +776,23 @@ export const DataStore = {
 
   // Classes
   getClasses(): ClassItem[] {
-    return getItem<ClassItem[]>(KEYS.CLASSES, initialClasses);
+    const list = getItem<ClassItem[]>(KEYS.CLASSES, initialClasses);
+    let updated = false;
+    for (const initCls of initialClasses) {
+      const idx = list.findIndex(c => c.ClassID === initCls.ClassID);
+      if (idx === -1) {
+        list.push(initCls);
+        updated = true;
+      } else if (
+        (initCls.ClassID >= 18 && initCls.ClassID <= 21 && list[idx].Level === 'Kulliyatu Tarbiyah') ||
+        (initCls.ClassID >= 15 && initCls.ClassID <= 17 && list[idx].Level === 'Tamhidi')
+      ) {
+        list[idx] = { ...list[idx], ClassName: initCls.ClassName, Level: initCls.Level };
+        updated = true;
+      }
+    }
+    if (updated) setItem(KEYS.CLASSES, list);
+    return list;
   },
   saveClass(item: Omit<ClassItem, 'ClassID'> & { ClassID?: number }): ClassItem {
     const list = this.getClasses();
@@ -806,7 +824,26 @@ export const DataStore = {
 
   // Teachers
   getTeachers(): TeacherItem[] {
-    return getItem<TeacherItem[]>(KEYS.TEACHERS, initialTeachers);
+    const list = getItem<TeacherItem[]>(KEYS.TEACHERS, initialTeachers);
+    let updated = false;
+    for (const initT of initialTeachers) {
+      const idx = list.findIndex(t => t.TeacherID === initT.TeacherID);
+      if (idx === -1) {
+        list.push(initT);
+        updated = true;
+      } else if (initT.ManagementScope && !list[idx].ManagementScope) {
+        list[idx] = {
+          ...list[idx],
+          IsMudir: initT.IsMudir,
+          ManagementScope: initT.ManagementScope,
+          Email: initT.Email,
+          Password: list[idx].Password || initT.Password,
+        };
+        updated = true;
+      }
+    }
+    if (updated) setItem(KEYS.TEACHERS, list);
+    return list;
   },
   saveTeacher(item: Omit<TeacherItem, 'TeacherID'> & { TeacherID?: number }): TeacherItem {
     const list = this.getTeachers();
@@ -977,6 +1014,12 @@ export const DataStore = {
   },
 
   // Schedules, Notices, Colors & Conflict Detection
+  getScheduleClassOrder(): number[] {
+    return this.getSettings().scheduleClassOrder || [];
+  },
+  setScheduleClassOrder(order: number[]): void {
+    this.updateSettings({ scheduleClassOrder: order });
+  },
   getScheduleNotice(): string {
     return this.getSettings().scheduleNotice || '';
   },
@@ -1011,7 +1054,18 @@ export const DataStore = {
     setItem(KEYS.SUBJECTS, subjects);
   },
   getSchedules(): ClassScheduleItem[] {
-    return getItem<ClassScheduleItem[]>(KEYS.SCHEDULES, initialSchedules);
+    const list = getItem<ClassScheduleItem[]>(KEYS.SCHEDULES, initialSchedules);
+    const hasNewCollegeSchedules = list.some(s => s.ClassID >= 22);
+    if (!hasNewCollegeSchedules) {
+      let nextId = list.length > 0 ? Math.max(...list.map(s => s.ID)) + 1 : 1;
+      for (const initS of initialSchedules) {
+        if (initS.ClassID >= 22) {
+          list.push({ ...initS, ID: nextId++ });
+        }
+      }
+      setItem(KEYS.SCHEDULES, list);
+    }
+    return list;
   },
   saveSchedule(
     item: Omit<ClassScheduleItem, 'ID'> & { ID?: number },
@@ -1663,7 +1717,36 @@ export const DataStore = {
     this.updateSettings({ gradeSubmissionDeadlines: deadlines });
   },
 
-  checkGradeLock(grade: StudentGradeItem | undefined | null, period?: GradingPeriod): {
+  getSubjectUnlockOverrides(): SubjectUnlockOverride[] {
+    return getItem<SubjectUnlockOverride[]>(KEYS.SUBJECT_UNLOCKS, []);
+  },
+  getSubjectUnlockOverride(
+    classId: number,
+    subjectId: number,
+    period: GradingPeriod,
+    academicYear?: string
+  ): SubjectUnlockOverride | undefined {
+    const targetYear = academicYear || this.getActiveAcademicYear();
+    const key = `${classId}-${subjectId}-${period}-${targetYear}`;
+    return this.getSubjectUnlockOverrides().find(o => o.key === key);
+  },
+  upsertSubjectUnlockOverride(override: SubjectUnlockOverride): void {
+    const list = this.getSubjectUnlockOverrides();
+    const idx = list.findIndex(o => o.key === override.key);
+    if (idx >= 0) {
+      list[idx] = override;
+    } else {
+      list.push(override);
+    }
+    setItem(KEYS.SUBJECT_UNLOCKS, list);
+  },
+
+  checkGradeLock(
+    grade: StudentGradeItem | undefined | null,
+    period?: GradingPeriod,
+    classId?: number,
+    subjectId?: number
+  ): {
     isLocked: boolean;
     remainingMs: number;
     expiresAt?: string;
@@ -1673,6 +1756,39 @@ export const DataStore = {
   } {
     const defaultHours = this.getGradeEditWindowHours();
     const dawrPeriod = grade?.Period || period;
+    const targetClassId = grade?.ClassID ?? classId;
+    const targetSubjectId = grade?.SubjectID ?? subjectId;
+    const targetYear = grade?.AcademicYear || this.getActiveAcademicYear();
+
+    const subjectOverride =
+      targetClassId && targetSubjectId && dawrPeriod
+        ? this.getSubjectUnlockOverride(targetClassId, targetSubjectId, dawrPeriod, targetYear)
+        : undefined;
+
+    if (subjectOverride?.ManuallyLocked && !subjectOverride.UnlockGranted) {
+      return {
+        isLocked: true,
+        remainingMs: 0,
+        expiresAt: subjectOverride.LockExpiresAt,
+        submittedAt: grade?.SubmittedAt || grade?.GradedAt,
+        allowedHours: subjectOverride.AllowedEditHours || defaultHours,
+        status: 'manually_locked',
+      };
+    }
+
+    if (subjectOverride?.UnlockGranted && subjectOverride.LockExpiresAt) {
+      const rem = new Date(subjectOverride.LockExpiresAt).getTime() - Date.now();
+      if (rem > 0) {
+        return {
+          isLocked: false,
+          remainingMs: rem,
+          expiresAt: subjectOverride.LockExpiresAt,
+          submittedAt: grade?.SubmittedAt || grade?.GradedAt,
+          allowedHours: subjectOverride.AllowedEditHours || defaultHours,
+          status: 'unlocked_by_admin',
+        };
+      }
+    }
 
     // Check Dawr-level calendar deadline set by Principal
     if (dawrPeriod) {
@@ -1835,8 +1951,24 @@ export const DataStore = {
         UnlockGranted: existing.UnlockGranted ?? false,
       };
     } else {
-      const allowedHours = defaultHours;
-      const lockExpiresAt = new Date(Date.now() + allowedHours * 3600 * 1000).toISOString();
+      const lockCheck = this.checkGradeLock(undefined, item.Period, item.ClassID, item.SubjectID);
+      if (lockCheck.isLocked) {
+        return {
+          success: false,
+          error: 'انتهى الموعد النهائي لهذا الدور والسجل مقفل حالياً! يرجى طلب فتح مهلة جديدة من المدير.',
+        };
+      }
+      const subjectOverride = this.getSubjectUnlockOverride(item.ClassID, item.SubjectID, item.Period, targetYear);
+      const hasActiveOverride =
+        subjectOverride?.UnlockGranted &&
+        subjectOverride.LockExpiresAt &&
+        new Date(subjectOverride.LockExpiresAt).getTime() > Date.now();
+      const allowedHours = hasActiveOverride
+        ? subjectOverride!.AllowedEditHours || defaultHours
+        : defaultHours;
+      const lockExpiresAt = hasActiveOverride
+        ? subjectOverride!.LockExpiresAt!
+        : new Date(Date.now() + allowedHours * 3600 * 1000).toISOString();
 
       list.push({
         ...item,
@@ -1846,7 +1978,7 @@ export const DataStore = {
         AllowedEditHours: allowedHours,
         LockExpiresAt: lockExpiresAt,
         IsLocked: false,
-        UnlockGranted: false,
+        UnlockGranted: Boolean(hasActiveOverride),
       });
     }
 
@@ -1899,8 +2031,22 @@ export const DataStore = {
           UnlockGranted: existing.UnlockGranted ?? false,
         };
       } else {
-        const allowedHours = defaultHours;
-        const lockExpiresAt = new Date(Date.now() + allowedHours * 3600 * 1000).toISOString();
+        const lockCheck = this.checkGradeLock(undefined, item.Period, item.ClassID, item.SubjectID);
+        if (lockCheck.isLocked) {
+          errors.push(`طالب #${item.StudentID}: السجل مقفل حالياً.`);
+          continue;
+        }
+        const subjectOverride = this.getSubjectUnlockOverride(item.ClassID, item.SubjectID, item.Period, targetYear);
+        const hasActiveOverride =
+          subjectOverride?.UnlockGranted &&
+          subjectOverride.LockExpiresAt &&
+          new Date(subjectOverride.LockExpiresAt).getTime() > Date.now();
+        const allowedHours = hasActiveOverride
+          ? subjectOverride!.AllowedEditHours || defaultHours
+          : defaultHours;
+        const lockExpiresAt = hasActiveOverride
+          ? subjectOverride!.LockExpiresAt!
+          : new Date(Date.now() + allowedHours * 3600 * 1000).toISOString();
 
         list.push({
           ...item,
@@ -1910,7 +2056,7 @@ export const DataStore = {
           AllowedEditHours: allowedHours,
           LockExpiresAt: lockExpiresAt,
           IsLocked: false,
-          UnlockGranted: false,
+          UnlockGranted: Boolean(hasActiveOverride),
         });
       }
       savedCount++;
@@ -1929,16 +2075,39 @@ export const DataStore = {
     }
   },
 
-  requestSubjectUnlock(classId: number, subjectId: number, period: GradingPeriod): void {
+  requestSubjectUnlock(classId: number, subjectId: number, period: GradingPeriod, teacherId?: number): void {
     const list = this.getGrades();
+    const activeYear = this.getActiveAcademicYear();
     let updated = false;
     list.forEach(g => {
-      if (g.ClassID === classId && g.SubjectID === subjectId && g.Period === period) {
+      if (
+        g.ClassID === classId &&
+        g.SubjectID === subjectId &&
+        g.Period === period &&
+        (g.AcademicYear || 'SY 2025-2026') === activeYear
+      ) {
         g.UnlockRequested = true;
         updated = true;
       }
     });
     if (updated) setItem(KEYS.GRADES, list);
+
+    const key = `${classId}-${subjectId}-${period}-${activeYear}`;
+    const existing = this.getSubjectUnlockOverride(classId, subjectId, period, activeYear);
+    this.upsertSubjectUnlockOverride({
+      key,
+      ClassID: classId,
+      SubjectID: subjectId,
+      Period: period,
+      AcademicYear: activeYear,
+      TeacherID: teacherId ?? existing?.TeacherID,
+      UnlockRequested: true,
+      UnlockGranted: existing?.UnlockGranted ?? false,
+      ManuallyLocked: existing?.ManuallyLocked,
+      LockExpiresAt: existing?.LockExpiresAt,
+      AllowedEditHours: existing?.AllowedEditHours,
+      UpdatedAt: new Date().toISOString(),
+    });
   },
 
   grantGradeUnlock(gradeId: string, grant: boolean, hours?: number): void {
@@ -1962,12 +2131,18 @@ export const DataStore = {
 
   grantSubjectUnlock(classId: number, subjectId: number, period: GradingPeriod, hours?: number): void {
     const list = this.getGrades();
+    const activeYear = this.getActiveAcademicYear();
     const grantedHours = hours || this.getGradeEditWindowHours();
     const lockExpiresAt = new Date(Date.now() + grantedHours * 3600 * 1000).toISOString();
     let updated = false;
 
     list.forEach(g => {
-      if (g.ClassID === classId && g.SubjectID === subjectId && g.Period === period) {
+      if (
+        g.ClassID === classId &&
+        g.SubjectID === subjectId &&
+        g.Period === period &&
+        (g.AcademicYear || 'SY 2025-2026') === activeYear
+      ) {
         g.IsLocked = false;
         g.UnlockRequested = false;
         g.UnlockGranted = true;
@@ -1978,22 +2153,64 @@ export const DataStore = {
     });
 
     if (updated) setItem(KEYS.GRADES, list);
+
+    const key = `${classId}-${subjectId}-${period}-${activeYear}`;
+    const existing = this.getSubjectUnlockOverride(classId, subjectId, period, activeYear);
+    this.upsertSubjectUnlockOverride({
+      key,
+      ClassID: classId,
+      SubjectID: subjectId,
+      Period: period,
+      AcademicYear: activeYear,
+      TeacherID: existing?.TeacherID,
+      UnlockRequested: false,
+      UnlockGranted: true,
+      ManuallyLocked: false,
+      LockExpiresAt: lockExpiresAt,
+      AllowedEditHours: grantedHours,
+      UpdatedAt: new Date().toISOString(),
+    });
   },
 
   lockSubjectNow(classId: number, subjectId: number, period: GradingPeriod): void {
     const list = this.getGrades();
+    const activeYear = this.getActiveAcademicYear();
+    const nowIso = new Date().toISOString();
     let updated = false;
 
     list.forEach(g => {
-      if (g.ClassID === classId && g.SubjectID === subjectId && g.Period === period) {
+      if (
+        g.ClassID === classId &&
+        g.SubjectID === subjectId &&
+        g.Period === period &&
+        (g.AcademicYear || 'SY 2025-2026') === activeYear
+      ) {
         g.IsLocked = true;
+        g.UnlockRequested = false;
         g.UnlockGranted = false;
-        g.LockExpiresAt = new Date().toISOString();
+        g.LockExpiresAt = nowIso;
         updated = true;
       }
     });
 
     if (updated) setItem(KEYS.GRADES, list);
+
+    const key = `${classId}-${subjectId}-${period}-${activeYear}`;
+    const existing = this.getSubjectUnlockOverride(classId, subjectId, period, activeYear);
+    this.upsertSubjectUnlockOverride({
+      key,
+      ClassID: classId,
+      SubjectID: subjectId,
+      Period: period,
+      AcademicYear: activeYear,
+      TeacherID: existing?.TeacherID,
+      UnlockRequested: false,
+      UnlockGranted: false,
+      ManuallyLocked: true,
+      LockExpiresAt: nowIso,
+      AllowedEditHours: existing?.AllowedEditHours,
+      UpdatedAt: nowIso,
+    });
   },
 
   // Tuition Fees per Dawr (1st to 6th)

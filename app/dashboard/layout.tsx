@@ -34,6 +34,7 @@ import {
   Clock,
   Facebook,
   UserPlus,
+  Lock,
 } from 'lucide-react';
 
 export default function DashboardLayout({
@@ -212,6 +213,7 @@ export default function DashboardLayout({
 
     if (role === 'admin' || role === 'mudir') {
       adminItems.push(
+        { href: '/dashboard/time-locks', labelEn: 'Time Locks & Deadlines', labelAr: 'إدارة المهل والأقفال', icon: Lock },
         { href: '/dashboard/forms', labelEn: 'Form Templates', labelAr: 'النماذج والتقارير', icon: FileText },
         { href: '/dashboard/accounts', labelEn: 'User Accounts & Roles', labelAr: 'الحسابات والصلاحيات', icon: UserCog }
       );

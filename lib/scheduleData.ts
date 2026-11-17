@@ -4,6 +4,7 @@ import {
   SubjectItem,
   SubjectTeacherItem,
   ClassScheduleItem,
+  ManagementScope,
 } from './types';
 
 export interface ScheduleTimeSlot {
@@ -33,15 +34,47 @@ export const scheduleClasses: ClassItem[] = [
   { ClassID: 12, ClassName: '2ب-أ - الثاني الابتدائي أ', Department: '2-days', Level: 'Ibtidaiyyah', YearGrade: 2 },
   { ClassID: 13, ClassName: '1ب-ب - الأول الابتدائي ب', Department: '2-days', Level: 'Ibtidaiyyah', YearGrade: 1 },
   { ClassID: 14, ClassName: '1ب-أ - الأول الابتدائي أ', Department: '2-days', Level: 'Ibtidaiyyah', YearGrade: 1 },
-  // Tamhidi / Level J (1ج, 2ج, 3ج)
-  { ClassID: 15, ClassName: '1ج - المستوى الأول ج', Department: '2-days', Level: 'Tamhidi', YearGrade: 1 },
-  { ClassID: 16, ClassName: '2ج - المستوى الثاني ج', Department: '2-days', Level: 'Tamhidi', YearGrade: 2 },
-  { ClassID: 17, ClassName: '3ج - المستوى الثالث ج', Department: '2-days', Level: 'Tamhidi', YearGrade: 3 },
-  // Kulliyatu Tarbiyah (Image 1: Levels 1, 3, 5, 7)
-  { ClassID: 18, ClassName: 'كلية التربية - المستوى الأول', Department: '2-days', Level: 'Kulliyatu Tarbiyah', YearGrade: 1 },
-  { ClassID: 19, ClassName: 'كلية التربية - المستوى الثالث', Department: '2-days', Level: 'Kulliyatu Tarbiyah', YearGrade: 2 },
-  { ClassID: 20, ClassName: 'كلية التربية - المستوى الخامس', Department: '2-days', Level: 'Kulliyatu Tarbiyah', YearGrade: 3 },
-  { ClassID: 21, ClassName: 'كلية التربية - المستوى السابع', Department: '2-days', Level: 'Kulliyatu Tarbiyah', YearGrade: 4 },
+  // Hadhana / الحضانة (1ج, 2ج, 3ج)
+  { ClassID: 15, ClassName: '1ج - الأول حضانة', Department: '2-days', Level: 'Hadhana', YearGrade: 1 },
+  { ClassID: 16, ClassName: '2ج - الثاني حضانة', Department: '2-days', Level: 'Hadhana', YearGrade: 2 },
+  { ClassID: 17, ClassName: '3ج - الثالث حضانة', Department: '2-days', Level: 'Hadhana', YearGrade: 3 },
+  // 1. كلية التربية والدراسات الإسلامية - يومين (Kulliyatu Tarbiyah & Islamic Studies - 2-Days)
+  { ClassID: 18, ClassName: 'كلية التربية والدراسات الإسلامية - المستوى الأول', Department: '2-days', Level: 'Kulliyatu Tarbiyah - 2-Days', YearGrade: 1 },
+  { ClassID: 19, ClassName: 'كلية التربية والدراسات الإسلامية - المستوى الثالث', Department: '2-days', Level: 'Kulliyatu Tarbiyah - 2-Days', YearGrade: 2 },
+  { ClassID: 20, ClassName: 'كلية التربية والدراسات الإسلامية - المستوى الخامس', Department: '2-days', Level: 'Kulliyatu Tarbiyah - 2-Days', YearGrade: 3 },
+  { ClassID: 21, ClassName: 'كلية التربية والدراسات الإسلامية - المستوى السابع', Department: '2-days', Level: 'Kulliyatu Tarbiyah - 2-Days', YearGrade: 4 },
+
+  // 2. كلية الشريعة - خمسة أيام (Kulliyatu Shariah - 5-Days)
+  { ClassID: 22, ClassName: 'كلية الشريعة - المستوى الأول', Department: '5-days', Level: 'Kulliyatu Shariah', YearGrade: 1 },
+  { ClassID: 23, ClassName: 'كلية الشريعة - المستوى الثاني', Department: '5-days', Level: 'Kulliyatu Shariah', YearGrade: 2 },
+  { ClassID: 24, ClassName: 'كلية الشريعة - المستوى الثالث', Department: '5-days', Level: 'Kulliyatu Shariah', YearGrade: 3 },
+  { ClassID: 25, ClassName: 'كلية الشريعة - المستوى الرابع', Department: '5-days', Level: 'Kulliyatu Shariah', YearGrade: 4 },
+
+  // 3. كلية الدعوة - خمسة أيام (Kulliyatu Da'wah - 5-Days)
+  { ClassID: 26, ClassName: 'كلية الدعوة - المستوى الأول', Department: '5-days', Level: 'Kulliyatu Dawah', YearGrade: 1 },
+  { ClassID: 27, ClassName: 'كلية الدعوة - المستوى الثاني', Department: '5-days', Level: 'Kulliyatu Dawah', YearGrade: 2 },
+  { ClassID: 28, ClassName: 'كلية الدعوة - المستوى الثالث', Department: '5-days', Level: 'Kulliyatu Dawah', YearGrade: 3 },
+  { ClassID: 29, ClassName: 'كلية الدعوة - المستوى الرابع', Department: '5-days', Level: 'Kulliyatu Dawah', YearGrade: 4 },
+
+  // 4. كلية التربية - خمسة أيام (Kulliyatu Tarbiyah - 5-Days)
+  { ClassID: 30, ClassName: 'كلية التربية (٥ أيام) - المستوى الأول', Department: '5-days', Level: 'Kulliyatu Tarbiyah 5-Days', YearGrade: 1 },
+  { ClassID: 31, ClassName: 'كلية التربية (٥ أيام) - المستوى الثاني', Department: '5-days', Level: 'Kulliyatu Tarbiyah 5-Days', YearGrade: 2 },
+  { ClassID: 32, ClassName: 'كلية التربية (٥ أيام) - المستوى الثالث', Department: '5-days', Level: 'Kulliyatu Tarbiyah 5-Days', YearGrade: 3 },
+  { ClassID: 33, ClassName: 'كلية التربية (٥ أيام) - المستوى الرابع', Department: '5-days', Level: 'Kulliyatu Tarbiyah 5-Days', YearGrade: 4 },
+
+  // 5-Days General Stages (القسم الصباحي - خمسة أيام)
+  { ClassID: 34, ClassName: '1ب - الأول الابتدائي (٥ أيام)', Department: '5-days', Level: 'Ibtidaiyyah', YearGrade: 1 },
+  { ClassID: 35, ClassName: '2ب - الثاني الابتدائي (٥ أيام)', Department: '5-days', Level: 'Ibtidaiyyah', YearGrade: 2 },
+  { ClassID: 36, ClassName: '3ب - الثالث الابتدائي (٥ أيام)', Department: '5-days', Level: 'Ibtidaiyyah', YearGrade: 3 },
+  { ClassID: 37, ClassName: '4ب - الرابع الابتدائي (٥ أيام)', Department: '5-days', Level: 'Ibtidaiyyah', YearGrade: 4 },
+  { ClassID: 38, ClassName: '5ب - الخامس الابتدائي (٥ أيام)', Department: '5-days', Level: 'Ibtidaiyyah', YearGrade: 5 },
+  { ClassID: 39, ClassName: '6ب - السادس الابتدائي (٥ أيام)', Department: '5-days', Level: 'Ibtidaiyyah', YearGrade: 6 },
+  { ClassID: 40, ClassName: '1م - الأول المتوسط (٥ أيام)', Department: '5-days', Level: 'Mutawassit', YearGrade: 1 },
+  { ClassID: 41, ClassName: '2م - الثاني المتوسط (٥ أيام)', Department: '5-days', Level: 'Mutawassit', YearGrade: 2 },
+  { ClassID: 42, ClassName: '3م - الثالث المتوسط (٥ أيام)', Department: '5-days', Level: 'Mutawassit', YearGrade: 3 },
+  { ClassID: 43, ClassName: '1ث - الأول الثانوي (٥ أيام)', Department: '5-days', Level: 'Thanawi', YearGrade: 1 },
+  { ClassID: 44, ClassName: '2ث - الثاني الثانوي (٥ أيام)', Department: '5-days', Level: 'Thanawi', YearGrade: 2 },
+  { ClassID: 45, ClassName: '3ث - الثالث الثانوي (٥ أيام)', Department: '5-days', Level: 'Thanawi', YearGrade: 3 },
 ];
 
 const CLASS_CODE_TO_ID: Record<string, number> = {
@@ -66,18 +99,49 @@ const CLASS_CODE_TO_ID: Record<string, number> = {
   'المستوى الثالث': 19,
   'المستوى الخامس': 20,
   'المستوى السابع': 21,
+  'شريعة-م1': 22,
+  'شريعة-م2': 23,
+  'شريعة-م3': 24,
+  'شريعة-م4': 25,
+  'دعوة-م1': 26,
+  'دعوة-م2': 27,
+  'دعوة-م3': 28,
+  'دعوة-م4': 29,
+  'تربية5-م1': 30,
+  'تربية5-م2': 31,
+  'تربية5-م3': 32,
+  'تربية5-م4': 33,
+  '5أيام-1ب': 34,
+  '5أيام-2ب': 35,
+  '5أيام-3ب': 36,
+  '5أيام-4ب': 37,
+  '5أيام-5ب': 38,
+  '5أيام-6ب': 39,
+  '5أيام-1م': 40,
+  '5أيام-2م': 41,
+  '5أيام-3م': 42,
+  '5أيام-1ث': 43,
+  '5أيام-2ث': 44,
+  '5أيام-3ث': 45,
 };
 
-// 2. Teachers (Mudir ID 1 preserved for authentication + all teachers from the 3 schedules)
-const TEACHER_DEFS: Array<{ ar: string; en: string; isMudir?: boolean; email?: string; password?: string }> = [
-  { ar: 'د. منيب الكزبري', en: 'Dr. Monib Alkuzbary', isMudir: true, email: 'mudir@jmaa.edu', password: 'mudir123' },
+// 2. Teachers, Principals (Yawmain & Khamsat Ayyam), and College Deans (4 Kulliyahs)
+const TEACHER_DEFS: Array<{
+  ar: string;
+  en: string;
+  isMudir?: boolean;
+  scope?: ManagementScope;
+  email?: string;
+  password?: string;
+}> = [
+  { ar: 'د. منيب الكزبري', en: 'Dr. Monib Alkuzbary (General Mudir)', isMudir: true, scope: 'all', email: 'mudir@jmaa.edu', password: 'mudir123' },
   { ar: 'عبدالجليل', en: 'Abduljalil', email: 'teacher@school.edu', password: 'teacher123' },
   { ar: 'نورهينة', en: 'Norhaina' },
   { ar: 'نوسة', en: 'Nosa' },
   { ar: 'أحمد', en: 'Ahmad' },
   { ar: 'عبدالله علي', en: 'Abdullah Ali' },
   { ar: 'نورجهان', en: 'Norjihan' },
-  { ar: 'محمد سلطان', en: 'Mohammad Sultan' },
+  { ar: 'محمد سلطان', en: 'Mohammad Sultan (Principal - 5 Days)', isMudir: true, scope: 'general-5days', email: 'mudir.5days@jmaa.edu', password: 'mudir123' },
   { ar: 'نور وفاء', en: 'Norwafa' },
   { ar: 'أفنان', en: 'Afnan' },
   { ar: 'عبدالصمد', en: 'Abdulsamad' },
@@ -89,7 +153,7 @@ const TEACHER_DEFS: Array<{ ar: string; en: string; isMudir?: boolean; email?: s
   { ar: 'راضية حكمة', en: 'Radhia Hikmah' },
   { ar: 'نفيسة جارية', en: 'Nafisa Jariah' },
   { ar: 'عبدالله ب', en: 'Abdullah B.' },
-  { ar: 'صادق', en: 'Sadiq' },
+  { ar: 'صادق', en: 'Sadiq (Principal - 2 Days)', isMudir: true, scope: 'general-2days', email: 'mudir.2days@jmaa.edu', password: 'mudir123' },
   { ar: 'عبود', en: 'Abboud' },
   { ar: 'عبدالله بلنساه', en: 'Abdullah Balansah' },
   { ar: 'نصيبة', en: 'Nusaibah' },
@@ -101,16 +165,16 @@ const TEACHER_DEFS: Array<{ ar: string; en: string; isMudir?: boolean; email?: s
   { ar: 'الجنان', en: 'Al-Jinan' },
   { ar: 'خديجة', en: 'Khadijah' },
   { ar: 'رضية', en: 'Radhiyah' },
-  { ar: 'خير الدين', en: 'Khairuddin' },
+  { ar: 'خير الدين', en: 'Dr. Khairuddin (Dean - Tarbiyah & Islamic Studies 2-Days)', isMudir: true, scope: 'kulliyah-tarbiyah-2days', email: 'dean.tarbiyah2@jmaa.edu', password: 'mudir123' },
   { ar: 'أمينة', en: 'Aminah' },
   { ar: 'ابتهال', en: 'Ibtihal' },
   { ar: 'عبدالله يونس', en: 'Abdullah Yunus' },
   { ar: 'لبيب', en: 'Labib' },
   { ar: 'غيثل', en: 'Ghaithal' },
-  { ar: 'عبدالواحد بايس', en: 'Abdulwahid Bayis' },
+  { ar: 'عبدالواحد بايس', en: 'Dr. Abdulwahid Bayis (Dean - Kulliyatu Dawah 5-Days)', isMudir: true, scope: 'kulliyah-dawah-5days', email: 'dean.dawah@jmaa.edu', password: 'mudir123' },
   { ar: 'ياسر', en: 'Yasir' },
-  { ar: 'سعدالدين محمد', en: 'Saaduddin Mohammad' },
-  { ar: 'د. عبدالله', en: 'Dr. Abdullah' },
+  { ar: 'سعدالدين محمد', en: 'Dr. Saaduddin Mohammad (Dean - Kulliyatu Tarbiyah 5-Days)', isMudir: true, scope: 'kulliyah-tarbiyah-5days', email: 'dean.tarbiyah5@jmaa.edu', password: 'mudir123' },
+  { ar: 'د. عبدالله', en: 'Dr. Abdullah (Dean - Kulliyatu Shariah 5-Days)', isMudir: true, scope: 'kulliyah-shariah-5days', email: 'dean.shariah@jmaa.edu', password: 'mudir123' },
   { ar: 'خالد', en: 'Khalid' },
 ];
 
@@ -122,6 +186,7 @@ export const scheduleTeachers: TeacherItem[] = TEACHER_DEFS.map((t, idx) => ({
   Password: t.password || 'teacher123',
   IdNumber: `TCH-${String(idx + 1).padStart(3, '0')}`,
   IsMudir: Boolean(t.isMudir),
+  ManagementScope: t.scope,
 }));
 
 const TEACHER_NAME_TO_ID: Record<string, number> = Object.fromEntries(
@@ -131,7 +196,7 @@ const TEACHER_NAME_TO_ID: Record<string, number> = Object.fromEntries(
 // Compact tuple: [classCode, day, startTime, endTime, subjectArabic, teacherArabic, room]
 type RawSlot = [
   string,
-  'Friday' | 'Saturday',
+  'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday',
   string,
   string,
   string,
@@ -398,6 +463,79 @@ const RAW_SLOTS: RawSlot[] = [
   ['المستوى السابع', 'Saturday', '15:00', '16:00', 'التخريج', 'خالد', 'كلية التربية - م٧'],
 
   ['المستوى الثالث', 'Saturday', '16:00', '17:00', 'فقه الدعوة', 'خالد', 'كلية التربية - م٣'],
+
+  // =========================================================================
+  // 2. كلية الشريعة - خمسة أيام (Kulliyatu Shariah - 5-Days: Sunday to Thursday)
+  // =========================================================================
+  ['شريعة-م1', 'Sunday', '08:00', '09:00', 'فقه العبادات', 'د. عبدالله', 'كلية الشريعة - م١'],
+  ['شريعة-م2', 'Sunday', '08:00', '09:00', 'أصول الفقه ١', 'غيثل', 'كلية الشريعة - م٢'],
+  ['شريعة-م3', 'Sunday', '08:00', '09:00', 'فقه المعاملات', 'لبيب', 'كلية الشريعة - م٣'],
+  ['شريعة-م4', 'Sunday', '08:00', '09:00', 'فقه المواريث', 'ياسر', 'كلية الشريعة - م٤'],
+
+  ['شريعة-م1', 'Sunday', '09:00', '10:00', 'المدخل للفقه الإسلامي', 'غيثل', 'كلية الشريعة - م١'],
+  ['شريعة-م2', 'Sunday', '09:00', '10:00', 'آيات الأحكام', 'د. عبدالله', 'كلية الشريعة - م٢'],
+  ['شريعة-م3', 'Sunday', '09:00', '10:00', 'القواعد الفقهية', 'ياسر', 'كلية الشريعة - م٣'],
+  ['شريعة-م4', 'Sunday', '09:00', '10:00', 'السياسة الشرعية', 'لبيب', 'كلية الشريعة - م٤'],
+
+  ['شريعة-م1', 'Monday', '08:00', '09:00', 'أحاديث الأحكام', 'ياسر', 'كلية الشريعة - م١'],
+  ['شريعة-م2', 'Monday', '08:00', '09:00', 'فقه الأسرة', 'د. عبدالله', 'كلية الشريعة - م٢'],
+  ['شريعة-م3', 'Monday', '08:00', '09:00', 'أصول الفقه ٢', 'غيثل', 'كلية الشريعة - م٣'],
+  ['شريعة-م4', 'Monday', '08:00', '09:00', 'فقه الجنايات والقضاء', 'لبيب', 'كلية الشريعة - م٤'],
+
+  // =========================================================================
+  // 3. كلية الدعوة - خمسة أيام (Kulliyatu Da'wah - 5-Days: Sunday to Thursday)
+  // =========================================================================
+  ['دعوة-م1', 'Sunday', '08:00', '09:00', 'أصول الدعوة', 'عبدالواحد بايس', 'كلية الدعوة - م١'],
+  ['دعوة-م2', 'Sunday', '08:00', '09:00', 'تاريخ الدعوة', 'خالد', 'كلية الدعوة - م٢'],
+  ['دعوة-م3', 'Sunday', '08:00', '09:00', 'الخطابة والمنبر', 'عبدالله يونس', 'كلية الدعوة - م٣'],
+  ['دعوة-م4', 'Sunday', '08:00', '09:00', 'الأديان والمذاهب', 'ابتهال', 'كلية الدعوة - م٤'],
+
+  ['دعوة-م1', 'Sunday', '09:00', '10:00', 'العقيدة الإسلامية', 'خالد', 'كلية الدعوة - م١'],
+  ['دعوة-م2', 'Sunday', '09:00', '10:00', 'مناهج الدعوة', 'عبدالواحد بايس', 'كلية الدعوة - م٢'],
+  ['دعوة-م3', 'Sunday', '09:00', '10:00', 'الحسبة والمجتمع', 'ابتهال', 'كلية الدعوة - م٣'],
+  ['دعوة-م4', 'Sunday', '09:00', '10:00', 'الدعوة المعاصرة', 'عبدالله يونس', 'كلية الدعوة - م٤'],
+
+  // =========================================================================
+  // 4. كلية التربية - خمسة أيام (Kulliyatu Tarbiyah - 5-Days: Sunday to Thursday)
+  // =========================================================================
+  ['تربية5-م1', 'Sunday', '08:00', '09:00', 'أصول التربية الإسلامية', 'سعدالدين محمد', 'كلية التربية ٥ - م١'],
+  ['تربية5-م2', 'Sunday', '08:00', '09:00', 'علم النفس التربوي', 'خير الدين', 'كلية التربية ٥ - م٢'],
+  ['تربية5-م3', 'Sunday', '08:00', '09:00', 'المناهج وطرق التدريس', 'أمينة', 'كلية التربية ٥ - م٣'],
+  ['تربية5-م4', 'Sunday', '08:00', '09:00', 'الإدارة والتخطيط التربوي', 'أمل', 'كلية التربية ٥ - م٤'],
+
+  ['تربية5-م1', 'Sunday', '09:00', '10:00', 'تقنيات التعليم', 'أمينة', 'كلية التربية ٥ - م١'],
+  ['تربية5-م2', 'Sunday', '09:00', '10:00', 'القياس والتقويم التربوي', 'سعدالدين محمد', 'كلية التربية ٥ - م٢'],
+  ['تربية5-م3', 'Sunday', '09:00', '10:00', 'البحث العلمي التربوي', 'أمل', 'كلية التربية ٥ - م٣'],
+  ['تربية5-م4', 'Sunday', '09:00', '10:00', 'التربية العملية', 'خير الدين', 'كلية التربية ٥ - م٤'],
+
+  // =========================================================================
+  // 5-Days General Stages (القسم الصباحي - خمسة أيام)
+  // =========================================================================
+  ['5أيام-1ب', 'Sunday', '07:15', '07:55', 'قرآن', 'نور وفاء', 'قاعة ١ب'],
+  ['5أيام-2ب', 'Sunday', '07:15', '07:55', 'توحيد', 'نورانية', 'قاعة ٢ب'],
+  ['5أيام-3ب', 'Sunday', '07:15', '07:55', 'فقه', 'نصيبة', 'قاعة ٣ب'],
+  ['5أيام-4ب', 'Sunday', '07:15', '07:55', 'حديث', 'أفنان', 'قاعة ٤ب'],
+  ['5أيام-5ب', 'Sunday', '07:15', '07:55', 'لغتي', 'أسماء', 'قاعة ٥ب'],
+  ['5أيام-6ب', 'Sunday', '07:15', '07:55', 'قواعد', 'عبود', 'قاعة ٦ب'],
+  ['5أيام-1م', 'Sunday', '07:15', '07:55', 'تفسير', 'أحمد', 'قاعة ١م'],
+  ['5أيام-2م', 'Sunday', '07:15', '07:55', 'فقه', 'صادق', 'قاعة ٢م'],
+  ['5أيام-3م', 'Sunday', '07:15', '07:55', 'توحيد', 'أمر الدين', 'قاعة ٣م'],
+  ['5أيام-1ث', 'Sunday', '07:15', '07:55', 'قرآن', 'عبدالجليل', 'قاعة ١ث'],
+  ['5أيام-2ث', 'Sunday', '07:15', '07:55', 'فرائض', 'نورهينة', 'قاعة ٢ث'],
+  ['5أيام-3ث', 'Sunday', '07:15', '07:55', 'قواعد', 'نوسة', 'قاعة ٣ث'],
+
+  ['5أيام-1ب', 'Sunday', '07:55', '08:35', 'لغة', 'روسلية', 'قاعة ١ب'],
+  ['5أيام-2ب', 'Sunday', '07:55', '08:35', 'قراءة', 'أم عمار', 'قاعة ٢ب'],
+  ['5أيام-3ب', 'Sunday', '07:55', '08:35', 'إملاء', 'محمد سلطان', 'قاعة ٣ب'],
+  ['5أيام-4ب', 'Sunday', '07:55', '08:35', 'فقه', 'عبدالصمد', 'قاعة ٤ب'],
+  ['5أيام-5ب', 'Sunday', '07:55', '08:35', 'تربية', 'نيفة', 'قاعة ٥ب'],
+  ['5أيام-6ب', 'Sunday', '07:55', '08:35', 'تاريخ', 'نورجهان', 'قاعة ٦ب'],
+  ['5أيام-1م', 'Sunday', '07:55', '08:35', 'حديث', 'رائدة', 'قاعة ١م'],
+  ['5أيام-2م', 'Sunday', '07:55', '08:35', 'مهارة', 'عبدالله علي', 'قاعة ٢م'],
+  ['5أيام-3م', 'Sunday', '07:55', '08:35', 'تفسير', 'الجنان', 'قاعة ٣م'],
+  ['5أيام-1ث', 'Sunday', '07:55', '08:35', 'حديث', 'عبدالله ب', 'قاعة ١ث'],
+  ['5أيام-2ث', 'Sunday', '07:55', '08:35', 'تفسير', 'خديجة', 'قاعة ٢ث'],
+  ['5أيام-3ث', 'Sunday', '07:55', '08:35', 'تخريج', 'عبدالله بلنساه', 'قاعة ٣ث'],
 ];
 
 // Build subjects, subject-teachers, and schedule items deterministically

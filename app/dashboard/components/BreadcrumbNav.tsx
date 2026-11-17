@@ -18,6 +18,7 @@ const ROUTE_LABELS: Record<string, { en: string; ar: string }> = {
   subjects: { en: 'Subjects', ar: 'المواد الدراسية' },
   schedules: { en: 'Class Schedules', ar: 'جدول الحصص' },
   grades: { en: 'Grades Matrix', ar: 'سجل الدرجات' },
+  'time-locks': { en: 'Time Locks & Deadlines', ar: 'إدارة المهل والأقفال' },
   finance: { en: 'Finance & Tuition', ar: 'المالية والرسوم' },
   fees: { en: 'Tuition Fees', ar: 'هيكل الرسوم' },
   examinations: { en: 'Examinations', ar: 'الاختبارات' },

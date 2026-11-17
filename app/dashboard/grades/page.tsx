@@ -395,6 +395,21 @@ export default function GradesPage() {
         }
       });
 
+    DataStore.getSubjectUnlockOverrides()
+      .filter(o => o.UnlockRequested)
+      .forEach(o => {
+        const key = `${o.ClassID}-${o.SubjectID}-${o.Period}`;
+        if (!map.has(key)) {
+          map.set(key, {
+            classId: o.ClassID,
+            subjectId: o.SubjectID,
+            period: o.Period,
+            teacherId: o.TeacherID || 0,
+            count: 0,
+          });
+        }
+      });
+
     const list: {
       key: string;
       classId: number;
@@ -675,6 +690,7 @@ export default function GradesPage() {
             onBack={() => setSelectedEditSubject(null)}
             teacherId={currentTeacher?.TeacherID || 2}
             isMudir={isMudir}
+            canManageLocks={isMudir || isAdmin}
             isSSG={isSSG}
             onSaveSuccess={loadData}
           />
@@ -907,14 +923,17 @@ export default function GradesPage() {
                             const defHours = DataStore.getGradeEditWindowHours();
                             let cStatus: 'unsubmitted' | 'editable' | 'locked' = 'unsubmitted';
                             let cHoursLeft = 0;
-                            if (d1Grades.length > 0) {
-                              const check = DataStore.checkGradeLock(d1Grades[0]);
-                              if (check.isLocked) {
-                                cStatus = 'locked';
-                              } else {
-                                cStatus = 'editable';
-                                cHoursLeft = Math.ceil(check.remainingMs / 3600000);
-                              }
+                            const check = DataStore.checkGradeLock(
+                              d1Grades[0],
+                              '1st',
+                              classItem.ClassID,
+                              subject.SubjectID
+                            );
+                            if (check.isLocked) {
+                              cStatus = 'locked';
+                            } else if (d1Grades.length > 0 || check.status === 'unlocked_by_admin') {
+                              cStatus = 'editable';
+                              cHoursLeft = Math.ceil(check.remainingMs / 3600000);
                             }
 
                             return (
@@ -950,7 +969,12 @@ export default function GradesPage() {
                               g.FinalGrade !== undefined &&
                               g.FinalGrade !== null
                           );
-                          const isSubjectLocked = d1Grades.length > 0 && DataStore.checkGradeLock(d1Grades[0]).isLocked;
+                          const isSubjectLocked = DataStore.checkGradeLock(
+                            d1Grades[0],
+                            '1st',
+                            classItem.ClassID,
+                            subject.SubjectID
+                          ).isLocked;
 
                           return (
                             <button
@@ -1327,7 +1351,7 @@ export default function GradesPage() {
                           </td>
 
                           <td className="py-3 px-4 text-right space-x-2">
-                            {isMudir ? (
+                            {isMudir || isAdmin ? (
                               <div className="flex items-center justify-end gap-1.5">
                                 <button
                                   type="button"

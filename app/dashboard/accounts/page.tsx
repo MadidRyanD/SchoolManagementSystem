@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { DataStore } from '@/lib/store';
 import { AuthService } from '@/lib/auth';
-import { TeacherItem, StudentItem, UserRole } from '@/lib/types';
+import { TeacherItem, StudentItem, UserRole, ManagementScope } from '@/lib/types';
 import {
   UserCog,
   KeyRound,
@@ -31,6 +31,7 @@ export default function UserAccountsPage() {
   // Role Promotion modal
   const [promotingTeacher, setPromotingTeacher] = useState<TeacherItem | null>(null);
   const [targetRole, setTargetRole] = useState<'teacher' | 'mudir' | 'admin' | 'cashier'>('teacher');
+  const [targetScope, setTargetScope] = useState<ManagementScope>('all');
 
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -69,7 +70,8 @@ export default function UserAccountsPage() {
     DataStore.saveTeacher({
       ...promotingTeacher,
       IsMudir: isMudir,
-      Remarks: `Promoted to ${targetRole.toUpperCase()} by Administrator`,
+      ManagementScope: isMudir ? targetScope : undefined,
+      Remarks: `Promoted to ${targetRole.toUpperCase()} (${isMudir ? targetScope : 'faculty'}) by Administrator`,
     });
 
     setMsg(`Role of ${promotingTeacher.Name} has been updated to ${targetRole.toUpperCase()}!`);
@@ -156,9 +158,26 @@ export default function UserAccountsPage() {
                     <td className="py-3 px-4 text-xs text-slate-600 font-mono">{t.Email}</td>
                     <td className="py-3 px-4">
                       {t.IsMudir ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
-                          <Crown className="w-3 h-3" /> Mudir / Principal
-                        </span>
+                        <div className="space-y-1">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+                            <Crown className="w-3 h-3" />
+                            <span>
+                              {t.ManagementScope === 'general-2days'
+                                ? 'مدير قسم يومين (Principal 2-Days)'
+                                : t.ManagementScope === 'general-5days'
+                                ? 'مدير قسم خمسة أيام (Principal 5-Days)'
+                                : t.ManagementScope === 'kulliyah-tarbiyah-2days'
+                                ? 'عميد كلية التربية والدراسات - يومين'
+                                : t.ManagementScope === 'kulliyah-shariah-5days'
+                                ? 'عميد كلية الشريعة - خمسة أيام'
+                                : t.ManagementScope === 'kulliyah-dawah-5days'
+                                ? 'عميد كلية الدعوة - خمسة أيام'
+                                : t.ManagementScope === 'kulliyah-tarbiyah-5days'
+                                ? 'عميد كلية التربية - خمسة أيام'
+                                : 'المدير العام (General Mudir)'}
+                            </span>
+                          </span>
+                        </div>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
                           <UserCheck className="w-3 h-3" /> Teacher
@@ -168,7 +187,11 @@ export default function UserAccountsPage() {
                     <td className="py-3 px-4 text-right space-x-2">
                       <button
                         type="button"
-                        onClick={() => setPromotingTeacher(t)}
+                        onClick={() => {
+                          setPromotingTeacher(t);
+                          setTargetRole(t.IsMudir ? 'mudir' : 'teacher');
+                          setTargetScope(t.ManagementScope || 'all');
+                        }}
                         className="px-2.5 py-1 text-xs font-bold rounded bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
                       >
                         Promote Role
@@ -310,11 +333,33 @@ export default function UserAccountsPage() {
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
                 >
                   <option value="teacher">Teacher (مدرس)</option>
-                  <option value="mudir">Mudir / Principal / Dean (مدير / عميد)</option>
+                  <option value="mudir">Mudir / Principal / Dean (مدير / عميد كلية)</option>
                   <option value="cashier">Cashier & Finance (أمين الصندوق)</option>
                   <option value="admin">System Administrator (مشرف نظام)</option>
                 </select>
               </div>
+
+              {targetRole === 'mudir' && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">
+                    Position & Schedule Edit Jurisdiction (نطاق صلاحية تعديل الجدول) *
+                  </label>
+                  <select
+                    value={targetScope}
+                    onChange={e => setTargetScope(e.target.value as ManagementScope)}
+                    className="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm bg-amber-50 font-serif font-bold text-slate-900"
+                    dir="rtl"
+                  >
+                    <option value="all">المدير العام (صلاحية تعديل جميع الجداول)</option>
+                    <option value="general-2days">مدير القسم الأسبوعي - يومين (المراحل العامة)</option>
+                    <option value="general-5days">مدير القسم الصباحي - خمسة أيام (المراحل العامة)</option>
+                    <option value="kulliyah-tarbiyah-2days">١. عميد كلية التربية والدراسات الإسلامية - يومين</option>
+                    <option value="kulliyah-shariah-5days">٢. عميد كلية الشريعة - خمسة أيام</option>
+                    <option value="kulliyah-dawah-5days">٣. عميد كلية الدعوة - خمسة أيام</option>
+                    <option value="kulliyah-tarbiyah-5days">٤. عميد كلية التربية - خمسة أيام</option>
+                  </select>
+                </div>
+              )}
 
               <div className="flex gap-2 pt-2">
                 <button

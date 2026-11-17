@@ -1,5 +1,17 @@
 export type DepartmentType = '5-days' | '2-days';
 
+export type KulliyahDivisionId =
+  | 'kulliyah-tarbiyah-2days'
+  | 'kulliyah-shariah-5days'
+  | 'kulliyah-dawah-5days'
+  | 'kulliyah-tarbiyah-5days';
+
+export type ManagementScope =
+  | 'all'
+  | 'general-2days'
+  | 'general-5days'
+  | KulliyahDivisionId;
+
 export type GradingPeriod = '1st' | '2nd' | '3rd' | '4th' | '5th' | '6th';
 
 export type SemesterType = '1st' | '2nd';
@@ -15,6 +27,7 @@ export interface UserSession {
   linkedId?: number;
   profilePic?: string;
   isSSG?: boolean;
+  managementScope?: ManagementScope;
 }
 
 export interface ClassItem {
@@ -74,6 +87,7 @@ export interface TeacherItem {
   Remarks?: string;
   ProfilePic?: string;
   IsMudir?: boolean;
+  ManagementScope?: ManagementScope;
 }
 
 export interface StudentItem {
@@ -247,6 +261,21 @@ export interface DawrDeadlineItem {
   enforceLock?: boolean; // If true, locking is strictly enforced when deadline is reached
 }
 
+export interface SubjectUnlockOverride {
+  key: string; // `${ClassID}-${SubjectID}-${Period}-${AcademicYear}`
+  ClassID: number;
+  SubjectID: number;
+  Period: GradingPeriod;
+  AcademicYear: string;
+  TeacherID?: number;
+  UnlockRequested?: boolean;
+  UnlockGranted?: boolean;
+  ManuallyLocked?: boolean;
+  LockExpiresAt?: string;
+  AllowedEditHours?: number;
+  UpdatedAt: string;
+}
+
 export interface SystemSettings {
   schoolNameEn: string;
   schoolNameAr: string;
@@ -261,6 +290,7 @@ export interface SystemSettings {
   libraryDriveFolderUrl?: string; // Google Drive Central Library folder URL
   scheduleNotice?: string; // Optional notice added by Principal/Admin at the top of the schedule
   subjectColors?: Record<string, string>; // Custom color mapping by subject name or ID
+  scheduleClassOrder?: number[]; // Custom default grade column order set by dragging grade headers
 }
 
 // Backward-compatible types for legacy secondary routes

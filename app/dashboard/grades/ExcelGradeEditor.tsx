@@ -43,6 +43,7 @@ interface ExcelGradeEditorProps {
   onBack: () => void;
   teacherId: number;
   isMudir?: boolean;
+  canManageLocks?: boolean;
   isSSG?: boolean;
   onSaveSuccess: () => void;
 }
@@ -59,9 +60,11 @@ export default function ExcelGradeEditor({
   onBack,
   teacherId,
   isMudir = false,
+  canManageLocks,
   isSSG = false,
   onSaveSuccess,
 }: ExcelGradeEditorProps) {
+  const hasLockControl = canManageLocks ?? isMudir;
   const [viewMode, setViewMode] = useState<EditorViewMode>('dawr');
   const [selectedPeriod, setSelectedPeriod] = useState<GradingPeriod>('1st');
   const [selectedSemester, setSelectedSemester] = useState<'1st' | '2nd'>('1st');
@@ -153,6 +156,11 @@ export default function ExcelGradeEditor({
     return () => clearInterval(timer);
   }, []);
 
+  // Reset local unlock request flag when switching subject, class, or period
+  useEffect(() => {
+    setUnlockRequestedLocal(false);
+  }, [subject.SubjectID, classItem.ClassID, selectedPeriod, selectedSemester, viewMode]);
+
   // Compute active lock info for the current view (selectedPeriod or activePeriods)
   const activeLockInfo = useMemo(() => {
     const periodsToCheck: GradingPeriod[] = viewMode === 'dawr' ? [selectedPeriod] : activePeriods;
@@ -167,15 +175,18 @@ export default function ExcelGradeEditor({
 
     const defaultHours = DataStore.getGradeEditWindowHours();
     const primaryPeriod = viewMode === 'dawr' ? selectedPeriod : activePeriods[0];
-    const deadlineCheck = DataStore.checkGradeLock(undefined, primaryPeriod);
+    const deadlineCheck = DataStore.checkGradeLock(undefined, primaryPeriod, classItem.ClassID, subject.SubjectID);
+    const subjectOverrideRequested = periodsToCheck.some(
+      p => DataStore.getSubjectUnlockOverride(classItem.ClassID, subject.SubjectID, p)?.UnlockRequested
+    );
 
     if (periodGrades.length === 0) {
       return {
         isLocked: deadlineCheck.isLocked,
-        remainingMs: 0,
-        allowedHours: defaultHours,
-        status: deadlineCheck.isLocked ? ('expired_locked' as const) : ('unsubmitted' as const),
-        hasUnlockRequest: unlockRequestedLocal,
+        remainingMs: deadlineCheck.remainingMs,
+        allowedHours: deadlineCheck.allowedHours || defaultHours,
+        status: deadlineCheck.status,
+        hasUnlockRequest: unlockRequestedLocal || subjectOverrideRequested,
         submittedAt: null as string | null,
         expiresAt: deadlineCheck.expiresAt || null,
       };
@@ -183,11 +194,12 @@ export default function ExcelGradeEditor({
 
     const checks = periodGrades.map(g => ({
       grade: g,
-      check: DataStore.checkGradeLock(g, g.Period),
+      check: DataStore.checkGradeLock(g, g.Period, classItem.ClassID, subject.SubjectID),
     }));
 
     const anyLocked = checks.some(c => c.check.isLocked);
-    const hasUnlockRequest = unlockRequestedLocal || periodGrades.some(g => g.UnlockRequested);
+    const hasUnlockRequest =
+      unlockRequestedLocal || subjectOverrideRequested || periodGrades.some(g => g.UnlockRequested);
 
     const graceCheck = checks.find(c => c.check.remainingMs > 0) || checks[0];
     const sampleCheck = graceCheck.check;
@@ -274,7 +286,7 @@ export default function ExcelGradeEditor({
   const handleRequestUnlock = () => {
     const periodsToRequest: GradingPeriod[] = viewMode === 'dawr' ? [selectedPeriod] : activePeriods;
     periodsToRequest.forEach(p => {
-      DataStore.requestSubjectUnlock(classItem.ClassID, subject.SubjectID, p);
+      DataStore.requestSubjectUnlock(classItem.ClassID, subject.SubjectID, p, teacherId);
     });
     setUnlockRequestedLocal(true);
     setToastMsg({
@@ -1099,6 +1111,127 @@ export default function ExcelGradeEditor({
                     {toHindiNumerals(currentDawrDeadline.days)} يوم و {toHindiNumerals(currentDawrDeadline.hours)} س
                   </span>
                 </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Edit Window & Lock Status / Unlock Controls Banner */}
+        {(activeLockInfo.isLocked || activeLockInfo.remainingMs > 0 || hasLockControl) && (
+          <div
+            className={`rounded-2xl p-3.5 border-2 flex flex-col md:flex-row md:items-center justify-between gap-3 text-right transition-all ${
+              activeLockInfo.isLocked
+                ? 'bg-red-50 border-red-300 text-red-950'
+                : activeLockInfo.status === 'unlocked_by_admin'
+                ? 'bg-amber-50 border-amber-300 text-amber-950'
+                : 'bg-emerald-50 border-emerald-300 text-emerald-950'
+            }`}
+            dir="rtl"
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  activeLockInfo.isLocked
+                    ? 'bg-red-600 text-white'
+                    : activeLockInfo.status === 'unlocked_by_admin'
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-emerald-600 text-white'
+                }`}
+              >
+                {activeLockInfo.isLocked ? (
+                  <Lock className="w-4 h-4" />
+                ) : (
+                  <Unlock className="w-4 h-4" />
+                )}
+              </div>
+              <div className="text-xs">
+                {activeLockInfo.isLocked ? (
+                  <>
+                    <div className="font-black text-red-900 text-sm">
+                      سجل الدرجات مقفل حالياً (Grades Locked)
+                    </div>
+                    <div className="text-red-700 mt-0.5">
+                      انتهت مهلة التعديل أو الموعد النهائي لهذا الدور. لا يمكن تعديل الدرجات إلا بعد موافقة المدير أو المشرف على فتح المهلة.
+                    </div>
+                  </>
+                ) : activeLockInfo.remainingMs > 0 ? (
+                  <>
+                    <div className="font-black text-sm flex items-center gap-2 flex-wrap">
+                      <span>
+                        {activeLockInfo.status === 'unlocked_by_admin'
+                          ? 'تم فتح التعديل بإذن الإدارة (Unlocked by Admin)'
+                          : 'مهلة التعديل بعد الاعتماد نشطة'}
+                      </span>
+                      <span className="font-mono bg-white/80 px-2 py-0.5 rounded-lg border border-current/20">
+                        متبقي: {countdown.text}
+                      </span>
+                    </div>
+                    <div className="opacity-80 mt-0.5">
+                      يغلق السجل تلقائياً في: {formatDateTimeArabic(activeLockInfo.expiresAt)}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="font-black text-sm">السجل مفتوح للإدخال (Open for Submission)</div>
+                    <div className="opacity-80 mt-0.5">
+                      تبدأ مهلة التعديل ({toHindiNumerals(activeLockInfo.allowedHours)} ساعة) تلقائياً بعد أول حفظ للدرجات.
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {hasLockControl ? (
+                <>
+                  <select
+                    value={mudirGrantHours}
+                    onChange={e => setMudirGrantHours(Number(e.target.value))}
+                    className="px-2.5 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-xs font-bold cursor-pointer"
+                  >
+                    <option value={6}>٦ ساعات (6h)</option>
+                    <option value={12}>١٢ ساعة (12h)</option>
+                    <option value={24}>٢٤ ساعة (24h)</option>
+                    <option value={48}>٤٨ ساعة (48h)</option>
+                    <option value={72}>٧٢ ساعة (72h)</option>
+                    <option value={168}>أسبوع (168h)</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => handleMudirGrantUnlock(mudirGrantHours)}
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-black cursor-pointer inline-flex items-center gap-1.5 shadow-xs"
+                  >
+                    <Unlock className="w-3.5 h-3.5" />
+                    <span>منح فتح / تمديد</span>
+                  </button>
+                  {!activeLockInfo.isLocked && (
+                    <button
+                      type="button"
+                      onClick={handleMudirLockNow}
+                      className="px-3.5 py-1.5 rounded-xl bg-red-700 hover:bg-red-600 text-white text-xs font-black cursor-pointer inline-flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>قفل فوراً</span>
+                    </button>
+                  )}
+                </>
+              ) : (
+                activeLockInfo.isLocked &&
+                canUserEditThisSubject && (
+                  <button
+                    type="button"
+                    onClick={handleRequestUnlock}
+                    disabled={activeLockInfo.hasUnlockRequest}
+                    className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:bg-slate-400 text-white text-xs font-black cursor-pointer inline-flex items-center gap-1.5 shadow-xs transition-colors"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>
+                      {activeLockInfo.hasUnlockRequest
+                        ? 'تم إرسال طلب الفتح (بانتظار المدير)'
+                        : 'طلب فتح مهلة التعديل (Request Unlock)'}
+                    </span>
+                  </button>
+                )
               )}
             </div>
           </div>

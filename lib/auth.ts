@@ -29,11 +29,28 @@ export const AuthService = {
     }
 
     // 2. Mudir / Principal / Dean (Amid)
+    const allTeachers = DataStore.getTeachers();
+    const scopeShortcutMap: Record<string, string> = {
+      'mudir.2days': 'general-2days',
+      'mudir.5days': 'general-5days',
+      'dean.tarbiyah2': 'kulliyah-tarbiyah-2days',
+      'dean.shariah': 'kulliyah-shariah-5days',
+      'dean.dawah': 'kulliyah-dawah-5days',
+      'dean.tarbiyah5': 'kulliyah-tarbiyah-5days',
+    };
     if (
-      (cleanUser === 'mudir' || cleanUser === 'mudir@jmaa.edu' || cleanUser === 'dean' || cleanUser === 'amid') &&
-      (cleanPass === 'mudir123' || cleanPass === 'mudir')
+      (cleanUser === 'mudir' ||
+        cleanUser === 'mudir@jmaa.edu' ||
+        cleanUser === 'dean' ||
+        cleanUser === 'amid' ||
+        scopeShortcutMap[cleanUser]) &&
+      (cleanPass === 'mudir123' || cleanPass === 'mudir' || cleanPass === 'teacher123')
     ) {
-      const mudir = DataStore.getTeachers().find(t => t.IsMudir) || DataStore.getTeachers()[0];
+      const targetScope = scopeShortcutMap[cleanUser] || 'all';
+      const mudir =
+        allTeachers.find(t => t.IsMudir && (t.ManagementScope || 'all') === targetScope) ||
+        allTeachers.find(t => t.IsMudir) ||
+        allTeachers[0];
       const mudirSession: UserSession = {
         id: `usr-mudir-${mudir.TeacherID}`,
         name: mudir.Name,
@@ -42,6 +59,7 @@ export const AuthService = {
         role: 'mudir',
         linkedId: mudir.TeacherID,
         profilePic: mudir.ProfilePic,
+        managementScope: mudir.ManagementScope || 'all',
       };
       this.setSession(mudirSession);
       return { success: true, user: mudirSession };
@@ -96,6 +114,7 @@ export const AuthService = {
           role: isMudirAccount ? 'mudir' : 'teacher',
           linkedId: matchedTeacher.TeacherID,
           profilePic: matchedTeacher.ProfilePic,
+          managementScope: isMudirAccount ? matchedTeacher.ManagementScope || 'all' : undefined,
         };
         this.setSession(teacherSession);
         return { success: true, user: teacherSession };
@@ -181,7 +200,14 @@ export const AuthService = {
     try {
       const raw = localStorage.getItem(SESSION_KEY);
       if (!raw) return null;
-      return JSON.parse(raw);
+      const parsed: UserSession = JSON.parse(raw);
+      if (parsed.role === 'mudir' && parsed.linkedId) {
+        const tch = DataStore.getTeachers().find(t => t.TeacherID === parsed.linkedId);
+        if (tch?.ManagementScope) {
+          parsed.managementScope = tch.ManagementScope;
+        }
+      }
+      return parsed;
     } catch {
       return null;
     }
