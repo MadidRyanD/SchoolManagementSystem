@@ -103,11 +103,12 @@ export default function ExcelGradeEditor({
     value: string;
   } | null>(null);
 
-  // Task 5: Taqdir ratio configured by Admin / Principal
-  const taqdirScale = useMemo(() => {
-    if (typeof window === 'undefined') return DEFAULT_TAQDIR_SCALE;
-    return DataStore.getTaqdirScale();
-  }, [allGrades]);
+  // Task 5: Taqdir ratio configured by Admin / Principal (always read latest)
+  const taqdirScale =
+    typeof window !== 'undefined' ? DataStore.getTaqdirScale() : DEFAULT_TAQDIR_SCALE;
+
+  // Remember previous numeric score before toggling INC/DRP so toggling twice restores it
+  const prevScoresBeforeSpecial = useRef<Record<number, Record<string, string>>>({});
 
   // Nashat Subject & SSG Permission Checks
   const isNashatSubject = Boolean(
@@ -407,7 +408,10 @@ export default function ExcelGradeEditor({
           loadedCriteria.forEach(c => {
             const v = found.CriteriaScores[c.id];
             if (v !== undefined && v !== null) {
-              initialCrit[std.StudentID][c.id] = String(v);
+              // Scale legacy 0-100 seed scores down to the criterion's weight max so SUM <= 100
+              const normalized =
+                v > c.weight ? Math.round(((v * c.weight) / 100) * 10) / 10 : v;
+              initialCrit[std.StudentID][c.id] = String(normalized);
             }
           });
         }
@@ -573,6 +577,64 @@ export default function ExcelGradeEditor({
     const updated = subjectCriteria.filter(c => c.id !== critId);
     DataStore.saveSubjectCriteria(classItem.ClassID, subject.SubjectID, updated);
     setSubjectCriteria(DataStore.getSubjectCriteria(classItem.ClassID, subject.SubjectID));
+  };
+
+  // Toggle INC or DRP; toggling off restores criteria sum or previous numeric score
+  const handleToggleSpecialStatus = (
+    studentId: number,
+    period: GradingPeriod,
+    status: 'INC' | 'DRP'
+  ) => {
+    const currentRaw = (gridValues[studentId]?.[period] || '').trim().toUpperCase();
+    if (currentRaw !== status) {
+      if (currentRaw !== '' && currentRaw !== 'INC' && currentRaw !== 'DRP') {
+        if (!prevScoresBeforeSpecial.current[studentId]) {
+          prevScoresBeforeSpecial.current[studentId] = {};
+        }
+        prevScoresBeforeSpecial.current[studentId][period] = currentRaw;
+      }
+      handleCellChange(studentId, period, status);
+    } else {
+      // Toggling OFF: 1) recalculate sum from criteriaScoresGrid if available
+      const critRow = criteriaScoresGrid[studentId] || {};
+      let critSum = 0;
+      let hasCrit = false;
+      subjectCriteria.forEach(c => {
+        const n = parseFloat(critRow[c.id] || '');
+        if (!isNaN(n)) {
+          critSum += n;
+          hasCrit = true;
+        }
+      });
+
+      if (hasCrit) {
+        const total = String(Math.min(100, Math.round(critSum * 10) / 10));
+        handleCellChange(studentId, period, total);
+        return;
+      }
+
+      // 2) Otherwise restore remembered score before DRP/INC
+      const remembered = prevScoresBeforeSpecial.current[studentId]?.[period];
+      if (remembered !== undefined && remembered !== '') {
+        handleCellChange(studentId, period, remembered);
+        return;
+      }
+
+      // 3) Fallback to saved numeric grade in allGrades if any
+      const saved = allGrades.find(
+        g =>
+          g.StudentID === studentId &&
+          g.SubjectID === subject.SubjectID &&
+          g.ClassID === classItem.ClassID &&
+          g.Period === period
+      );
+      if (saved && typeof saved.FinalGrade === 'number') {
+        handleCellChange(studentId, period, String(saved.FinalGrade));
+        return;
+      }
+
+      handleCellChange(studentId, period, '');
+    }
   };
 
   const handleCellChange = (studentId: number, period: GradingPeriod, rawVal: string) => {
@@ -1228,8 +1290,8 @@ export default function ExcelGradeEditor({
               )}
             </button>
 
-            {/* Criteria Setup Button (Task 3) */}
-            {canUserEditThisSubject && viewMode === 'dawr' && (
+            {/* Criteria Setup Button (Task 3 - available to Teacher, Admin & Principal) */}
+            {(canUserEditThisSubject || hasLockControl) && viewMode === 'dawr' && (
               <button
                 type="button"
                 onClick={() => setShowCriteriaSetup(!showCriteriaSetup)}
@@ -1893,11 +1955,7 @@ export default function ExcelGradeEditor({
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    handleCellChange(
-                                      student.StudentID,
-                                      selectedPeriod,
-                                      rawVal === 'INC' ? '' : 'INC'
-                                    )
+                                    handleToggleSpecialStatus(student.StudentID, selectedPeriod, 'INC')
                                   }
                                   className={`px-2 py-0.5 rounded text-[10px] font-black cursor-pointer border ${
                                     rawVal === 'INC'
@@ -1911,11 +1969,7 @@ export default function ExcelGradeEditor({
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    handleCellChange(
-                                      student.StudentID,
-                                      selectedPeriod,
-                                      rawVal === 'DRP' ? '' : 'DRP'
-                                    )
+                                    handleToggleSpecialStatus(student.StudentID, selectedPeriod, 'DRP')
                                   }
                                   className={`px-2 py-0.5 rounded text-[10px] font-black cursor-pointer border ${
                                     rawVal === 'DRP'
