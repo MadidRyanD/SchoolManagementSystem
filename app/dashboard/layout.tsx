@@ -153,6 +153,7 @@ export default function DashboardLayout({
         { href: '/dashboard/profile', labelEn: 'Profile', labelAr: 'الملف الشخصي', icon: User },
         { href: '/dashboard/schedules', labelEn: 'Class Schedule', labelAr: 'جدول الحصص', icon: Calendar },
         { href: '/dashboard/subjects', labelEn: 'Subjects', labelAr: 'المواد الدراسية', icon: BookOpen },
+        { href: '/dashboard/grades', labelEn: 'Grades', labelAr: 'رصد الدرجات', icon: ClipboardList },
         { href: '/dashboard/classes/advisee', labelEn: 'Class Advisee', labelAr: 'الفصل المشرف عليه', icon: UserCheck },
         { href: '/dashboard/attendance', labelEn: 'Attendance', labelAr: 'سجل الحضور والدوام', icon: CalendarCheck },
         { href: '/dashboard/finance', labelEn: 'Payroll', labelAr: 'الرواتب والمستحقات', icon: Wallet },

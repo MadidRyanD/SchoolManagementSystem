@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { DataStore } from '@/lib/store';
+import { DataStore, DEFAULT_TAQDIR_SCALE } from '@/lib/store';
 import { AuthService } from '@/lib/auth';
 import { useAcademicTerm } from '@/lib/useAcademicTerm';
 import SchoolArabicTitle from '@/app/components/SchoolArabicTitle';
@@ -14,6 +14,7 @@ import {
   TeacherItem,
   GradingCriteria,
   SubjectTeacherItem,
+  TaqdirScale,
 } from '@/lib/types';
 import StudentGradeView from './StudentGradeView';
 import ExcelGradeEditor from './ExcelGradeEditor';
@@ -131,6 +132,10 @@ export default function GradesPage() {
   const [newCritName, setNewCritName] = useState('');
   const [newCritWeight, setNewCritWeight] = useState(20);
 
+  // Taqdir Ratio Setup Modal (Admin & Principal only)
+  const [isManagingTaqdir, setIsManagingTaqdir] = useState(false);
+  const [taqdirForm, setTaqdirForm] = useState<TaqdirScale>(DEFAULT_TAQDIR_SCALE);
+
   // Grade Entry Modal (Matrix View legacy)
   const [editingStudent, setEditingStudent] = useState<StudentItem | null>(null);
   const [scoresInput, setScoresInput] = useState<Record<string, number>>({});
@@ -157,6 +162,7 @@ export default function GradesPage() {
     setGrades(DataStore.getGradesForTerm(academicYear));
     setCriteria(DataStore.getCriteria());
     setSubjectTeachers(stMap);
+    setTaqdirForm(DataStore.getTaqdirScale());
 
     if (stds.length > 0 && previewStudentId === 1) {
       setPreviewStudentId(stds[0].StudentID);
@@ -613,22 +619,39 @@ export default function GradesPage() {
             </button>
           )}
 
-          {/* 3. Student Report Card Preview */}
-          <button
-            type="button"
-            onClick={() => {
-              setStaffTab('preview');
-              setSelectedEditSubject(null);
-            }}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
-              staffTab === 'preview'
-                ? 'bg-emerald-800 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-            }`}
-          >
-            <Eye className="w-4 h-4 text-amber-400" />
-            <span>معاينة شهادة الطالب (Student Report Card)</span>
-          </button>
+          {/* 3. Student Report Card Preview (Admin / Mudir only; Teachers use Class Advisee) */}
+          {(isAdmin || isMudir) && (
+            <button
+              type="button"
+              onClick={() => {
+                setStaffTab('preview');
+                setSelectedEditSubject(null);
+              }}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                staffTab === 'preview'
+                  ? 'bg-emerald-800 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+              }`}
+            >
+              <Eye className="w-4 h-4 text-amber-400" />
+              <span>معاينة شهادة الطالب (Student Report Card)</span>
+            </button>
+          )}
+
+          {/* 4. Taqdir Ratio Setup (Admin / Mudir only) */}
+          {(isAdmin || isMudir) && (
+            <button
+              type="button"
+              onClick={() => {
+                setTaqdirForm(DataStore.getTaqdirScale());
+                setIsManagingTaqdir(true);
+              }}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300"
+            >
+              <Award className="w-4 h-4 text-amber-600" />
+              <span>سلم التقدير (Taqdir Ratio)</span>
+            </button>
+          )}
         </div>
 
         {/* Teacher Switcher (for Admin/Mudir inspecting teacher views) */}
@@ -653,7 +676,7 @@ export default function GradesPage() {
         )}
 
         {/* Student Selector for Preview Mode */}
-        {staffTab === 'preview' && (
+        {staffTab === 'preview' && (isAdmin || isMudir) && (
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase text-slate-500">Select Student:</span>
             <select
@@ -1013,7 +1036,7 @@ export default function GradesPage() {
       {/* ========================================================================= */}
       {/* 2. STUDENT VIEW PREVIEW (معاينة كشف درجات الطالب)                         */}
       {/* ========================================================================= */}
-      {staffTab === 'preview' && previewStudent && (
+      {staffTab === 'preview' && (isAdmin || isMudir) && previewStudent && (
         <StudentGradeView
           student={previewStudent}
           classes={classes}
@@ -1597,6 +1620,132 @@ export default function GradesPage() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+      {/* Taqdir Ratio Setup Modal (Admin / Mudir) */}
+      {isManagingTaqdir && (isAdmin || isMudir) && (
+        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="text-lg font-extrabold text-slate-900">
+                إعداد سلم التقدير (Taqdir Ratio Setup)
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsManagingTaqdir(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              Configure the minimum score required for each تقدير level. Scores below مقبول are marked as راسب.
+            </p>
+
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                DataStore.updateTaqdirScale(taqdirForm);
+                setIsManagingTaqdir(false);
+                loadData();
+                setMsg({
+                  type: 'success',
+                  text: 'تم تحديث سلم التقدير (Taqdir Ratio) بنجاح!',
+                });
+                setTimeout(() => setMsg(null), 3000);
+              }}
+              className="space-y-3"
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    ممتاز (Excellent) Min
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    required
+                    value={taqdirForm.mumtazMin}
+                    onChange={e => setTaqdirForm(f => ({ ...f, mumtazMin: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white font-mono font-bold"
+                  />
+                  <span className="text-[11px] text-emerald-700">{taqdirForm.mumtazMin} - 100</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    جيد جدا (Very Good) Min
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    required
+                    value={taqdirForm.jayyidJiddanMin}
+                    onChange={e => setTaqdirForm(f => ({ ...f, jayyidJiddanMin: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white font-mono font-bold"
+                  />
+                  <span className="text-[11px] text-amber-700">
+                    {taqdirForm.jayyidJiddanMin} - {taqdirForm.mumtazMin - 1}
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    جيد (Good) Min
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    required
+                    value={taqdirForm.jayyidMin}
+                    onChange={e => setTaqdirForm(f => ({ ...f, jayyidMin: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white font-mono font-bold"
+                  />
+                  <span className="text-[11px] text-orange-700">
+                    {taqdirForm.jayyidMin} - {taqdirForm.jayyidJiddanMin - 1}
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    مقبول (Acceptable) Min
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    required
+                    value={taqdirForm.maqboolMin}
+                    onChange={e => setTaqdirForm(f => ({ ...f, maqboolMin: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white font-mono font-bold"
+                  />
+                  <span className="text-[11px] text-red-700">
+                    {taqdirForm.maqboolMin} - {taqdirForm.jayyidMin - 1} (Below {taqdirForm.maqboolMin}: راسب)
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTaqdirForm(DEFAULT_TAQDIR_SCALE)}
+                  className="px-3 py-2 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                >
+                  Reset Default (90/80/76/75)
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-emerald-800 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold cursor-pointer"
+                >
+                  Save Ratio
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

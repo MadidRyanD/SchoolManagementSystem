@@ -11,7 +11,7 @@ import {
   GradingPeriod,
   SemesterType,
 } from '@/lib/types';
-import { DataStore } from '@/lib/store';
+import { DataStore, getTaqdirRating, DEFAULT_TAQDIR_SCALE } from '@/lib/store';
 import { useAcademicTerm } from '@/lib/useAcademicTerm';
 import { toHindiNumerals } from '@/lib/numerals';
 import {
@@ -133,7 +133,8 @@ export default function StudentGradeView({
 
   // All subjects for this student's class + any completed subjects from previous enrollment in this class
   // Orders classic core subjects (فقه، توحيد، قرآن، تعبير...) first and ensures "نشاط" (Nashat) is always included (Requirements 6 & 9)
-  const classSubjects = useMemo(() => {
+  // Also deduplicates subjects taught at different times into a single unified subject entry (Task 9)
+  const { classSubjects, subjectGroupMap } = useMemo(() => {
     const classSubList = subjects.filter(s => s.ClassID === selectedClassId);
 
     // Also include any subject where the student already has completed grades for this class (Requirement 9)
@@ -149,9 +150,29 @@ export default function StudentGradeView({
     const combined = [...classSubList, ...extraGradedSubjects];
     const baseList = combined.length > 0 ? combined : subjects.slice(0, 6);
 
+    // Deduplicate by normalized subject name so different time slots are treated as one subject
+    const groupMap = new Map<number, number[]>();
+    const byName = new Map<string, SubjectItem>();
+    baseList.forEach(sub => {
+      const normName = (sub.SubjectArabic || sub.SubjectClass || String(sub.SubjectID)).trim().toLowerCase();
+      const existing = byName.get(normName);
+      if (!existing) {
+        byName.set(normName, sub);
+        groupMap.set(sub.SubjectID, [sub.SubjectID]);
+      } else {
+        const ids = groupMap.get(existing.SubjectID) || [existing.SubjectID];
+        if (!ids.includes(sub.SubjectID)) {
+          ids.push(sub.SubjectID);
+        }
+        groupMap.set(existing.SubjectID, ids);
+      }
+    });
+
+    const deduplicated = Array.from(byName.values());
+
     // Priority order matching Screenshot 3 (فقه، توحيد، قرآن، تعبير، ... ثم نشاط)
     const priorityOrder = ['فقه', 'توحيد', 'قرآن', 'تعبير', 'حديث', 'قواعد', 'تفسير', 'تجويد'];
-    return [...baseList].sort((a, b) => {
+    const sorted = [...deduplicated].sort((a, b) => {
       const aIsNashat = Boolean(a.IsNashat || a.SubjectArabic === 'نشاط');
       const bIsNashat = Boolean(b.IsNashat || b.SubjectArabic === 'نشاط');
       // Put النشاط at the end of the subject list
@@ -167,6 +188,8 @@ export default function StudentGradeView({
       if (bIdx !== -1) return 1;
       return a.SubjectID - b.SubjectID;
     });
+
+    return { classSubjects: sorted, subjectGroupMap: groupMap };
   }, [subjects, selectedClassId, studentAllGrades]);
 
   // Check if subject is "نشاط" (graded by SSG Officers)
@@ -177,9 +200,10 @@ export default function StudentGradeView({
         (sub.SubjectClass && sub.SubjectClass.toLowerCase().includes('nashat'))
     );
 
-  // Helper to get grade for a subject in a specific grading period
+  // Helper to get grade for a subject in a specific grading period (checks all grouped time-slot SubjectIDs)
   const getSubjectGrade = (subjectId: number, period: GradingPeriod): StudentGradeItem | undefined => {
-    return studentAllGrades.find(g => g.SubjectID === subjectId && g.Period === period);
+    const groupIds = subjectGroupMap.get(subjectId) || [subjectId];
+    return studentAllGrades.find(g => groupIds.includes(g.SubjectID) && g.Period === period);
   };
 
   // Helper to get Ustadh / Teacher for a subject (Requirements 6, 7, 9):
@@ -252,7 +276,12 @@ export default function StudentGradeView({
     };
   };
 
-  // Rating badge helper matching the exact colors of Screenshot 3
+  const taqdirScale = useMemo(() => {
+    if (typeof window === 'undefined') return DEFAULT_TAQDIR_SCALE;
+    return DataStore.getTaqdirScale();
+  }, []);
+
+  // Rating badge helper using Admin/Principal configured Taqdir scale (Task 5) and 'INC' label (Task 8)
   const getRating = (
     val: number | 'INC' | 'DRP' | null | undefined
   ): {
@@ -261,23 +290,7 @@ export default function StudentGradeView({
     cellBgClass: string;
     pillClass: string;
   } => {
-    if (val === 'DRP') {
-      return {
-        labelAr: 'منسحب (DRP)',
-        labelEn: 'Dropped (DRP)',
-        cellBgClass: 'bg-red-600 text-white font-black',
-        pillClass: 'bg-red-600 text-white font-black',
-      };
-    }
-    if (val === 'INC') {
-      return {
-        labelAr: 'غير مكتمل (INC)',
-        labelEn: 'Incomplete (INC)',
-        cellBgClass: 'bg-amber-200 text-amber-950 font-black',
-        pillClass: 'bg-amber-200 text-amber-950 font-black',
-      };
-    }
-    if (val === null || val === undefined || typeof val !== 'number' || isNaN(val)) {
+    if (val === null || val === undefined || (typeof val === 'number' && isNaN(val))) {
       return {
         labelAr: '',
         labelEn: 'Not Graded',
@@ -285,44 +298,7 @@ export default function StudentGradeView({
         pillClass: 'bg-slate-100 text-slate-400',
       };
     }
-    if (val >= 90) {
-      return {
-        labelAr: 'ممتاز',
-        labelEn: 'Excellent',
-        cellBgClass: 'bg-[#6bd953] text-slate-950 font-black',
-        pillClass: 'bg-[#6bd953] text-slate-950 font-black',
-      };
-    }
-    if (val >= 80) {
-      return {
-        labelAr: 'جيد جدا',
-        labelEn: 'Very Good',
-        cellBgClass: 'bg-[#f7d842] text-slate-950 font-black',
-        pillClass: 'bg-[#f7d842] text-slate-950 font-black',
-      };
-    }
-    if (val >= 70) {
-      return {
-        labelAr: 'جيد',
-        labelEn: 'Good',
-        cellBgClass: 'bg-[#fbbd4c] text-slate-950 font-black',
-        pillClass: 'bg-[#fbbd4c] text-slate-950 font-black',
-      };
-    }
-    if (val >= 60) {
-      return {
-        labelAr: 'مقبول',
-        labelEn: 'Acceptable',
-        cellBgClass: 'bg-[#fb8c44] text-slate-950 font-black',
-        pillClass: 'bg-[#fb8c44] text-slate-950 font-black',
-      };
-    }
-    return {
-      labelAr: 'راسب',
-      labelEn: 'Failed',
-      cellBgClass: 'bg-[#fc5454] text-slate-950 font-black',
-      pillClass: 'bg-[#fc5454] text-slate-950 font-black',
-    };
+    return getTaqdirRating(val, taqdirScale, 'INC');
   };
 
   // Grading Periods Metadata

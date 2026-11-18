@@ -137,6 +137,15 @@ export interface GradingCriteria {
   id: string;
   name: string;
   weight: number;
+  isLocked?: boolean; // e.g., Tabulation Score (50%) cannot be removed or resized
+}
+
+export interface TaqdirScale {
+  mumtazMin: number;       // e.g. 90 (90-100) -> ممتاز
+  jayyidJiddanMin: number; // e.g. 80 (80-89) -> جيد جدا
+  jayyidMin: number;       // e.g. 76 (76-79) -> جيد
+  maqboolMin: number;      // e.g. 75 (75)    -> مقبول
+  // below maqboolMin (<= 74) -> راسب
 }
 
 export interface StudentGradeItem {
@@ -291,6 +300,7 @@ export interface SystemSettings {
   scheduleNotice?: string; // Optional notice added by Principal/Admin at the top of the schedule
   subjectColors?: Record<string, string>; // Custom color mapping by subject name or ID
   scheduleClassOrder?: number[]; // Custom default grade column order set by dragging grade headers
+  taqdirScale?: TaqdirScale; // Configurable تقدير ratio set by Admin / Principal
 }
 
 // Backward-compatible types for legacy secondary routes

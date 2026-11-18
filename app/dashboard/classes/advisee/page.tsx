@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { DataStore } from '@/lib/store';
+import { DataStore, getTaqdirRating } from '@/lib/store';
 import { AuthService } from '@/lib/auth';
 import {
   UserSession,

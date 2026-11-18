@@ -7,6 +7,7 @@ import {
   SubjectTeacherItem,
   ClassScheduleItem,
   GradingCriteria,
+  TaqdirScale,
   StudentGradeItem,
   TeacherAttendanceItem,
   StudentAttendanceItem,
@@ -36,6 +37,87 @@ import {
   scheduleItems,
 } from './scheduleData';
 
+export const DEFAULT_TAQDIR_SCALE: TaqdirScale = {
+  mumtazMin: 90,
+  jayyidJiddanMin: 80,
+  jayyidMin: 76,
+  maqboolMin: 75,
+};
+
+export function getTaqdirRating(
+  val: number | 'INC' | 'DRP' | null | undefined,
+  scale: TaqdirScale = DEFAULT_TAQDIR_SCALE,
+  incLabel: string = 'INC'
+): {
+  labelAr: string;
+  labelEn: string;
+  cellBgClass: string;
+  pillClass: string;
+} {
+  if (val === 'DRP') {
+    return {
+      labelAr: 'منسحب (DRP)',
+      labelEn: 'Dropped (DRP)',
+      cellBgClass: 'bg-red-600 text-white font-black',
+      pillClass: 'bg-red-600 text-white font-black',
+    };
+  }
+  if (val === 'INC') {
+    return {
+      labelAr: incLabel,
+      labelEn: 'Incomplete (INC)',
+      cellBgClass: 'bg-amber-200 text-amber-950 font-black',
+      pillClass: 'bg-amber-200 text-amber-950 font-black',
+    };
+  }
+  if (val === null || val === undefined || typeof val !== 'number' || isNaN(val)) {
+    return {
+      labelAr: '—',
+      labelEn: 'Not Graded',
+      cellBgClass: 'bg-transparent text-slate-400',
+      pillClass: 'bg-slate-200 text-slate-500',
+    };
+  }
+  if (val >= scale.mumtazMin) {
+    return {
+      labelAr: 'ممتاز',
+      labelEn: 'Excellent',
+      cellBgClass: 'bg-[#6bd953] text-slate-950 font-black',
+      pillClass: 'bg-[#6bd953] text-slate-950 font-black',
+    };
+  }
+  if (val >= scale.jayyidJiddanMin) {
+    return {
+      labelAr: 'جيد جدا',
+      labelEn: 'Very Good',
+      cellBgClass: 'bg-[#f7d842] text-slate-950 font-black',
+      pillClass: 'bg-[#f7d842] text-slate-950 font-black',
+    };
+  }
+  if (val >= scale.jayyidMin) {
+    return {
+      labelAr: 'جيد',
+      labelEn: 'Good',
+      cellBgClass: 'bg-[#fbbd4c] text-slate-950 font-black',
+      pillClass: 'bg-[#fbbd4c] text-slate-950 font-black',
+    };
+  }
+  if (val >= scale.maqboolMin) {
+    return {
+      labelAr: 'مقبول',
+      labelEn: 'Acceptable',
+      cellBgClass: 'bg-[#fb8c44] text-slate-950 font-black',
+      pillClass: 'bg-[#fb8c44] text-slate-950 font-black',
+    };
+  }
+  return {
+    labelAr: 'راسب',
+    labelEn: 'Fail',
+    cellBgClass: 'bg-[#fc5454] text-slate-950 font-black',
+    pillClass: 'bg-[#fc5454] text-slate-950 font-black',
+  };
+}
+
 export const initialSettings: SystemSettings = {
   schoolNameEn: 'Jamiatu Monib Alkuzbary Al-Arabia',
   schoolNameAr: 'جامعة منيب الكزبري العربية',
@@ -55,6 +137,7 @@ export const initialSettings: SystemSettings = {
     '6th': { period: '6th', deadlineIso: '2027-03-31T23:59', instructions: 'الموعد النهائي لتسليم درجات الدور السادس والاختبارات النهائية', enforceLock: true },
   },
   libraryDriveFolderUrl: 'https://drive.google.com/drive/folders/1fCXKezhMzm93fm9S98keWyxLfG-N2NDf?usp=drive_link',
+  taqdirScale: DEFAULT_TAQDIR_SCALE,
 };
 
 // 1. Classes (populated from scheduleData.ts)
@@ -306,12 +389,12 @@ export const initialStudents: StudentItem[] = [
   },
 ];
 
-// 7. Default Grading Criteria
+// 7. Default Grading Criteria (50% locked Tabulation Score + 50% customizable criteria)
 export const initialCriteria: GradingCriteria[] = [
-  { id: 'crit-att', name: 'Attendance & Decorum (حضور وسلوك)', weight: 10 },
-  { id: 'crit-quiz', name: 'Quizzes & Exercises (اختبارات قصيرة)', weight: 20 },
-  { id: 'crit-mid', name: 'Mid-Dawr Examination (اختبار نصفي)', weight: 30 },
-  { id: 'crit-final', name: 'Final Dawr Exam (امتحان نهائي)', weight: 40 },
+  { id: 'crit-att', name: 'Attendance (الحضور)', weight: 10 },
+  { id: 'crit-quiz', name: 'Quiz (الاختبار القصير)', weight: 20 },
+  { id: 'crit-exam', name: 'Exam (الامتحان)', weight: 20 },
+  { id: 'crit-tabulation', name: 'Tabulation Score (درجة التبويب)', weight: 50, isLocked: true },
 ];
 
 // Helper to look up Class 1 SubjectID by Arabic name from scheduleSubjects
@@ -742,6 +825,13 @@ export const DataStore = {
   updateSettings(settings: Partial<SystemSettings>): void {
     const current = this.getSettings();
     setItem(KEYS.SETTINGS, { ...current, ...settings });
+  },
+  getTaqdirScale(): TaqdirScale {
+    const s = this.getSettings();
+    return s.taqdirScale || DEFAULT_TAQDIR_SCALE;
+  },
+  updateTaqdirScale(scale: TaqdirScale): void {
+    this.updateSettings({ taqdirScale: scale });
   },
   getActiveAcademicYear(): string {
     const s = this.getSettings();
@@ -1645,6 +1735,41 @@ export const DataStore = {
   deleteCriteria(id: string): void {
     const list = this.getCriteria().filter(c => c.id !== id);
     setItem(KEYS.CRITERIA, list);
+  },
+  getSubjectCriteria(classId: number, subjectId: number): GradingCriteria[] {
+    const key = `jmaa_subject_criteria_${classId}_${subjectId}`;
+    const stored = getItem<GradingCriteria[]>(key, []);
+    const base = stored.length > 0 ? stored : initialCriteria;
+    // Guarantee Tabulation Score (50%) is always present and locked
+    const hasTabulation = base.some(c => c.id === 'crit-tabulation' || c.isLocked);
+    if (!hasTabulation) {
+      return [
+        ...base,
+        { id: 'crit-tabulation', name: 'Tabulation Score (درجة التبويب)', weight: 50, isLocked: true },
+      ];
+    }
+    return base.map(c =>
+      c.id === 'crit-tabulation' || c.isLocked
+        ? { ...c, weight: 50, isLocked: true }
+        : c
+    );
+  },
+  saveSubjectCriteria(classId: number, subjectId: number, list: GradingCriteria[]): void {
+    const key = `jmaa_subject_criteria_${classId}_${subjectId}`;
+    const normalized = list.map(c =>
+      c.id === 'crit-tabulation' || c.isLocked
+        ? { ...c, weight: 50, isLocked: true }
+        : c
+    );
+    if (!normalized.some(c => c.id === 'crit-tabulation' || c.isLocked)) {
+      normalized.push({
+        id: 'crit-tabulation',
+        name: 'Tabulation Score (درجة التبويب)',
+        weight: 50,
+        isLocked: true,
+      });
+    }
+    setItem(key, normalized);
   },
 
   // 6-Period Grades

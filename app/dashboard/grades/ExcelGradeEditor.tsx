@@ -7,8 +7,10 @@ import {
   StudentItem,
   StudentGradeItem,
   GradingPeriod,
+  GradingCriteria,
 } from '@/lib/types';
-import { DataStore } from '@/lib/store';
+import { DataStore, getTaqdirRating, DEFAULT_TAQDIR_SCALE } from '@/lib/store';
+import { exportGradesToExcelRTL, exportCriteriaTemplateRTL } from '@/lib/gradeExcel';
 import {
   Save,
   Download,
@@ -30,6 +32,11 @@ import {
   Eye,
   EyeOff,
   AlertTriangle,
+  Sliders,
+  Plus,
+  Trash2,
+  FileSpreadsheet,
+  X,
 } from 'lucide-react';
 import { toHindiNumerals } from '@/lib/numerals';
 
@@ -79,6 +86,29 @@ export default function ExcelGradeEditor({
   // Requirement 12: In the teacher's view, DRP students are automatically hidden unless teacher clicks "View All"
   const [showAllStudentsWithDRP, setShowAllStudentsWithDRP] = useState(false);
 
+  // Task 3: Subject-specific grading criteria (50% Tabulation Score locked + customizable remaining 50%)
+  const [subjectCriteria, setSubjectCriteria] = useState<GradingCriteria[]>(() =>
+    DataStore.getSubjectCriteria(classItem.ClassID, subject.SubjectID)
+  );
+  const [criteriaScoresGrid, setCriteriaScoresGrid] = useState<Record<number, Record<string, string>>>({});
+  const [showCriteriaSetup, setShowCriteriaSetup] = useState(false);
+  const [newCritName, setNewCritName] = useState('');
+  const [newCritWeight, setNewCritWeight] = useState(10);
+
+  // Task 4: Excel-like drag up/down to fill
+  const [dragFill, setDragFill] = useState<{
+    colKey: string;
+    startRow: number;
+    currentRow: number;
+    value: string;
+  } | null>(null);
+
+  // Task 5: Taqdir ratio configured by Admin / Principal
+  const taqdirScale = useMemo(() => {
+    if (typeof window === 'undefined') return DEFAULT_TAQDIR_SCALE;
+    return DataStore.getTaqdirScale();
+  }, [allGrades]);
+
   // Nashat Subject & SSG Permission Checks
   const isNashatSubject = Boolean(
     subject.IsNashat ||
@@ -113,12 +143,11 @@ export default function ExcelGradeEditor({
     '6th': 'دور السادس',
   };
 
-  // Helper to check if a student is graded as DRP in the current view (Requirement 12)
-  const isStudentDRP = (studentId: number): boolean => {
+  // Helper to check if a student is SAVED as DRP in the database (Task 6: don't hide before submission!)
+  const isStudentSavedDRP = (studentId: number): boolean => {
     const row = gridValues[studentId] || {};
     if (viewMode === 'dawr') {
       const currentVal = (row[selectedPeriod] || '').trim().toUpperCase();
-      if (currentVal === 'DRP') return true;
       const saved = allGrades.find(
         g =>
           g.StudentID === studentId &&
@@ -126,21 +155,45 @@ export default function ExcelGradeEditor({
           g.ClassID === classItem.ClassID &&
           g.Period === selectedPeriod
       );
-      return saved?.FinalGrade === 'DRP' && currentVal === '';
+      // Only hide if it is already saved as DRP and hasn't been changed to something else
+      return saved?.FinalGrade === 'DRP' && (currentVal === '' || currentVal === 'DRP');
+    } else {
+      return activePeriods.some(p => {
+        const currentVal = (row[p] || '').trim().toUpperCase();
+        const saved = allGrades.find(
+          g =>
+            g.StudentID === studentId &&
+            g.SubjectID === subject.SubjectID &&
+            g.ClassID === classItem.ClassID &&
+            g.Period === p
+        );
+        return saved?.FinalGrade === 'DRP' && (currentVal === '' || currentVal === 'DRP');
+      });
+    }
+  };
+
+  // Helper to check if a student currently has DRP in the working grid (for red row highlighting)
+  const isStudentDRP = (studentId: number): boolean => {
+    const row = gridValues[studentId] || {};
+    if (viewMode === 'dawr') {
+      const currentVal = (row[selectedPeriod] || '').trim().toUpperCase();
+      if (currentVal === 'DRP') return true;
+      return isStudentSavedDRP(studentId);
     } else {
       return activePeriods.some(p => (row[p] || '').trim().toUpperCase() === 'DRP');
     }
   };
 
-  // Count of DRP students in this class/subject
+  // Count of saved DRP students in this class/subject
   const drpStudentsList = useMemo(() => {
-    return students.filter(s => isStudentDRP(s.StudentID));
+    return students.filter(s => isStudentSavedDRP(s.StudentID));
   }, [students, gridValues, allGrades, viewMode, selectedPeriod, activePeriods, subject.SubjectID, classItem.ClassID]);
 
-  // Visible students list: automatically hides DRP students unless "View All" is clicked (Requirement 12)
+  // Visible students list: automatically hides SAVED DRP students unless "View All" is clicked
+  // Unsubmitted DRP clicks remain visible until Save/Submit (Task 6)
   const visibleStudents = useMemo(() => {
     if (showAllStudentsWithDRP) return students;
-    return students.filter(s => !isStudentDRP(s.StudentID));
+    return students.filter(s => !isStudentSavedDRP(s.StudentID));
   }, [students, showAllStudentsWithDRP, gridValues, allGrades, viewMode, selectedPeriod, activePeriods]);
 
   // Lock state & ticker
@@ -324,12 +377,17 @@ export default function ExcelGradeEditor({
     setTimeout(() => setToastMsg(null), 4000);
   };
 
-  // Initialize working grid from stored grades
+  // Initialize working grid from stored grades & criteria scores
   useEffect(() => {
+    const loadedCriteria = DataStore.getSubjectCriteria(classItem.ClassID, subject.SubjectID);
+    setSubjectCriteria(loadedCriteria);
+
     const initial: Record<number, Record<string, string>> = {};
+    const initialCrit: Record<number, Record<string, string>> = {};
 
     students.forEach(std => {
       initial[std.StudentID] = {};
+      initialCrit[std.StudentID] = {};
       const allPeriods: GradingPeriod[] = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
       allPeriods.forEach(p => {
         const found = allGrades.find(
@@ -344,12 +402,93 @@ export default function ExcelGradeEditor({
         } else {
           initial[std.StudentID][p] = '';
         }
+
+        if (p === selectedPeriod && found?.CriteriaScores) {
+          loadedCriteria.forEach(c => {
+            const v = found.CriteriaScores[c.id];
+            if (v !== undefined && v !== null) {
+              initialCrit[std.StudentID][c.id] = String(v);
+            }
+          });
+        }
       });
     });
 
     setGridValues(initial);
+    setCriteriaScoresGrid(initialCrit);
     setHasUnsavedChanges(false);
-  }, [subject.SubjectID, classItem.ClassID, students, allGrades]);
+  }, [subject.SubjectID, classItem.ClassID, students, allGrades, selectedPeriod]);
+
+  // Task 4: Apply drag-fill on mouseup
+  useEffect(() => {
+    if (!dragFill) return;
+    const handleMouseUp = () => {
+      const { colKey, startRow, currentRow, value } = dragFill;
+      const minR = Math.min(startRow, currentRow);
+      const maxR = Math.max(startRow, currentRow);
+
+      if (minR !== maxR) {
+        if (colKey.startsWith('crit:')) {
+          const critId = colKey.slice(5);
+          setCriteriaScoresGrid(prev => {
+            const updatedCrit = { ...prev };
+            const updatedGridValues: Record<number, string> = {};
+
+            for (let r = minR; r <= maxR; r++) {
+              const std = visibleStudents[r];
+              if (!std) continue;
+              const stdCrit = { ...(updatedCrit[std.StudentID] || {}), [critId]: value };
+              updatedCrit[std.StudentID] = stdCrit;
+
+              // Recalculate sum for this student
+              let sum = 0;
+              let hasAny = false;
+              subjectCriteria.forEach(c => {
+                const n = parseFloat(stdCrit[c.id] || '');
+                if (!isNaN(n)) {
+                  sum += n;
+                  hasAny = true;
+                }
+              });
+              if (hasAny) {
+                updatedGridValues[std.StudentID] = String(Math.min(100, Math.round(sum * 10) / 10));
+              }
+            }
+
+            if (Object.keys(updatedGridValues).length > 0) {
+              setGridValues(gv => {
+                const next = { ...gv };
+                Object.entries(updatedGridValues).forEach(([sid, val]) => {
+                  const idNum = Number(sid);
+                  next[idNum] = { ...(next[idNum] || {}), [selectedPeriod]: val };
+                });
+                return next;
+              });
+            }
+
+            return updatedCrit;
+          });
+        } else {
+          // Period column (e.g. '1st', '2nd', etc.)
+          const periodKey = colKey as GradingPeriod;
+          setGridValues(prev => {
+            const next = { ...prev };
+            for (let r = minR; r <= maxR; r++) {
+              const std = visibleStudents[r];
+              if (!std) continue;
+              next[std.StudentID] = { ...(next[std.StudentID] || {}), [periodKey]: value };
+            }
+            return next;
+          });
+        }
+        setHasUnsavedChanges(true);
+      }
+      setDragFill(null);
+    };
+
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => window.removeEventListener('mouseup', handleMouseUp);
+  }, [dragFill, visibleStudents, subjectCriteria, selectedPeriod]);
 
   // Handle Ctrl+S / Cmd+S save shortcut
   useEffect(() => {
@@ -361,26 +500,79 @@ export default function ExcelGradeEditor({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gridValues, hasUnsavedChanges]);
+  }, [gridValues, hasUnsavedChanges, criteriaScoresGrid]);
 
-  // Rating badge helper matching the user's screenshot
+  // Rating badge helper using Admin/Principal configured Taqdir scale
   const getRating = (avg: number | null | undefined): { labelAr: string; pillClass: string } => {
-    if (avg === null || avg === undefined || isNaN(avg)) {
-      return { labelAr: '—', pillClass: 'bg-slate-200 text-slate-500' };
+    const r = getTaqdirRating(avg, taqdirScale, 'INC');
+    return { labelAr: r.labelAr, pillClass: r.pillClass };
+  };
+
+  // Task 3: Handle criteria score entry & automatically compute sum into FinalGrade
+  const handleCriteriaCellChange = (studentId: number, crit: GradingCriteria, rawVal: string) => {
+    const trimmed = rawVal.trim();
+    if (trimmed !== '') {
+      const num = parseFloat(trimmed);
+      if (isNaN(num) || num < 0 || num > crit.weight) return;
     }
-    if (avg >= 90) {
-      return { labelAr: 'ممتاز', pillClass: 'bg-[#6bd953] text-slate-950 font-black' };
-    }
-    if (avg >= 80) {
-      return { labelAr: 'جيد جدا', pillClass: 'bg-[#f7d842] text-slate-950 font-black' };
-    }
-    if (avg >= 70) {
-      return { labelAr: 'جيد', pillClass: 'bg-[#fbbd4c] text-slate-950 font-black' };
-    }
-    if (avg >= 60) {
-      return { labelAr: 'مقبول', pillClass: 'bg-[#fb8c44] text-slate-950 font-black' };
-    }
-    return { labelAr: 'راسب', pillClass: 'bg-[#fc5454] text-slate-950 font-black' };
+
+    setCriteriaScoresGrid(prev => {
+      const stdCrit = { ...(prev[studentId] || {}), [crit.id]: trimmed };
+      const next = { ...prev, [studentId]: stdCrit };
+
+      let sum = 0;
+      let hasAny = false;
+      subjectCriteria.forEach(c => {
+        const val = parseFloat(stdCrit[c.id] || '');
+        if (!isNaN(val)) {
+          sum += val;
+          hasAny = true;
+        }
+      });
+
+      setGridValues(gv => ({
+        ...gv,
+        [studentId]: {
+          ...(gv[studentId] || {}),
+          [selectedPeriod]: hasAny ? String(Math.min(100, Math.round(sum * 10) / 10)) : '',
+        },
+      }));
+      setHasUnsavedChanges(true);
+      return next;
+    });
+  };
+
+  const handleAddSubjectCriterion = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCritName.trim()) return;
+    const weight = Math.max(1, Math.min(50, Number(newCritWeight) || 10));
+    const updated: GradingCriteria[] = [
+      ...subjectCriteria.filter(c => !c.isLocked && c.id !== 'crit-tabulation'),
+      { id: `crit-${Date.now()}`, name: newCritName.trim(), weight },
+      ...subjectCriteria.filter(c => c.isLocked || c.id === 'crit-tabulation'),
+    ];
+    DataStore.saveSubjectCriteria(classItem.ClassID, subject.SubjectID, updated);
+    setSubjectCriteria(DataStore.getSubjectCriteria(classItem.ClassID, subject.SubjectID));
+    setNewCritName('');
+    setNewCritWeight(10);
+  };
+
+  const handleUpdateCriterionWeight = (critId: string, weight: number) => {
+    const updated = subjectCriteria.map(c =>
+      c.id === critId && !c.isLocked && c.id !== 'crit-tabulation'
+        ? { ...c, weight: Math.max(1, Math.min(50, weight || 0)) }
+        : c
+    );
+    DataStore.saveSubjectCriteria(classItem.ClassID, subject.SubjectID, updated);
+    setSubjectCriteria(DataStore.getSubjectCriteria(classItem.ClassID, subject.SubjectID));
+  };
+
+  const handleDeleteSubjectCriterion = (critId: string) => {
+    const target = subjectCriteria.find(c => c.id === critId);
+    if (!target || target.isLocked || target.id === 'crit-tabulation') return;
+    const updated = subjectCriteria.filter(c => c.id !== critId);
+    DataStore.saveSubjectCriteria(classItem.ClassID, subject.SubjectID, updated);
+    setSubjectCriteria(DataStore.getSubjectCriteria(classItem.ClassID, subject.SubjectID));
   };
 
   const handleCellChange = (studentId: number, period: GradingPeriod, rawVal: string) => {
@@ -516,47 +708,60 @@ export default function ExcelGradeEditor({
 
       targetPeriods.forEach(p => {
         const rawVal = (row[p] || '').trim().toUpperCase();
-        if (rawVal !== '') {
-          let finalG: number | 'INC' | 'DRP' = 0;
-          if (rawVal === 'INC') finalG = 'INC';
-          else if (rawVal === 'DRP') finalG = 'DRP';
-          else finalG = parseFloat(rawVal) || 0;
-
-          // Preserve existing criteria scores or auto-populate component breakdown for numeric grades
-          const existingGrade = allGrades.find(
-            g =>
-              g.StudentID === std.StudentID &&
-              g.SubjectID === subject.SubjectID &&
-              g.ClassID === classItem.ClassID &&
-              g.Period === p
-          );
-          const hasExistingCriteria =
-            existingGrade?.CriteriaScores && Object.keys(existingGrade.CriteriaScores).length > 0;
-          const criteriaScores =
-            typeof finalG === 'number'
-              ? hasExistingCriteria && existingGrade.FinalGrade === finalG
-                ? existingGrade.CriteriaScores
-                : {
-                    'crit-att': finalG,
-                    'crit-quiz': finalG,
-                    'crit-mid': finalG,
-                    'crit-final': finalG,
-                  }
-              : {};
-
-          gradesToSave.push({
-            id: `grd-${std.StudentID}-${subject.SubjectID}-${p}`,
-            StudentID: std.StudentID,
-            ClassID: classItem.ClassID,
-            SubjectID: subject.SubjectID,
-            TeacherID: teacherId || 2,
-            Period: p,
-            CriteriaScores: criteriaScores,
-            FinalGrade: finalG,
-            GradedAt: new Date().toISOString(),
-            IsLocked: false,
-          });
+        // Task 7: If left blank when submitted, automatically set as INC
+        let finalG: number | 'INC' | 'DRP' = 'INC';
+        if (rawVal === '' || rawVal === 'INC') {
+          finalG = 'INC';
+        } else if (rawVal === 'DRP') {
+          finalG = 'DRP';
+        } else {
+          finalG = parseFloat(rawVal) || 0;
         }
+
+        // Preserve or populate criteria scores
+        const existingGrade = allGrades.find(
+          g =>
+            g.StudentID === std.StudentID &&
+            g.SubjectID === subject.SubjectID &&
+            g.ClassID === classItem.ClassID &&
+            g.Period === p
+        );
+
+        let criteriaScores: Record<string, number> = {};
+        if (typeof finalG === 'number') {
+          const critRow = p === selectedPeriod ? criteriaScoresGrid[std.StudentID] : undefined;
+          const hasEnteredCrit =
+            critRow && Object.values(critRow).some(v => v !== undefined && v !== '');
+          if (hasEnteredCrit && critRow) {
+            subjectCriteria.forEach(c => {
+              const num = parseFloat(critRow[c.id] || '');
+              if (!isNaN(num)) criteriaScores[c.id] = num;
+            });
+          } else if (
+            existingGrade?.CriteriaScores &&
+            Object.keys(existingGrade.CriteriaScores).length > 0 &&
+            existingGrade.FinalGrade === finalG
+          ) {
+            criteriaScores = existingGrade.CriteriaScores;
+          } else {
+            subjectCriteria.forEach(c => {
+              criteriaScores[c.id] = Math.round(((finalG * c.weight) / 100) * 10) / 10;
+            });
+          }
+        }
+
+        gradesToSave.push({
+          id: `grd-${std.StudentID}-${subject.SubjectID}-${p}`,
+          StudentID: std.StudentID,
+          ClassID: classItem.ClassID,
+          SubjectID: subject.SubjectID,
+          TeacherID: teacherId || 2,
+          Period: p,
+          CriteriaScores: criteriaScores,
+          FinalGrade: finalG,
+          GradedAt: new Date().toISOString(),
+          IsLocked: false,
+        });
       });
     });
 
@@ -577,71 +782,48 @@ export default function ExcelGradeEditor({
     setTimeout(() => setToastMsg(null), 3500);
   };
 
-  // Export to Excel file
+  // Task 10: Export to RTL Excel matching Picture 5 (with school header, logo, metadata, and table)
   const handleExportExcel = async () => {
-    const XLSX = await import('xlsx');
-    const dataToExport = visibleStudents.map(s => {
-      const row = gridValues[s.StudentID] || {};
-      if (viewMode === 'dawr') {
-        const val = row[selectedPeriod];
-        const num = parseFloat(val);
-        const rating = !isNaN(num) ? getRating(num).labelAr : val === 'INC' ? 'INC' : val === 'DRP' ? 'DRP' : '—';
-        return {
-          'الرقم (ID)': s.RollNo,
-          'اسم الطالب': s.NameArabic || s.Name,
-          'المادة': subject.SubjectArabic || subject.SubjectClass,
-          'الفترة': dawrArabicNames[selectedPeriod],
-          'الدرجة': val || '—',
-          'التقدير': rating,
-        };
-      } else {
-        const rawList = activePeriods.map(p => (row[p] || '').trim().toUpperCase());
-        const hasINC = rawList.includes('INC');
-        const hasDRP = rawList.includes('DRP');
-        const validNums = rawList.map(v => parseFloat(v)).filter(n => !isNaN(n));
-        const sum =
-          !hasINC && !hasDRP && validNums.length > 0
-            ? Math.round(validNums.reduce((a, b) => a + b, 0) * 10) / 10
-            : '—';
-        const avg =
-          hasDRP
-            ? 'DRP'
-            : hasINC
-            ? 'INC'
-            : validNums.length > 0
-            ? Math.round((validNums.reduce((a, b) => a + b, 0) / validNums.length) * 10) / 10
-            : '—';
-        const rating = typeof avg === 'number' ? getRating(avg).labelAr : avg;
-
-        return {
-          'الرقم (ID)': s.RollNo,
-          'اسم الطالب': s.NameArabic || s.Name,
-          'المادة': subject.SubjectArabic || subject.SubjectClass,
-          'الفصل': selectedSemester === '1st' ? 'الفصل الأول' : 'الفصل الثاني',
-          'دور 1': row[activePeriods[0]] || '—',
-          'دور 2': row[activePeriods[1]] || '—',
-          'دور 3': row[activePeriods[2]] || '—',
-          'المجموع': sum,
-          'المعدل': avg,
-          'التقدير': rating,
-        };
-      }
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      `${subject.SubjectArabic || 'Grades'}`.substring(0, 30)
-    );
-    XLSX.writeFile(
-      workbook,
-      `${subject.SubjectClass}_${classItem.ClassName}_${viewMode === 'dawr' ? selectedPeriod : selectedSemester}.xlsx`
-    );
+    try {
+      await exportGradesToExcelRTL({
+        subject,
+        classItem,
+        students: visibleStudents,
+        gridValues,
+        viewMode,
+        selectedPeriod,
+        selectedSemester,
+        activePeriods,
+        academicYear: DataStore.getActiveAcademicYear(),
+        taqdirScale,
+      });
+    } catch {
+      setToastMsg({ type: 'error', text: 'تعذر تصدير ملف الإكسل.' });
+      setTimeout(() => setToastMsg(null), 3000);
+    }
   };
 
-  // Import from Excel file
+  // Task 11: Download Upload Template generated from Ustadh's criteria with SUM & Taqdir formulas and locked cells
+  const handleDownloadTemplate = async () => {
+    try {
+      await exportCriteriaTemplateRTL({
+        subject,
+        classItem,
+        students: visibleStudents,
+        criteriaList: subjectCriteria,
+        criteriaScoresGrid,
+        selectedPeriod,
+        selectedSemester,
+        academicYear: DataStore.getActiveAcademicYear(),
+        taqdirScale,
+      });
+    } catch {
+      setToastMsg({ type: 'error', text: 'تعذر تحميل قالب الإدخال.' });
+      setTimeout(() => setToastMsg(null), 3000);
+    }
+  };
+
+  // Import from Excel file (supports both the new RTL template with criteria columns & legacy format)
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -654,9 +836,30 @@ export default function ExcelGradeEditor({
         const wb = XLSX.read(bstr, { type: 'binary' });
         const wsName = wb.SheetNames[0];
         const ws = wb.Sheets[wsName];
-        const importedData: any[] = XLSX.utils.sheet_to_json(ws);
+
+        // Read as 2D array first to locate the table header row (since rows 1-6 are school header/metadata)
+        const rows2D: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        const headerRowIdx = rows2D.findIndex(r =>
+          r.some(cell => {
+            const s = String(cell || '').trim();
+            return (
+              s === 'الرقم (ID)' ||
+              s === 'الرقم' ||
+              s === 'Roll No' ||
+              s === 'RollNo' ||
+              s === 'IdNumb'
+            );
+          })
+        );
+
+        const importedData: any[] =
+          headerRowIdx >= 0
+            ? XLSX.utils.sheet_to_json(ws, { range: headerRowIdx, defval: '' })
+            : XLSX.utils.sheet_to_json(ws, { defval: '' });
 
         let matchCount = 0;
+        const importedCritUpdates: Record<number, Record<string, string>> = {};
+
         setGridValues(prev => {
           const updated = { ...prev };
           importedData.forEach(row => {
@@ -673,23 +876,67 @@ export default function ExcelGradeEditor({
               const matchedStudent = students.find(
                 s => s.RollNo.toLowerCase() === String(roll).trim().toLowerCase()
               );
-              if (matchedStudent && grade !== undefined) {
+              if (matchedStudent) {
                 if (!updated[matchedStudent.StudentID]) {
                   updated[matchedStudent.StudentID] = {};
                 }
-                if (viewMode === 'dawr') {
-                  updated[matchedStudent.StudentID][selectedPeriod] = String(grade).toUpperCase();
-                } else {
-                  if (row['دور 1'] !== undefined) updated[matchedStudent.StudentID][activePeriods[0]] = String(row['دور 1']);
-                  if (row['دور 2'] !== undefined) updated[matchedStudent.StudentID][activePeriods[1]] = String(row['دور 2']);
-                  if (row['دور 3'] !== undefined) updated[matchedStudent.StudentID][activePeriods[2]] = String(row['دور 3']);
+
+                // Check if template criteria columns are present
+                let critSum = 0;
+                let hasCritCols = false;
+                const critMap: Record<string, string> = {};
+                subjectCriteria.forEach(c => {
+                  const headerWithWeight = `${c.name} (${c.weight}%)`;
+                  const rawC = row[headerWithWeight] !== undefined ? row[headerWithWeight] : row[c.name];
+                  if (rawC !== undefined && rawC !== '') {
+                    const numC = parseFloat(String(rawC));
+                    if (!isNaN(numC)) {
+                      const clamped = Math.max(0, Math.min(c.weight, numC));
+                      critMap[c.id] = String(clamped);
+                      critSum += clamped;
+                      hasCritCols = true;
+                    }
+                  }
+                });
+
+                if (hasCritCols) {
+                  importedCritUpdates[matchedStudent.StudentID] = critMap;
                 }
-                matchCount++;
+
+                if (viewMode === 'dawr') {
+                  if (hasCritCols) {
+                    updated[matchedStudent.StudentID][selectedPeriod] = String(
+                      Math.min(100, Math.round(critSum * 10) / 10)
+                    );
+                    matchCount++;
+                  } else if (grade !== undefined && grade !== '') {
+                    updated[matchedStudent.StudentID][selectedPeriod] = String(grade).toUpperCase();
+                    matchCount++;
+                  }
+                } else {
+                  if (row['دور ١'] !== undefined && row['دور ١'] !== '')
+                    updated[matchedStudent.StudentID][activePeriods[0]] = String(row['دور ١']);
+                  if (row['دور 1'] !== undefined && row['دور 1'] !== '')
+                    updated[matchedStudent.StudentID][activePeriods[0]] = String(row['دور 1']);
+                  if (row['دور ٢'] !== undefined && row['دور ٢'] !== '')
+                    updated[matchedStudent.StudentID][activePeriods[1]] = String(row['دور ٢']);
+                  if (row['دور 2'] !== undefined && row['دور 2'] !== '')
+                    updated[matchedStudent.StudentID][activePeriods[1]] = String(row['دور 2']);
+                  if (row['دور ٣'] !== undefined && row['دور ٣'] !== '')
+                    updated[matchedStudent.StudentID][activePeriods[2]] = String(row['دور ٣']);
+                  if (row['دور 3'] !== undefined && row['دور 3'] !== '')
+                    updated[matchedStudent.StudentID][activePeriods[2]] = String(row['دور 3']);
+                  matchCount++;
+                }
               }
             }
           });
           return updated;
         });
+
+        if (Object.keys(importedCritUpdates).length > 0) {
+          setCriteriaScoresGrid(prev => ({ ...prev, ...importedCritUpdates }));
+        }
 
         setHasUnsavedChanges(true);
         setToastMsg({
@@ -703,6 +950,7 @@ export default function ExcelGradeEditor({
       }
     };
     reader.readAsBinaryString(file);
+    e.target.value = '';
   };
 
   // Class Summary Calculations (Excludes ungraded, INC, and DRP per Requirement 4)
@@ -980,7 +1228,34 @@ export default function ExcelGradeEditor({
               )}
             </button>
 
-            {/* Export to Excel */}
+            {/* Criteria Setup Button (Task 3) */}
+            {canUserEditThisSubject && viewMode === 'dawr' && (
+              <button
+                type="button"
+                onClick={() => setShowCriteriaSetup(!showCriteriaSetup)}
+                className={`px-3 py-1.5 font-bold text-xs rounded-full shadow-xs cursor-pointer flex items-center gap-1 transition-colors border ${
+                  showCriteriaSetup
+                    ? 'bg-emerald-800 text-white border-emerald-900'
+                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-emerald-300'
+                }`}
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                <span>معايير الدرجات (Criteria)</span>
+              </button>
+            )}
+
+            {/* Download Upload Template (Task 11) */}
+            <button
+              type="button"
+              onClick={handleDownloadTemplate}
+              className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 text-white font-bold text-xs rounded-full shadow-xs cursor-pointer flex items-center gap-1 transition-colors"
+              title="تحميل قالب الإدخال مع المعادلات التلقائية وحماية الأسماء"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-200" />
+              <span>قالب الإدخال (Template)</span>
+            </button>
+
+            {/* Export to Excel (Task 10) */}
             <button
               type="button"
               onClick={handleExportExcel}
@@ -1237,6 +1512,145 @@ export default function ExcelGradeEditor({
           </div>
         )}
 
+        {/* Task 3: Criteria Setup Panel (50% Tabulation Score locked + customizable remaining 50%) */}
+        {showCriteriaSetup && viewMode === 'dawr' && (
+          <div className="bg-white rounded-2xl border-2 border-emerald-300 p-4 shadow-sm space-y-3" dir="rtl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+              <div>
+                <h4 className="text-sm font-black text-emerald-950 flex items-center gap-1.5">
+                  <Sliders className="w-4 h-4 text-emerald-700" />
+                  <span>إعداد معايير الدرجات للمادة (Subject Criteria & Ratio)</span>
+                </h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  درجة التبويب (Tabulation Score) ثابتة بنسبة ٥٠٪ ولا يمكن تعديلها أو حذفها. يمكنك إضافة أو حذف وتعديل نسب المعايير الأخرى (مثل الحضور، الاختبار القصير، الامتحان).
+                </p>
+              </div>
+              {(() => {
+                const totalW = subjectCriteria.reduce((acc, c) => acc + c.weight, 0);
+                return (
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-black font-mono shrink-0 ${
+                      totalW === 100
+                        ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                        : 'bg-amber-100 text-amber-900 border border-amber-300'
+                    }`}
+                  >
+                    المجموع الكلي: {totalW}% / 100%
+                  </span>
+                );
+              })()}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+              {subjectCriteria.map(c => {
+                const locked = Boolean(c.isLocked || c.id === 'crit-tabulation');
+                return (
+                  <div
+                    key={c.id}
+                    className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 ${
+                      locked
+                        ? 'bg-amber-50/80 border-amber-300'
+                        : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-slate-900 truncate flex items-center gap-1">
+                        {locked && <Lock className="w-3 h-3 text-amber-700 shrink-0" />}
+                        <span className="truncate">{c.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1 mt-1">
+                        <input
+                          type="number"
+                          min={1}
+                          max={50}
+                          disabled={locked}
+                          value={c.weight}
+                          onChange={e => handleUpdateCriterionWeight(c.id, Number(e.target.value))}
+                          className={`w-16 px-2 py-0.5 rounded border text-xs font-mono font-bold text-center ${
+                            locked
+                              ? 'bg-amber-100/70 border-amber-300 text-amber-900 cursor-not-allowed'
+                              : 'bg-white border-slate-300 text-slate-900'
+                          }`}
+                        />
+                        <span className="text-xs font-bold text-slate-500">%</span>
+                      </div>
+                    </div>
+                    {!locked && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSubjectCriterion(c.id)}
+                        className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg cursor-pointer"
+                        title="حذف المعيار"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <form onSubmit={handleAddSubjectCriterion} className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+              <input
+                type="text"
+                required
+                value={newCritName}
+                onChange={e => setNewCritName(e.target.value)}
+                placeholder="اسم المعيار الجديد (مثلاً: Participation / المشاركة)"
+                className="flex-1 min-w-[200px] px-3 py-1.5 border border-slate-300 rounded-xl text-xs bg-white"
+              />
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  required
+                  value={newCritWeight}
+                  onChange={e => setNewCritWeight(Number(e.target.value))}
+                  className="w-20 px-2.5 py-1.5 border border-slate-300 rounded-xl text-xs font-mono font-bold text-center bg-white"
+                />
+                <span className="text-xs font-bold text-slate-600">%</span>
+              </div>
+              <button
+                type="submit"
+                className="px-4 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold cursor-pointer inline-flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>إضافة معيار</span>
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* Task 5: Legend for تقدير Ratio (configured by Admin / Principal) */}
+        <div
+          className="bg-white/90 rounded-xl px-4 py-2 border border-[#d6c9a5] flex flex-wrap items-center justify-between gap-2 text-xs"
+          dir="rtl"
+        >
+          <span className="font-black text-slate-800 flex items-center gap-1.5">
+            <Award className="w-4 h-4 text-amber-600" />
+            <span>سلم التقدير المعتمد (تقدير Legend):</span>
+          </span>
+          <div className="flex flex-wrap items-center gap-2 font-bold">
+            <span className="px-2.5 py-0.5 rounded bg-[#6bd953] text-slate-950 font-mono">
+              ممتاز: {taqdirScale.mumtazMin}–100
+            </span>
+            <span className="px-2.5 py-0.5 rounded bg-[#f7d842] text-slate-950 font-mono">
+              جيد جدا: {taqdirScale.jayyidJiddanMin}–{taqdirScale.mumtazMin - 1}
+            </span>
+            <span className="px-2.5 py-0.5 rounded bg-[#fbbd4c] text-slate-950 font-mono">
+              جيد: {taqdirScale.jayyidMin}–{taqdirScale.jayyidJiddanMin - 1}
+            </span>
+            <span className="px-2.5 py-0.5 rounded bg-[#fb8c44] text-slate-950 font-mono">
+              مقبول: {taqdirScale.maqboolMin}
+              {taqdirScale.jayyidMin - 1 > taqdirScale.maqboolMin ? `–${taqdirScale.jayyidMin - 1}` : ''}
+            </span>
+            <span className="px-2.5 py-0.5 rounded bg-[#fc5454] text-slate-950 font-mono">
+              راسب: 0–{taqdirScale.maqboolMin - 1}
+            </span>
+          </div>
+        </div>
+
         {/* Excel Instructions Banner */}
         <div
           className="bg-amber-100/70 text-amber-950 text-xs px-4 py-2 rounded-xl border border-amber-300/80 flex items-center justify-between"
@@ -1264,8 +1678,14 @@ export default function ExcelGradeEditor({
               {viewMode === 'dawr' ? (
                 <tr>
                   <th className="py-3 px-3 text-center w-24">IdNumb</th>
-                  <th className="py-3 px-4 text-right">أسماء الطلاب</th>
-                  <th className="py-3 px-4 text-center w-36">الدرجة</th>
+                  <th className="py-3 px-4 text-right min-w-[180px]">أسماء الطلاب</th>
+                  {subjectCriteria.map(c => (
+                    <th key={c.id} className="py-3 px-2 text-center min-w-[96px] text-xs">
+                      <div>{c.name}</div>
+                      <div className="text-[10px] font-mono opacity-80">({c.weight}%)</div>
+                    </th>
+                  ))}
+                  <th className="py-3 px-4 text-center w-32">الدرجة (المجموع)</th>
                   <th className="py-3 px-4 text-center w-32">تقدير</th>
                   <th className="py-3 px-3 text-center w-36">حالة / إجراء سريع</th>
                 </tr>
@@ -1288,7 +1708,7 @@ export default function ExcelGradeEditor({
               {visibleStudents.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={viewMode === 'dawr' ? 5 : 9}
+                    colSpan={viewMode === 'dawr' ? 5 + subjectCriteria.length : 9}
                     className="py-8 text-center text-slate-400 font-medium"
                   >
                     {students.length > 0 && !showAllStudentsWithDRP ? (
@@ -1328,6 +1748,11 @@ export default function ExcelGradeEditor({
                     return (
                       <tr
                         key={student.StudentID}
+                        onMouseEnter={() => {
+                          if (dragFill) {
+                            setDragFill(prev => (prev ? { ...prev, currentRow: rowIndex } : null));
+                          }
+                        }}
                         className={`transition-colors group ${
                           rowIsDRP
                             ? 'bg-red-100 hover:bg-red-200/80 text-red-950 border-y-2 border-red-400 font-black'
@@ -1360,27 +1785,97 @@ export default function ExcelGradeEditor({
                           )}
                         </td>
 
+                        {/* Criteria Score Cells (Task 3 & Task 4 Drag Fill) */}
+                        {subjectCriteria.map(crit => {
+                          const critVal = criteriaScoresGrid[student.StudentID]?.[crit.id] ?? '';
+                          const colKey = `crit:${crit.id}`;
+                          const isDragTarget =
+                            dragFill &&
+                            dragFill.colKey === colKey &&
+                            rowIndex >= Math.min(dragFill.startRow, dragFill.currentRow) &&
+                            rowIndex <= Math.max(dragFill.startRow, dragFill.currentRow);
+
+                          return (
+                            <td key={crit.id} className="py-2 px-1.5 text-center">
+                              <div className="relative inline-block">
+                                <input
+                                  type="text"
+                                  disabled={!canUserEditThisSubject || activeLockInfo.isLocked}
+                                  value={critVal}
+                                  placeholder={`0-${crit.weight}`}
+                                  onChange={e => handleCriteriaCellChange(student.StudentID, crit, e.target.value)}
+                                  className={`w-16 py-1.5 px-1 text-center font-mono font-bold text-xs rounded-lg border transition-all ${
+                                    isDragTarget
+                                      ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-400'
+                                      : !canUserEditThisSubject || activeLockInfo.isLocked
+                                      ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
+                                      : 'bg-white border-slate-300 text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
+                                  }`}
+                                />
+                                {canUserEditThisSubject && !activeLockInfo.isLocked && (
+                                  <span
+                                    onMouseDown={e => {
+                                      e.preventDefault();
+                                      setDragFill({
+                                        colKey,
+                                        startRow: rowIndex,
+                                        currentRow: rowIndex,
+                                        value: critVal,
+                                      });
+                                    }}
+                                    title="اسحب لأعلى أو لأسفل للتعبئة التلقائية (Drag to Fill)"
+                                    className="w-2.5 h-2.5 bg-emerald-700 border border-white rounded-xs absolute -bottom-1 -left-1 cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                  />
+                                )}
+                              </div>
+                            </td>
+                          );
+                        })}
+
+                        {/* Final Grade / Sum Cell with Excel Drag Fill Handle */}
                         <td className="py-2 px-3 text-center">
-                          <input
-                            ref={el => {
-                              inputRefs.current[refKey] = el;
-                            }}
-                            type="text"
-                            disabled={!canUserEditThisSubject || activeLockInfo.isLocked}
-                            value={rawVal}
-                            placeholder="—"
-                            onChange={e => handleCellChange(student.StudentID, selectedPeriod, e.target.value)}
-                            onKeyDown={e => handleKeyDown(e, rowIndex, 0, [selectedPeriod])}
-                            className={`w-28 py-1.5 px-2 text-center font-mono font-bold text-sm rounded-lg border transition-all ${
-                              !canUserEditThisSubject || activeLockInfo.isLocked
-                                ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
-                                : rowIsDRP
-                                ? 'bg-red-600 text-white border-red-800'
-                                : rawVal !== ''
-                                ? 'bg-white border-slate-300 text-slate-950 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
-                                : 'bg-slate-50 border-dashed border-slate-300 text-slate-400 focus:bg-white focus:border-emerald-600'
-                            }`}
-                          />
+                          <div className="relative inline-block">
+                            <input
+                              ref={el => {
+                                inputRefs.current[refKey] = el;
+                              }}
+                              type="text"
+                              disabled={!canUserEditThisSubject || activeLockInfo.isLocked}
+                              value={rawVal}
+                              placeholder="—"
+                              onChange={e => handleCellChange(student.StudentID, selectedPeriod, e.target.value)}
+                              onKeyDown={e => handleKeyDown(e, rowIndex, 0, [selectedPeriod])}
+                              className={`w-24 py-1.5 px-2 text-center font-mono font-bold text-sm rounded-lg border transition-all ${
+                                dragFill &&
+                                dragFill.colKey === selectedPeriod &&
+                                rowIndex >= Math.min(dragFill.startRow, dragFill.currentRow) &&
+                                rowIndex <= Math.max(dragFill.startRow, dragFill.currentRow)
+                                  ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-400'
+                                  : !canUserEditThisSubject || activeLockInfo.isLocked
+                                  ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
+                                  : rowIsDRP
+                                  ? 'bg-red-600 text-white border-red-800'
+                                  : rawVal !== ''
+                                  ? 'bg-white border-slate-300 text-slate-950 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
+                                  : 'bg-slate-50 border-dashed border-slate-300 text-slate-400 focus:bg-white focus:border-emerald-600'
+                              }`}
+                            />
+                            {canUserEditThisSubject && !activeLockInfo.isLocked && (
+                              <span
+                                onMouseDown={e => {
+                                  e.preventDefault();
+                                  setDragFill({
+                                    colKey: selectedPeriod,
+                                    startRow: rowIndex,
+                                    currentRow: rowIndex,
+                                    value: rawVal,
+                                  });
+                                }}
+                                title="اسحب لأعلى أو لأسفل للتعبئة التلقائية (Drag to Fill)"
+                                className="w-2.5 h-2.5 bg-emerald-700 border border-white rounded-xs absolute -bottom-1 -left-1 cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                              />
+                            )}
+                          </div>
                         </td>
 
                         <td className="py-2.5 px-4 text-center">
@@ -1462,12 +1957,17 @@ export default function ExcelGradeEditor({
                     const rating = hasDRP
                       ? { labelAr: 'منسحب (DRP)', pillClass: 'bg-red-600 text-white font-black' }
                       : hasINC
-                      ? { labelAr: 'غير مكتمل (INC)', pillClass: 'bg-amber-200 text-amber-900 font-black' }
+                      ? { labelAr: 'INC', pillClass: 'bg-amber-200 text-amber-900 font-black' }
                       : getRating(avg);
 
                     return (
                       <tr
                         key={student.StudentID}
+                        onMouseEnter={() => {
+                          if (dragFill) {
+                            setDragFill(prev => (prev ? { ...prev, currentRow: rowIndex } : null));
+                          }
+                        }}
                         className={`transition-colors group ${
                           rowIsDRP
                             ? 'bg-red-100 hover:bg-red-200/80 text-red-950 border-y-2 border-red-400 font-black'
@@ -1503,26 +2003,50 @@ export default function ExcelGradeEditor({
                         {[0, 1, 2].map(colIdx => {
                           const p = activePeriods[colIdx];
                           const valStr = (row[p] || '').trim().toUpperCase();
+                          const isDragTarget =
+                            dragFill &&
+                            dragFill.colKey === p &&
+                            rowIndex >= Math.min(dragFill.startRow, dragFill.currentRow) &&
+                            rowIndex <= Math.max(dragFill.startRow, dragFill.currentRow);
                           return (
                             <td key={p} className="py-2 px-2 text-center">
-                              <input
-                                ref={el => {
-                                  inputRefs.current[`${rowIndex}-${colIdx}`] = el;
-                                }}
-                                type="text"
-                                disabled={!canUserEditThisSubject || activeLockInfo.isLocked}
-                                value={valStr}
-                                placeholder="—"
-                                onChange={e => handleCellChange(student.StudentID, p, e.target.value)}
-                                onKeyDown={e => handleKeyDown(e, rowIndex, colIdx, activePeriods)}
-                                className={`w-20 py-1.5 px-1 text-center font-mono font-bold text-sm rounded-lg border transition-all ${
-                                  !canUserEditThisSubject || activeLockInfo.isLocked
-                                    ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
-                                    : valStr === 'DRP'
-                                    ? 'bg-red-600 text-white border-red-800'
-                                    : 'border-slate-300 bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
-                                }`}
-                              />
+                              <div className="relative inline-block">
+                                <input
+                                  ref={el => {
+                                    inputRefs.current[`${rowIndex}-${colIdx}`] = el;
+                                  }}
+                                  type="text"
+                                  disabled={!canUserEditThisSubject || activeLockInfo.isLocked}
+                                  value={valStr}
+                                  placeholder="—"
+                                  onChange={e => handleCellChange(student.StudentID, p, e.target.value)}
+                                  onKeyDown={e => handleKeyDown(e, rowIndex, colIdx, activePeriods)}
+                                  className={`w-20 py-1.5 px-1 text-center font-mono font-bold text-sm rounded-lg border transition-all ${
+                                    isDragTarget
+                                      ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-400'
+                                      : !canUserEditThisSubject || activeLockInfo.isLocked
+                                      ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
+                                      : valStr === 'DRP'
+                                      ? 'bg-red-600 text-white border-red-800'
+                                      : 'border-slate-300 bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
+                                  }`}
+                                />
+                                {canUserEditThisSubject && !activeLockInfo.isLocked && (
+                                  <span
+                                    onMouseDown={e => {
+                                      e.preventDefault();
+                                      setDragFill({
+                                        colKey: p,
+                                        startRow: rowIndex,
+                                        currentRow: rowIndex,
+                                        value: valStr,
+                                      });
+                                    }}
+                                    title="اسحب لأعلى أو لأسفل للتعبئة التلقائية (Drag to Fill)"
+                                    className="w-2.5 h-2.5 bg-emerald-700 border border-white rounded-xs absolute -bottom-1 -left-1 cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                  />
+                                )}
+                              </div>
                             </td>
                           );
                         })}
@@ -1576,6 +2100,11 @@ export default function ExcelGradeEditor({
                 </td>
                 {viewMode === 'dawr' ? (
                   <>
+                    {subjectCriteria.map(c => (
+                      <td key={c.id} className="py-3 px-2 text-center font-mono text-xs text-slate-500">
+                        {c.weight}%
+                      </td>
+                    ))}
                     <td className="py-3 px-4 text-center font-mono font-black text-sm text-emerald-950">
                       {classSummary.average > 0 ? `${classSummary.average}%` : '—'}
                     </td>
