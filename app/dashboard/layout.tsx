@@ -4,11 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { AuthService } from '@/lib/auth';
+import { DataStore } from '@/lib/store';
 import { UserSession, UserRole } from '@/lib/types';
 import { toHindiNumerals } from '@/lib/numerals';
 import AcademicTermSwitcher from './components/AcademicTermSwitcher';
 import BreadcrumbNav from './components/BreadcrumbNav';
 import SchoolArabicTitle from '@/app/components/SchoolArabicTitle';
+import WebsiteBrandTitle from '@/app/components/WebsiteBrandTitle';
 import {
   LayoutDashboard,
   Building2,
@@ -48,12 +50,22 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const user = AuthService.getSession();
-    if (!user) {
-      router.replace('/login');
-    } else {
-      setCurrentUser(user);
-    }
+    let active = true;
+    const init = async () => {
+      const user = AuthService.getSession();
+      if (!user) {
+        router.replace('/login');
+        return;
+      }
+      await DataStore.syncFromServer();
+      if (active) {
+        setCurrentUser(user);
+      }
+    };
+    init();
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   const handleLogout = () => {
@@ -252,11 +264,14 @@ export default function DashboardLayout({
                 <Menu className="w-5 h-5" />
               </button>
 
-              {/* JMAA-MoritAko Brand Tag matching Mockup */}
+              {/* Website Brand Logo (2nd picture: MoritAko) with Cache & Weak-Internet Fallback to "JMAA-MoritAko" */}
               <div className="flex items-center gap-2 shrink-0">
-                <span className="bg-[#dfd4b8] border border-[#ccbf99] text-[#126b38] px-3.5 py-1 rounded-full font-black text-xs sm:text-sm tracking-wide shadow-2xs font-mono">
-                  JMAA-MoritAko
-                </span>
+                <WebsiteBrandTitle
+                  variant="navbar"
+                  imgClassName="h-9 sm:h-10 w-auto object-contain select-none drop-shadow-2xs"
+                  fallbackClassName="bg-[#dfd4b8] border border-[#ccbf99] text-[#126b38] px-3.5 py-1 rounded-full font-black text-xs sm:text-sm tracking-wide shadow-2xs font-mono"
+                  fallbackText="JMAA-MoritAko"
+                />
                 <SchoolArabicTitle
                   variant="dark"
                   imgClassName="hidden xl:inline-block h-7 w-auto object-contain"
@@ -317,8 +332,8 @@ export default function DashboardLayout({
             <div className="lg:hidden mb-3">
               <AcademicTermSwitcher canAddYear={role === 'admin' || role === 'mudir'} />
             </div>
-            {/* Breadcrumb Navigation with Academic Year & Semester */}
-            <BreadcrumbNav />
+            {/* Breadcrumb Navigation with Academic Year & Semester (Shown on Principal & Admin only) */}
+            {(role === 'admin' || role === 'mudir') && <BreadcrumbNav canAddYear={true} />}
             {children}
           </div>
         </main>
@@ -430,9 +445,9 @@ export default function DashboardLayout({
           })}
         </nav>
 
-        {/* Sidebar Footer: Ryan Madid Copyright */}
+        {/* Sidebar Footer: © Ryan Madid */}
         <div className="p-3 border-t border-emerald-800/60 bg-emerald-950/40 text-center text-xs text-amber-200/90 font-sans font-bold shrink-0">
-          <span>&copy; Ryan Madid Copyright</span>
+          <span>&copy; Ryan Madid</span>
         </div>
       </aside>
     </div>

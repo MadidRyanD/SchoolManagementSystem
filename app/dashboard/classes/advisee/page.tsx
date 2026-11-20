@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { DataStore, getTaqdirRating } from '@/lib/store';
 import { AuthService } from '@/lib/auth';
+import { useAcademicTerm } from '@/lib/useAcademicTerm';
 import {
   UserSession,
   ClassItem,
@@ -62,8 +63,14 @@ export default function TeacherAdviseeGradesPage() {
   const [grades, setGrades] = useState<StudentGradeItem[]>([]);
   const [subjectTeachers, setSubjectTeachers] = useState<SubjectTeacherItem[]>([]);
 
+  const { academicYear, semester } = useAcademicTerm();
+  const activeSemesterPeriods: GradingPeriod[] =
+    semester === '2nd' ? ['4th', '5th', '6th'] : ['1st', '2nd', '3rd'];
+
   // UI state
-  const [selectedGrading, setSelectedGrading] = useState<GradingPeriod>('1st');
+  const [selectedGrading, setSelectedGrading] = useState<GradingPeriod>(
+    semester === '2nd' ? '4th' : '1st'
+  );
   const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<'class' | 'student'>('class');
   const [selectedFilterClassId, setSelectedFilterClassId] = useState<number | null>(null);
@@ -73,12 +80,22 @@ export default function TeacherAdviseeGradesPage() {
     setCurrentUser(session);
 
     setClasses(DataStore.getClasses());
-    setSubjects(DataStore.getSubjects());
-    setStudents(DataStore.getStudents());
+    setSubjects(
+      DataStore.getSubjects().filter(
+        s => !s.Semester || s.Semester === 'Both' || s.Semester === semester
+      )
+    );
+    setStudents(DataStore.getStudentsForTerm(academicYear, semester));
     setTeachers(DataStore.getTeachers());
-    setGrades(DataStore.getGrades());
+    setGrades(DataStore.getGradesForTerm(academicYear));
     setSubjectTeachers(DataStore.getSubjectTeachers());
-  }, []);
+
+    setSelectedGrading(prev => {
+      if (semester === '1st' && ['4th', '5th', '6th'].includes(prev)) return '1st';
+      if (semester === '2nd' && ['1st', '2nd', '3rd'].includes(prev)) return '4th';
+      return prev;
+    });
+  }, [academicYear, semester]);
 
   const isAdminOrMudir = currentUser?.role === 'admin' || currentUser?.role === 'mudir';
   const [selectedInspectedClassId, setSelectedInspectedClassId] = useState<number>(0);
@@ -142,10 +159,10 @@ export default function TeacherAdviseeGradesPage() {
     return g && typeof g.FinalGrade === 'number' ? g.FinalGrade : null;
   };
 
-  // Per-student summary across all gradings
+  // Per-student summary across the active semester's gradings
   const getStudentSummary = (student: StudentItem) => {
     const classSubjects = getSubjectsForClass(student.ClassID);
-    const periodScores = GRADING_LIST.map(period => {
+    const periodScores = activeSemesterPeriods.map(period => {
       const scores = classSubjects
         .map(s => getGradeScore(student.StudentID, s.SubjectID, period))
         .filter(s => s !== null) as number[];

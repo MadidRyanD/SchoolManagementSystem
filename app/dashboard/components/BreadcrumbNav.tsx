@@ -1,10 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, ChevronRight, Calendar, Layers } from 'lucide-react';
+import { Home, ChevronRight, Calendar, Layers, Plus, Check, X } from 'lucide-react';
 import { useAcademicTerm } from '@/lib/useAcademicTerm';
+import { AuthService } from '@/lib/auth';
+import { UserRole } from '@/lib/types';
 
 const ROUTE_LABELS: Record<string, { en: string; ar: string }> = {
   dashboard: { en: 'Dashboard', ar: 'لوحة التحكم' },
@@ -30,16 +32,46 @@ const ROUTE_LABELS: Record<string, { en: string; ar: string }> = {
   profile: { en: 'My Profile', ar: 'الملف الشخصي' },
 };
 
-export default function BreadcrumbNav() {
+interface BreadcrumbNavProps {
+  canAddYear?: boolean;
+}
+
+export default function BreadcrumbNav({ canAddYear = false }: BreadcrumbNavProps) {
   const pathname = usePathname();
-  const { academicYear, semester, availableYears, setAcademicYear, setSemester } = useAcademicTerm();
+  const { academicYear, semester, availableYears, setAcademicYear, setSemester, addAcademicYear } =
+    useAcademicTerm();
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [isAddingYear, setIsAddingYear] = useState(false);
+  const [newYearInput, setNewYearInput] = useState('');
+
+  useEffect(() => {
+    const session = AuthService.getSession();
+    setUserRole(session?.role || null);
+  }, []);
+
+  // Task 8: Crumbs will show on the Principal (mudir) and Admin only
+  if (userRole !== 'admin' && userRole !== 'mudir') {
+    return null;
+  }
+
+  // Task 4: Students, teachers, and SSG officers cannot add a school year
+  const isAllowedToAddYear = Boolean(canAddYear) && (userRole === 'admin' || userRole === 'mudir');
+
+  const handleAddYear = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAllowedToAddYear) return;
+    const trimmed = newYearInput.trim();
+    if (!trimmed) return;
+    addAcademicYear(trimmed);
+    setNewYearInput('');
+    setIsAddingYear(false);
+  };
 
   const segments = pathname.split('/').filter(Boolean);
   // Remove leading 'dashboard' since Home points to /dashboard
   const subSegments = segments[0] === 'dashboard' ? segments.slice(1) : segments;
 
   const semesterLabelEn = semester === '1st' ? '1st Semester' : '2nd Semester';
-  const semesterLabelAr = semester === '1st' ? 'الفصل الأول' : 'الفصل الثاني';
 
   return (
     <nav
@@ -65,43 +97,100 @@ export default function BreadcrumbNav() {
 
         {/* Active Academic Year in Breadcrumb */}
         <li>
-          <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 font-extrabold">
-            <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-            <select
-              aria-label="Breadcrumb Academic Year"
-              value={academicYear}
-              onChange={(e) => setAcademicYear(e.target.value)}
-              className="bg-transparent font-extrabold text-emerald-900 focus:outline-none cursor-pointer"
-            >
-              {availableYears.map((yr) => (
-                <option key={yr} value={yr}>
-                  {yr}
-                </option>
-              ))}
-            </select>
-          </div>
+          {isAddingYear && isAllowedToAddYear ? (
+            <form onSubmit={handleAddYear} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl bg-emerald-50 border border-emerald-300">
+              <input
+                type="text"
+                value={newYearInput}
+                onChange={(e) => setNewYearInput(e.target.value)}
+                placeholder="SY 2027-2028"
+                autoFocus
+                className="w-24 px-1.5 py-0.5 text-xs font-bold border border-emerald-400 rounded-md bg-white text-slate-900 focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="p-0.5 rounded bg-emerald-700 text-white hover:bg-emerald-800 cursor-pointer"
+                title="Add Academic Year"
+              >
+                <Check className="w-3 h-3" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingYear(false);
+                  setNewYearInput('');
+                }}
+                className="p-0.5 rounded bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer"
+                title="Cancel"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </form>
+          ) : (
+            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 font-extrabold">
+              <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+              <select
+                aria-label="Breadcrumb Academic Year"
+                value={academicYear}
+                onChange={(e) => setAcademicYear(e.target.value)}
+                className="bg-transparent font-extrabold text-emerald-900 focus:outline-none cursor-pointer"
+              >
+                {availableYears.map((yr) => (
+                  <option key={yr} value={yr}>
+                    {yr}
+                  </option>
+                ))}
+              </select>
+              {isAllowedToAddYear && (
+                <button
+                  type="button"
+                  onClick={() => setIsAddingYear(true)}
+                  className="ml-0.5 p-0.5 rounded bg-emerald-200/70 hover:bg-emerald-300 text-emerald-900 transition-colors cursor-pointer"
+                  title="Add New Academic Year"
+                >
+                  <Plus className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          )}
         </li>
 
         <li aria-hidden="true" className="text-slate-400">
           <ChevronRight className="w-3.5 h-3.5" />
         </li>
 
-        {/* Active Semester in Breadcrumb (click to toggle) */}
+        {/* Direct 1st Semester & 2nd Semester Buttons in Breadcrumb (Task 3) */}
         <li>
-          <button
-            type="button"
-            onClick={() => setSemester(semester === '1st' ? '2nd' : '1st')}
-            title="Click to switch Semester"
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border font-extrabold transition-colors cursor-pointer ${
-              semester === '1st'
-                ? 'bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100'
-                : 'bg-sky-50 border-sky-300 text-sky-900 hover:bg-sky-100'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>{semesterLabelEn}</span>
-            <span className="hidden md:inline font-serif opacity-80">({semesterLabelAr})</span>
-          </button>
+          <div className="inline-flex items-center gap-1 bg-[#f8f5ec] p-0.5 rounded-xl border border-[#dfd4b8]">
+            <button
+              type="button"
+              onClick={() => setSemester('1st')}
+              title="Show 1st Semester data (Dawrs 1-3, grades, scores, schedules)"
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-extrabold transition-all cursor-pointer ${
+                semester === '1st'
+                  ? 'bg-[#126b38] text-white shadow-2xs'
+                  : 'text-slate-700 hover:bg-[#dfd4b8]/60 hover:text-slate-900'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>1st Semester</span>
+              <span className="hidden md:inline font-serif opacity-90">(الفصل الأول)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSemester('2nd')}
+              title="Show 2nd Semester data (Dawrs 4-6, grades, scores, schedules)"
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-extrabold transition-all cursor-pointer ${
+                semester === '2nd'
+                  ? 'bg-[#9f7a28] text-white shadow-2xs'
+                  : 'text-slate-700 hover:bg-[#dfd4b8]/60 hover:text-slate-900'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>2nd Semester</span>
+              <span className="hidden md:inline font-serif opacity-90">(الفصل الثاني)</span>
+            </button>
+          </div>
         </li>
 
         {/* Current Page Segments */}

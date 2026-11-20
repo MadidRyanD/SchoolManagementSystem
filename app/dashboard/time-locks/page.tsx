@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { DataStore } from '@/lib/store';
 import { AuthService } from '@/lib/auth';
+import { useAcademicTerm } from '@/lib/useAcademicTerm';
 import {
   UserSession,
   GradingPeriod,
@@ -49,6 +50,7 @@ const formatLocalDateTimeInput = (date: Date): string => {
 };
 
 export default function TimeLocksPage() {
+  const { academicYear, semester } = useAcademicTerm();
   const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -96,12 +98,12 @@ export default function TimeLocksPage() {
     setCurrentUser(session);
     if (session && (session.role === 'mudir' || session.role === 'admin')) {
       loadAllData();
-      const currentActive = DataStore.getActiveGradingPeriod();
-      setSelectedDawrTab(currentActive);
-      setSubjectFilterPeriod(currentActive);
+      const targetDawr: GradingPeriod = semester === '2nd' ? '4th' : '1st';
+      setSelectedDawrTab(targetDawr);
+      setSubjectFilterPeriod(targetDawr);
     }
     setLoaded(true);
-  }, []);
+  }, [academicYear, semester]);
 
   const showToast = (type: 'success' | 'error', text: string) => {
     setSettingsMsg({ type, text });

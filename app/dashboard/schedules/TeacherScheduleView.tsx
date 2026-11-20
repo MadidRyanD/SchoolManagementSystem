@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   ClassScheduleItem,
@@ -9,6 +9,7 @@ import {
   TeacherItem,
   SubjectTeacherItem,
 } from '@/lib/types';
+import { useAcademicTerm } from '@/lib/useAcademicTerm';
 import { toHindiNumerals, formatTimeHindi } from '@/lib/numerals';
 import { buildScheduleTimeSlots } from '@/lib/scheduleData';
 import {
@@ -41,8 +42,15 @@ export default function TeacherScheduleView({
   classes,
   subjectTeachers = [],
 }: TeacherScheduleViewProps) {
-  const [selectedSemester, setSelectedSemester] = useState<'1st' | '2nd'>('1st');
+  const { academicYear, semester: globalSemester, setSemester: setGlobalSemester } = useAcademicTerm();
+  const [selectedSemester, setSelectedSemester] = useState<'1st' | '2nd'>(
+    globalSemester === '2nd' ? '2nd' : '1st'
+  );
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+  useEffect(() => {
+    setSelectedSemester(globalSemester === '2nd' ? '2nd' : '1st');
+  }, [globalSemester]);
 
   // Department mode: 5-days (Sun-Thu) or 2-days (Fri-Sat)
   const [deptMode, setDeptMode] = useState<'5-days' | '2-days'>('2-days');
@@ -66,8 +74,14 @@ export default function TeacherScheduleView({
 
   const activeDays = deptMode === '2-days' ? twoDaysList : fiveDaysList;
 
-  // Schedules for this teacher
-  const teacherSchedules = schedules.filter(s => s.TeacherID === teacher.TeacherID);
+  // Schedules for this teacher filtered by active semester
+  const teacherSchedules = schedules.filter(s => {
+    if (s.TeacherID !== teacher.TeacherID) return false;
+    if (s.Semester && s.Semester !== 'Both' && s.Semester !== selectedSemester) return false;
+    const sub = subjects.find(subItem => subItem.SubjectID === s.SubjectID);
+    if (sub?.Semester && sub.Semester !== 'Both' && sub.Semester !== selectedSemester) return false;
+    return true;
+  });
 
   const timeSlots = buildScheduleTimeSlots(teacherSchedules);
 
@@ -216,26 +230,28 @@ export default function TeacherScheduleView({
                   type="button"
                   onClick={() => {
                     setSelectedSemester('1st');
+                    setGlobalSemester('1st');
                     setShowFilterDropdown(false);
                   }}
                   className={`w-full text-right px-3.5 py-2 hover:bg-emerald-50 flex items-center justify-between ${
                     selectedSemester === '1st' ? 'font-bold text-emerald-800 bg-emerald-50/60' : ''
                   }`}
                 >
-                  <span>الفصل الأول ({toHindiNumerals(2025)} - 1st Sem)</span>
+                  <span>الفصل الأول ({academicYear} - 1st Sem)</span>
                   {selectedSemester === '1st' && <Check className="w-4 h-4 text-emerald-700" />}
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setSelectedSemester('2nd');
+                    setGlobalSemester('2nd');
                     setShowFilterDropdown(false);
                   }}
                   className={`w-full text-right px-3.5 py-2 hover:bg-emerald-50 flex items-center justify-between ${
                     selectedSemester === '2nd' ? 'font-bold text-emerald-800 bg-emerald-50/60' : ''
                   }`}
                 >
-                  <span>الفصل الثاني ({toHindiNumerals(2025)} - 2nd Sem)</span>
+                  <span>الفصل الثاني ({academicYear} - 2nd Sem)</span>
                   {selectedSemester === '2nd' && <Check className="w-4 h-4 text-emerald-700" />}
                 </button>
               </div>

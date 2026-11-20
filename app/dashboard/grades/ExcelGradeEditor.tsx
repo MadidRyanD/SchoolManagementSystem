@@ -10,6 +10,7 @@ import {
   GradingCriteria,
 } from '@/lib/types';
 import { DataStore, getTaqdirRating, DEFAULT_TAQDIR_SCALE } from '@/lib/store';
+import { useAcademicTerm } from '@/lib/useAcademicTerm';
 import { exportGradesToExcelRTL, exportCriteriaTemplateRTL } from '@/lib/gradeExcel';
 import {
   Save,
@@ -71,10 +72,29 @@ export default function ExcelGradeEditor({
   isSSG = false,
   onSaveSuccess,
 }: ExcelGradeEditorProps) {
+  const { semester: globalSemester, setSemester: setGlobalSemester } = useAcademicTerm();
   const hasLockControl = canManageLocks ?? isMudir;
   const [viewMode, setViewMode] = useState<EditorViewMode>('dawr');
-  const [selectedPeriod, setSelectedPeriod] = useState<GradingPeriod>('1st');
-  const [selectedSemester, setSelectedSemester] = useState<'1st' | '2nd'>('1st');
+  const [selectedPeriod, setSelectedPeriod] = useState<GradingPeriod>(
+    globalSemester === '2nd' ? '4th' : '1st'
+  );
+  const [selectedSemester, setSelectedSemester] = useState<'1st' | '2nd'>(
+    globalSemester === '2nd' ? '2nd' : '1st'
+  );
+
+  // Sync with global semester switcher / crumbs (Task 3)
+  useEffect(() => {
+    setSelectedSemester(globalSemester);
+    setSelectedPeriod(prev => {
+      if (globalSemester === '1st' && ['4th', '5th', '6th'].includes(prev)) {
+        return '1st';
+      }
+      if (globalSemester === '2nd' && ['1st', '2nd', '3rd'].includes(prev)) {
+        return '4th';
+      }
+      return prev;
+    });
+  }, [globalSemester]);
 
   // Working grid state: StudentID -> Period -> value (number | 'INC' | 'DRP' | '')
   const [gridValues, setGridValues] = useState<Record<number, Record<string, string>>>({});
@@ -1140,17 +1160,28 @@ export default function ExcelGradeEditor({
               onChange={e => setSelectedPeriod(e.target.value as GradingPeriod)}
               className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs font-bold text-amber-300 focus:outline-none cursor-pointer"
             >
-              <option value="1st">دور الأول (1ˢᵗ Dawr)</option>
-              <option value="2nd">دور الثاني (2ⁿᵈ Dawr)</option>
-              <option value="3rd">دور الثالث (3ʳᵈ Dawr)</option>
-              <option value="4th">دور الرابع (4ᵗʰ Dawr)</option>
-              <option value="5th">دور الخامس (5ᵗʰ Dawr)</option>
-              <option value="6th">دور السادس (6ᵗʰ Dawr)</option>
+              {selectedSemester === '1st' ? (
+                <>
+                  <option value="1st">دور الأول (1ˢᵗ Dawr - 1st Sem)</option>
+                  <option value="2nd">دور الثاني (2ⁿᵈ Dawr - 1st Sem)</option>
+                  <option value="3rd">دور الثالث (3ʳᵈ Dawr - 1st Sem)</option>
+                </>
+              ) : (
+                <>
+                  <option value="4th">دور الرابع (4ᵗʰ Dawr - 2nd Sem)</option>
+                  <option value="5th">دور الخامس (5ᵗʰ Dawr - 2nd Sem)</option>
+                  <option value="6th">دور السادس (6ᵗʰ Dawr - 2nd Sem)</option>
+                </>
+              )}
             </select>
           ) : (
             <select
               value={selectedSemester}
-              onChange={e => setSelectedSemester(e.target.value as '1st' | '2nd')}
+              onChange={e => {
+                const nextSem = e.target.value as '1st' | '2nd';
+                setSelectedSemester(nextSem);
+                setGlobalSemester(nextSem);
+              }}
               className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs font-bold text-amber-300 focus:outline-none cursor-pointer"
             >
               <option value="1st">الفصل الأول (دور 1، 2، 3)</option>

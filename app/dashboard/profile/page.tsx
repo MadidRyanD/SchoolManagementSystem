@@ -1,37 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { DataStore } from '@/lib/store';
 import { AuthService } from '@/lib/auth';
-import { UserSession, TeacherItem, StudentItem } from '@/lib/types';
+import { UserSession } from '@/lib/types';
 import { toHindiNumerals } from '@/lib/numerals';
-import StudentGradeView from '../grades/StudentGradeView';
 import {
   User,
   CheckCircle,
   Camera,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  Globe,
-  Award,
-  BookOpen,
   FileBadge,
-  Clock,
-  ShieldCheck,
   AlertCircle,
-  Save,
   Lock,
-  Unlock,
-  Hourglass,
-  Sparkles,
-  Sliders,
-  CalendarCheck,
-  ListOrdered,
-  AlertTriangle,
 } from 'lucide-react';
+
+const MAX_STUDENT_PROFILE_EDITS = 2;
 
 export default function ProfilePage() {
   const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
@@ -53,8 +36,11 @@ export default function ProfilePage() {
   const [remarks, setRemarks] = useState('');
   const [profilePic, setProfilePic] = useState('');
 
+  // Student personal information edit counter (max 2 edits allowed)
+  const [studentEditCount, setStudentEditCount] = useState<number>(0);
+
   const [msg, setMsg] = useState<string | null>(null);
-  const [profileTab, setProfileTab] = useState<'profile' | 'grades'>('profile');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const session = AuthService.getSession();
@@ -80,8 +66,12 @@ export default function ProfilePage() {
         setRemarks(tch.Remarks || 'Senior Faculty Member');
         setProfilePic(tch.ProfilePic || '');
       }
-    } else if (session.role === 'student') {
-      const std = DataStore.getStudents().find(s => s.StudentID === session.linkedId) || DataStore.getStudents()[0];
+    } else if (session.role === 'student' || session.role === 'ssg') {
+      const allStudents = DataStore.getStudents();
+      const std =
+        allStudents.find(s => s.StudentID === session.linkedId) ||
+        (session.role === 'ssg' ? allStudents.find(s => s.IsSSG) : undefined) ||
+        allStudents[0];
       if (std) {
         setNameEn(std.Name || '');
         setNameAr(std.NameArabic || '');
@@ -98,6 +88,7 @@ export default function ProfilePage() {
         setAdmissionDate(std.AdmissionDate || '2024-09-01');
         setRemarks(std.Remarks || 'Active Learner');
         setProfilePic(std.ProfilePic || '');
+        setStudentEditCount(std.ProfileEditCount || 0);
       }
     } else {
       setNameEn(session.name);
@@ -110,9 +101,15 @@ export default function ProfilePage() {
     }
   }, []);
 
+  const isStudentRole = currentUser?.role === 'student' || currentUser?.role === 'ssg';
+  const isStudentEditLocked = isStudentRole && studentEditCount >= MAX_STUDENT_PROFILE_EDITS;
+  const remainingStudentEdits = Math.max(0, MAX_STUDENT_PROFILE_EDITS - studentEditCount);
+
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
+    setErrorMsg(null);
+    setMsg(null);
 
     if (currentUser.role === 'teacher' || currentUser.role === 'mudir') {
       const tch = DataStore.getTeachers().find(t => t.TeacherID === currentUser.linkedId);
@@ -133,6 +130,59 @@ export default function ProfilePage() {
           Remarks: remarks,
         });
       }
+    } else if (currentUser.role === 'student' || currentUser.role === 'ssg') {
+      const allStudents = DataStore.getStudents();
+      const std =
+        allStudents.find(s => s.StudentID === currentUser.linkedId) ||
+        (currentUser.role === 'ssg' ? allStudents.find(s => s.IsSSG) : undefined) ||
+        allStudents[0];
+
+      const currentCount = std?.ProfileEditCount ?? studentEditCount;
+      if (currentCount >= MAX_STUDENT_PROFILE_EDITS) {
+        setStudentEditCount(currentCount);
+        setErrorMsg(
+          'Edit limit reached: Personal information for students can only be edited twice (2/2 used). Please contact the Admin or Principal for further changes.'
+        );
+        return;
+      }
+
+      const nextCount = currentCount + 1;
+      if (std) {
+        DataStore.saveStudent({
+          ...std,
+          Name: nameEn,
+          NameArabic: nameAr,
+          Gender: gender,
+          Tribe: tribe,
+          Nationality: nationality,
+          BirthDate: birthDate,
+          BirthPlace: birthPlace,
+          Address: address,
+          MobileNumber: mobile,
+          Email: email,
+          ProfilePic: profilePic,
+          Remarks: remarks,
+          ProfileEditCount: nextCount,
+        });
+      }
+      setStudentEditCount(nextCount);
+
+      AuthService.setSession({
+        ...currentUser,
+        name: nameEn,
+        nameArabic: nameAr,
+        email,
+        profilePic,
+      });
+
+      const left = Math.max(0, MAX_STUDENT_PROFILE_EDITS - nextCount);
+      setMsg(
+        left > 0
+          ? `Personal profile updated! You have ${left} of ${MAX_STUDENT_PROFILE_EDITS} personal information edit remaining.`
+          : `Personal profile updated (${nextCount}/${MAX_STUDENT_PROFILE_EDITS})! You have used all 2 allowed edits and your profile is now locked.`
+      );
+      setTimeout(() => setMsg(null), 5000);
+      return;
     }
 
     // Update active session
@@ -154,162 +204,43 @@ export default function ProfilePage() {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
             <User className="w-6 h-6 text-emerald-800" />
-            <span>Personal & Academic Profile</span>
+            <span>Personal &amp; Academic Profile</span>
           </h1>
           <p className="text-sm text-slate-500">
             Manage your official identity credentials, Arabic typography, and profile summary.
           </p>
         </div>
 
-        {(currentUser?.role === 'teacher' || currentUser?.role === 'ssg' || currentUser?.role === 'student') && (
-          <div className="inline-flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 self-start">
-            <button
-              type="button"
-              onClick={() => setProfileTab('profile')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
-                profileTab === 'profile'
-                  ? 'bg-emerald-800 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-              }`}
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>Profile (الملف الشخصي)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setProfileTab('grades')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
-                profileTab === 'grades'
-                  ? 'bg-emerald-800 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>
-                {currentUser.role === 'teacher'
-                  ? 'Grades (رصد الدرجات)'
-                  : currentUser.role === 'ssg'
-                  ? 'Grades (الدرجات والنشاط)'
-                  : 'Grades (الدرجات الأكاديمية)'}
-              </span>
-            </button>
+        {/* Student 2-Edit Limit Badge */}
+        {isStudentRole && (
+          <div
+            className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-extrabold self-start ${
+              isStudentEditLocked
+                ? 'bg-red-50 border-red-200 text-red-800'
+                : 'bg-amber-50 border-amber-300 text-amber-900'
+            }`}
+          >
+            <Lock className="w-3.5 h-3.5 shrink-0" />
+            <span>
+              {isStudentEditLocked
+                ? `Edit Limit Reached (${studentEditCount}/${MAX_STUDENT_PROFILE_EDITS} Edits Used)`
+                : `Edits Allowed: ${remainingStudentEdits} of ${MAX_STUDENT_PROFILE_EDITS} Remaining (${toHindiNumerals(remainingStudentEdits)}/${toHindiNumerals(MAX_STUDENT_PROFILE_EDITS)})`}
+            </span>
           </div>
         )}
       </div>
 
-      {profileTab === 'grades' && (currentUser?.role === 'teacher' || currentUser?.role === 'ssg' || currentUser?.role === 'student') ? (
-        <div className="space-y-6">
-          {currentUser.role === 'teacher' && (() => {
-            const allSubs = DataStore.getSubjects();
-            const allCls = DataStore.getClasses();
-            const allMappings = DataStore.getSubjectTeachers().filter(st => st.TeacherID === currentUser.linkedId);
-            const assigned = allMappings
-              .map(m => ({
-                subject: allSubs.find(s => s.SubjectID === m.SubjectID && s.ClassID === m.ClassID),
-                classItem: allCls.find(c => c.ClassID === m.ClassID),
-              }))
-              .filter((x): x is { subject: NonNullable<typeof x.subject>; classItem: NonNullable<typeof x.classItem> } => Boolean(x.subject && x.classItem));
-
-            return (
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                  <div>
-                    <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                      <BookOpen className="w-5 h-5 text-emerald-700" />
-                      <span>My Assigned Subjects & Grade Entry (المواد المسندة ورصد الدرجات)</span>
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Open the Grades portal to enter criteria scores, download/upload RTL Excel templates, and submit Dawr grades.
-                    </p>
-                  </div>
-                  <Link
-                    href="/dashboard/grades"
-                    className="px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs inline-flex items-center gap-2 self-start"
-                  >
-                    <BookOpen className="w-4 h-4" />
-                    <span>Open Gradebook (فتح سجل الدرجات)</span>
-                  </Link>
-                </div>
-
-                {assigned.length === 0 ? (
-                  <p className="text-sm text-slate-500 py-4 text-center">No subjects assigned yet.</p>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {assigned.map(({ subject, classItem }) => (
-                      <Link
-                        key={`${classItem.ClassID}-${subject.SubjectID}`}
-                        href="/dashboard/grades"
-                        className="p-4 rounded-xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/40 transition-all flex items-center justify-between gap-3"
-                      >
-                        <div>
-                          <div className="font-bold text-slate-900 text-sm">
-                            {subject.SubjectArabic || subject.SubjectClass}
-                          </div>
-                          <div className="text-xs text-slate-500 mt-0.5">
-                            {classItem.ClassName} &bull; {classItem.Department}
-                          </div>
-                        </div>
-                        <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-[11px] font-bold">
-                          Enter Grades
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {(currentUser.role === 'ssg' || currentUser.role === 'student') && (() => {
-            const allStds = DataStore.getStudents();
-            const myStd =
-              allStds.find(s => s.StudentID === currentUser.linkedId) ||
-              (currentUser.role === 'ssg' ? allStds.find(s => s.IsSSG || s.RollNo === 'SSG101') : undefined) ||
-              allStds[0];
-            return (
-              <div className="space-y-4">
-                {currentUser.role === 'ssg' && (
-                  <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-sm font-black text-rose-950 flex items-center gap-2">
-                        <Award className="w-4 h-4 text-rose-700" />
-                        <span>SSG Officer Nashat Gradebook (رصد درجات النشاط)</span>
-                      </h3>
-                      <p className="text-xs text-rose-800 mt-0.5">
-                        Manage and submit النشاط (Nashat) scores for all classes.
-                      </p>
-                    </div>
-                    <Link
-                      href="/dashboard/grades"
-                      className="px-4 py-2 bg-rose-700 hover:bg-rose-600 text-white rounded-xl text-xs font-bold shadow-xs inline-flex items-center gap-2 self-start"
-                    >
-                      <Award className="w-4 h-4" />
-                      <span>Open Nashat Grades</span>
-                    </Link>
-                  </div>
-                )}
-                {myStd && (
-                  <StudentGradeView
-                    student={myStd}
-                    classes={DataStore.getClasses()}
-                    subjects={DataStore.getSubjects()}
-                    teachers={DataStore.getTeachers()}
-                    subjectTeachers={DataStore.getSubjectTeachers()}
-                    grades={DataStore.getGrades()}
-                    allStudents={allStds}
-                  />
-                )}
-              </div>
-            );
-          })()}
-        </div>
-      ) : (
-      <>
-
       {msg && (
         <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-sm flex items-center gap-2">
-          <CheckCircle className="w-5 h-5 text-emerald-600" />
+          <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
           <span>{msg}</span>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-sm flex items-center gap-2">
+          <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+          <span>{errorMsg}</span>
         </div>
       )}
 
@@ -324,16 +255,18 @@ export default function ProfilePage() {
                 <User className="w-12 h-12 text-slate-400" />
               )}
             </div>
-            <label className="absolute bottom-1 right-1 p-2 bg-emerald-800 text-white rounded-xl shadow cursor-pointer hover:bg-emerald-700">
-              <Camera className="w-4 h-4" />
-              <input
-                type="text"
-                value={profilePic}
-                onChange={(e) => setProfilePic(e.target.value)}
-                placeholder="Paste Image URL"
-                className="hidden"
-              />
-            </label>
+            {!isStudentEditLocked && (
+              <label className="absolute bottom-1 right-1 p-2 bg-emerald-800 text-white rounded-xl shadow cursor-pointer hover:bg-emerald-700">
+                <Camera className="w-4 h-4" />
+                <input
+                  type="text"
+                  value={profilePic}
+                  onChange={(e) => setProfilePic(e.target.value)}
+                  placeholder="Paste Image URL"
+                  className="hidden"
+                />
+              </label>
+            )}
           </div>
 
           <div>
@@ -362,9 +295,28 @@ export default function ProfilePage() {
 
         {/* Profile Editing Form */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-          <h2 className="text-base font-extrabold text-slate-900 mb-4 pb-2 border-b border-slate-100">
-            Update Personal & Contact Information
-          </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-2 border-b border-slate-100">
+            <h2 className="text-base font-extrabold text-slate-900">
+              Update Personal &amp; Contact Information
+            </h2>
+            {isStudentRole && (
+              <span className="text-xs font-bold text-slate-500">
+                Edits Used: {studentEditCount} / {MAX_STUDENT_PROFILE_EDITS}
+              </span>
+            )}
+          </div>
+
+          {isStudentEditLocked && (
+            <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-900 flex items-start gap-2.5">
+              <Lock className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-extrabold">Personal Information Locked (Maximum 2 Edits Reached)</p>
+                <p className="mt-0.5">
+                  Personal information for students can only be edited twice ({MAX_STUDENT_PROFILE_EDITS}/{MAX_STUDENT_PROFILE_EDITS} used). Please contact the Principal or System Administrator if you need any further corrections.
+                </p>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSaveProfile} className="space-y-4">
             {/* Required Personal Info */}
@@ -376,9 +328,10 @@ export default function ProfilePage() {
                 <input
                   type="text"
                   required
+                  disabled={isStudentEditLocked}
                   value={nameEn}
                   onChange={(e) => setNameEn(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -390,9 +343,10 @@ export default function ProfilePage() {
                   type="text"
                   required
                   dir="rtl"
+                  disabled={isStudentEditLocked}
                   value={nameAr}
                   onChange={(e) => setNameAr(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white font-serif text-right"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white font-serif text-right disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -401,9 +355,10 @@ export default function ProfilePage() {
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Gender *</label>
                 <select
+                  disabled={isStudentEditLocked}
                   value={gender}
                   onChange={(e) => setGender(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 >
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
@@ -415,10 +370,11 @@ export default function ProfilePage() {
                 <input
                   type="text"
                   required
+                  disabled={isStudentEditLocked}
                   value={tribe}
                   onChange={(e) => setTribe(e.target.value)}
                   placeholder="e.g. Bani Hashim"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -427,9 +383,10 @@ export default function ProfilePage() {
                 <input
                   type="text"
                   required
+                  disabled={isStudentEditLocked}
                   value={nationality}
                   onChange={(e) => setNationality(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -440,9 +397,10 @@ export default function ProfilePage() {
                 <input
                   type="date"
                   required
+                  disabled={isStudentEditLocked}
                   value={birthDate}
                   onChange={(e) => setBirthDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -451,10 +409,11 @@ export default function ProfilePage() {
                 <input
                   type="text"
                   required
+                  disabled={isStudentEditLocked}
                   value={birthPlace}
                   onChange={(e) => setBirthPlace(e.target.value)}
                   placeholder="e.g. Riyadh, Damascus, Cairo"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -462,25 +421,27 @@ export default function ProfilePage() {
             {/* Optional / Contact Info */}
             <div className="pt-2 border-t border-slate-100">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
-                Contact Details & Address (Optional)
+                Contact Details &amp; Address (Optional)
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
                   <input
                     type="email"
+                    disabled={isStudentEditLocked}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Contact</label>
                   <input
                     type="tel"
+                    disabled={isStudentEditLocked}
                     value={mobile}
                     onChange={(e) => setMobile(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -489,9 +450,10 @@ export default function ProfilePage() {
                 <label className="block text-xs font-bold text-slate-700 mb-1">Residential Address</label>
                 <input
                   type="text"
+                  disabled={isStudentEditLocked}
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -501,53 +463,30 @@ export default function ProfilePage() {
               <label className="block text-xs font-bold text-slate-700 mb-1">Profile Photo URL</label>
               <input
                 type="url"
+                disabled={isStudentEditLocked}
                 value={profilePic}
                 onChange={(e) => setProfilePic(e.target.value)}
                 placeholder="https://images.unsplash.com/..."
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
               />
             </div>
 
-            <div className="pt-3">
+            <div className="pt-3 flex items-center gap-3">
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer"
+                disabled={isStudentEditLocked}
+                className="px-6 py-2.5 bg-emerald-800 hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer transition-colors"
               >
-                Save Profile Updates
+                {isStudentEditLocked
+                  ? 'Editing Locked (2/2 Edits Used)'
+                  : isStudentRole
+                  ? `Save Profile Updates (${remainingStudentEdits} Edit${remainingStudentEdits === 1 ? '' : 's'} Left)`
+                  : 'Save Profile Updates'}
               </button>
             </div>
           </form>
         </div>
       </div>
-
-      {/* ========================================================================= */}
-      {/* STUDENT PROFILE ACADEMIC GRADES & DAWR CARDS                              */}
-      {/* ========================================================================= */}
-      {currentUser?.role === 'student' && (() => {
-        const allStds = DataStore.getStudents();
-        const myStd =
-          allStds.find(s => s.StudentID === currentUser.linkedId) || allStds[0];
-        if (!myStd) return null;
-        return (
-          <div className="pt-4 border-t border-[#dfd4b8] space-y-4">
-            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-[#126b38]" />
-              <span>My Academic Grades (الدرجات الأكاديمية للطالب)</span>
-            </h2>
-            <StudentGradeView
-              student={myStd}
-              classes={DataStore.getClasses()}
-              subjects={DataStore.getSubjects()}
-              teachers={DataStore.getTeachers()}
-              subjectTeachers={DataStore.getSubjectTeachers()}
-              grades={DataStore.getGrades()}
-              allStudents={allStds}
-            />
-          </div>
-        );
-      })()}
-      </>
-      )}
     </div>
   );
 }

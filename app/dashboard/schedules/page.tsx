@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { DataStore } from '@/lib/store';
 import { AuthService } from '@/lib/auth';
+import { useAcademicTerm } from '@/lib/useAcademicTerm';
 import {
   ClassScheduleItem,
   ClassItem,
@@ -82,23 +83,33 @@ export default function SchedulesPage() {
     EndTime: '09:00',
     Room: 'Hall 101',
   });
+  const { academicYear, semester } = useAcademicTerm();
   const [conflictError, setConflictError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [academicYear, semester]);
 
   const loadData = () => {
     const cls = DataStore.getClasses();
-    const subs = DataStore.getSubjects();
+    const subs = DataStore.getSubjects().filter(
+      s => !s.Semester || s.Semester === 'Both' || s.Semester === semester
+    );
+    const subIdSet = new Set(subs.map(s => s.SubjectID));
     const tchs = DataStore.getTeachers();
     const stMap = DataStore.getSubjectTeachers();
-    const stds = DataStore.getStudents();
+    const stds = DataStore.getStudentsForTerm(academicYear, semester);
+    const allScheds = DataStore.getSchedules().filter(
+      sc =>
+        (!sc.Semester || sc.Semester === 'Both' || sc.Semester === semester) &&
+        (!sc.AcademicYear || sc.AcademicYear === academicYear) &&
+        subIdSet.has(sc.SubjectID)
+    );
     setClasses(cls);
     setSubjects(subs);
     setTeachers(tchs);
     setSubjectTeachers(stMap);
-    setSchedules(DataStore.getSchedules());
+    setSchedules(allScheds);
     setStudents(stds);
 
     if (cls.length > 0) {

@@ -8,6 +8,7 @@ import {
   isSubjectSpecificUrl,
 } from '@/lib/store';
 import { AuthService } from '@/lib/auth';
+import { useAcademicTerm } from '@/lib/useAcademicTerm';
 import {
   ClassItem,
   SubjectItem,
@@ -173,19 +174,31 @@ export default function SubjectsPage() {
     { name: 'General Science', arabic: 'العلوم العامة', code: 'SCI' },
   ];
 
+  const { academicYear, semester } = useAcademicTerm();
+
   useEffect(() => {
     loadData();
-  }, []);
+  }, [academicYear, semester]);
 
   const loadData = () => {
     const clsList = DataStore.getClasses();
     setClasses(clsList);
-    setSubjects(DataStore.getSubjects());
+    setSubjects(
+      DataStore.getSubjects().filter(
+        s => !s.Semester || s.Semester === 'Both' || s.Semester === semester
+      )
+    );
     setSubjectEBooks(DataStore.getSubjectEBooks());
     setTeachers(DataStore.getTeachers());
     setSubjectTeachers(DataStore.getSubjectTeachers());
-    setSchedules(DataStore.getSchedules());
-    setStudents(DataStore.getStudents());
+    setSchedules(
+      DataStore.getSchedules().filter(
+        sc =>
+          (!sc.Semester || sc.Semester === 'Both' || sc.Semester === semester) &&
+          (!sc.AcademicYear || sc.AcademicYear === academicYear)
+      )
+    );
+    setStudents(DataStore.getStudentsForTerm(academicYear, semester));
 
     if (clsList.length > 0 && selectedClassId === 1) {
       setSelectedClassId(clsList[0].ClassID);

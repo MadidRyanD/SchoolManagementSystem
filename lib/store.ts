@@ -27,6 +27,7 @@ import {
   FeesItem,
   ExamItem,
   ExpenseItem,
+  UserAccount,
   UserRole,
 } from './types';
 import {
@@ -36,6 +37,7 @@ import {
   scheduleSubjectTeachers,
   scheduleItems,
 } from './scheduleData';
+import { extractedStudents } from './extractedStudents';
 
 export const DEFAULT_TAQDIR_SCALE: TaqdirScale = {
   mumtazMin: 90,
@@ -155,239 +157,78 @@ export const initialSubjectTeachers: SubjectTeacherItem[] = scheduleSubjectTeach
 // 5. Weekly Class Schedules (populated from scheduleData.ts)
 export const initialSchedules: ClassScheduleItem[] = scheduleItems;
 
-// 6. Students
-export const initialStudents: StudentItem[] = [
-  {
-    StudentID: 1,
-    RollNo: 'R101',
-    Name: 'Aarav Al-Husseini',
-    NameArabic: 'آراف الحسيني',
-    Gender: 'Male',
-    Tribe: 'Bani Tamim',
-    Nationality: 'Saudi Arabia',
-    BirthDate: '2010-04-14',
-    BirthPlace: 'Riyadh',
-    Address: 'Al-Malaz District, St. 14, Villa 8',
-    MobileNumber: '+966 51 111 2233',
-    Email: 'aarav@student.jmaa.edu',
-    ClassID: 1,
-    IdNumber: 'STD-2026-001',
-    AdmissionDate: '2024-09-01',
-    Remarks: 'Excellence in Quran Recitation (Mumtaz)',
-    ProfilePic: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
-    Awards: ['1st Place Hifdh Competition 2025', 'Academic Star of the Year'],
-  },
-  {
-    StudentID: 2,
-    RollNo: 'R102',
-    Name: 'Priya Al-Kindi',
-    NameArabic: 'بريا الكندي',
-    Gender: 'Female',
-    Tribe: 'Kindah',
-    Nationality: 'Emirati',
-    BirthDate: '2010-07-22',
-    BirthPlace: 'Abu Dhabi',
-    Address: 'Al-Nahda Gardens, Bldg 4',
-    MobileNumber: '+966 52 222 3344',
-    Email: 'priya@student.jmaa.edu',
-    ClassID: 1,
-    IdNumber: 'STD-2026-002',
-    AdmissionDate: '2024-09-01',
-    Remarks: 'Class Representative & Top Reader',
-    ProfilePic: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-    Awards: ['Best Calligraphy Honor 2025'],
-  },
-  {
-    StudentID: 3,
-    RollNo: 'R103',
-    Name: 'Rohan Al-Baghdadi',
-    NameArabic: 'روهان البغدادي',
-    Gender: 'Male',
-    Tribe: 'Taiy',
-    Nationality: 'Iraqi',
-    BirthDate: '2008-01-19',
-    BirthPlace: 'Baghdad',
-    Address: 'Campus Student Hostel, Room 204',
-    MobileNumber: '+966 53 333 4455',
-    Email: 'rohan@student.jmaa.edu',
-    ClassID: 7,
-    IdNumber: 'STD-2026-003',
-    AdmissionDate: '2023-09-01',
-    Remarks: 'Specialization in Fiqh & Arabic Grammar',
-    ProfilePic: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
-    Awards: ['Dean’s Honor Roll List 2024, 2025'],
-  },
-  {
-    StudentID: 4,
-    RollNo: 'R104',
-    Name: 'Zainab Al-Ghamdi',
-    NameArabic: 'زينب الغامدي',
-    Gender: 'Female',
-    Tribe: 'Ghamid',
-    Nationality: 'Saudi Arabia',
-    BirthDate: '2006-05-11',
-    BirthPlace: 'Jeddah',
-    Address: 'Al-Safa Quarter, House 22',
-    MobileNumber: '+966 54 444 5566',
-    Email: 'zainab@student.jmaa.edu',
-    ClassID: 10,
-    IdNumber: 'STD-2026-004',
-    AdmissionDate: '2022-09-01',
-    Remarks: 'Top Scholar in Hadith Terminology',
-    ProfilePic: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    Awards: ['Hadith Memorization Prize (40 Nawawi)'],
-  },
-  {
-    StudentID: 5,
-    RollNo: 'R105',
-    Name: 'Yusuf Al-Qurtubi',
-    NameArabic: 'يوسف القرطبي',
-    Gender: 'Male',
-    Tribe: 'Qays',
-    Nationality: 'Moroccan',
-    BirthDate: '2003-09-08',
-    BirthPlace: 'Fes',
-    Address: 'Graduate Residence, Suite 10',
-    MobileNumber: '+966 55 555 6677',
-    Email: 'yusuf@student.jmaa.edu',
-    ClassID: 13,
-    IdNumber: 'STD-2026-005',
-    AdmissionDate: '2021-09-01',
-    Remarks: 'Kulliyatu Shariah Senior Scholar',
-    ProfilePic: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
-    Awards: ['Valedictorian Candidate 2026'],
-  },
-  {
-    StudentID: 6,
-    RollNo: 'R106',
-    Name: 'Omar Al-Faruq',
-    NameArabic: 'عمر الفاروق',
-    Gender: 'Male',
-    Tribe: 'Adnan',
-    Nationality: 'Saudi Arabia',
-    BirthDate: '2010-02-11',
-    BirthPlace: 'Mecca',
-    Address: 'Al-Aziziyyah District, Villa 12',
-    MobileNumber: '+966 50 666 7788',
-    Email: 'omar@student.jmaa.edu',
-    ClassID: 1,
-    IdNumber: 'STD-2026-006',
-    AdmissionDate: '2024-09-01',
-    Remarks: 'Active in Fiqh Discussions',
-  },
-  {
-    StudentID: 7,
-    RollNo: 'R107',
-    Name: 'Fatima Al-Zahra',
-    NameArabic: 'فاطمة الزهراء',
-    Gender: 'Female',
-    Tribe: 'Hashim',
-    Nationality: 'Saudi Arabia',
-    BirthDate: '2010-08-19',
-    BirthPlace: 'Medina',
-    Address: 'Quba Avenue, House 5',
-    MobileNumber: '+966 50 777 8899',
-    Email: 'fatima.std@student.jmaa.edu',
-    ClassID: 1,
-    IdNumber: 'STD-2026-007',
-    AdmissionDate: '2024-09-01',
-    Remarks: 'Top Scorer in Tajweed',
-  },
-  {
-    StudentID: 8,
-    RollNo: 'R108',
-    Name: 'Bilal Al-Habashi',
-    NameArabic: 'بلال الحبشي',
-    Gender: 'Male',
-    Tribe: 'Ansari',
-    Nationality: 'Yemeni',
-    BirthDate: '2010-11-03',
-    BirthPlace: 'Sanaa',
-    Address: 'Al-Khalidiyah, Flat 3B',
-    MobileNumber: '+966 50 888 9900',
-    Email: 'bilal.std@student.jmaa.edu',
-    ClassID: 1,
-    IdNumber: 'STD-2026-008',
-    AdmissionDate: '2024-09-01',
-    Remarks: 'Diligent and Well Mannered',
-  },
-  {
-    StudentID: 9,
-    RollNo: 'R109',
-    Name: 'Hamza Al-Baghdadi',
-    NameArabic: 'حمزة البغدادي',
-    Gender: 'Male',
-    Tribe: 'Abbas',
-    Nationality: 'Iraqi',
-    BirthDate: '2004-05-14',
-    BirthPlace: 'Baghdad',
-    Address: 'College Quarters, Room 102',
-    MobileNumber: '+966 55 112 2334',
-    Email: 'hamza@student.jmaa.edu',
-    ClassID: 15,
-    IdNumber: 'STD-2026-009',
-    AdmissionDate: '2023-09-01',
-    Remarks: 'Kulliyatu Shariah Year 3 Senior',
-  },
-  {
-    StudentID: 10,
-    RollNo: 'R110',
-    Name: 'Aisha Al-Basri',
-    NameArabic: 'عائشة البصري',
-    Gender: 'Female',
-    Tribe: 'Tamim',
-    Nationality: 'Kuwaiti',
-    BirthDate: '2004-09-22',
-    BirthPlace: 'Kuwait City',
-    Address: 'Hostel Wing C, Suite 4',
-    MobileNumber: '+966 55 223 3445',
-    Email: 'aisha@student.jmaa.edu',
-    ClassID: 15,
-    IdNumber: 'STD-2026-010',
-    AdmissionDate: '2023-09-01',
-    Remarks: 'Excellence in Fiqh Al-Muamalat',
-  },
-  {
-    StudentID: 11,
-    RollNo: 'R111',
-    Name: 'Tariq Al-Andalusi',
-    NameArabic: 'طارق الأندلسي',
-    Gender: 'Male',
-    Tribe: 'Fihr',
-    Nationality: 'Moroccan',
-    BirthDate: '2004-01-30',
-    BirthPlace: 'Rabat',
-    Address: 'College Quarters, Room 104',
-    MobileNumber: '+966 55 334 4556',
-    Email: 'tariq.std@student.jmaa.edu',
-    ClassID: 15,
-    IdNumber: 'STD-2026-011',
-    AdmissionDate: '2023-09-01',
-    Remarks: 'Research Assistant in Usul Al-Fiqh',
-  },
-  {
-    StudentID: 12,
-    RollNo: 'SSG101',
-    Name: 'Tariq Al-Mansoor (SSG Officer)',
-    NameArabic: 'طارق المنصور (رئيس مجلس الطلبة / النشاط)',
-    Gender: 'Male',
-    Tribe: 'Tamim',
-    Nationality: 'Saudi Arabia',
-    BirthDate: '2005-03-15',
-    BirthPlace: 'Riyadh',
-    Address: 'Student Council Headquarters, Wing B',
-    MobileNumber: '+966 50 999 0011',
-    Email: 'ssg@student.jmaa.edu',
-    ClassID: 1,
-    IdNumber: 'SSG-2026-001',
-    AdmissionDate: '2024-09-01',
-    Remarks: 'President of Supreme Student Council (SSG) - Oversees student Nashat and co-curricular grades',
-    ProfilePic: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    Awards: ['Student Leadership Excellence 2025', 'Community Service Ribbon'],
-    IsSSG: true,
-    SSGPosition: 'رئيس مجلس الطلبة ومسؤول النشاط',
-  },
-];
+// 6. Students (populated from extractedStudents.ts - 1,442 students across 21 grade levels)
+export const initialStudents: StudentItem[] = extractedStudents;
+
+// 6b. Build initial user accounts for all built-in roles, teachers, and students
+export function buildInitialAccounts(
+  teachers: TeacherItem[] = initialTeachers,
+  students: StudentItem[] = initialStudents
+): UserAccount[] {
+  const now = new Date().toISOString().split('T')[0];
+  const accounts: UserAccount[] = [
+    {
+      AccountID: 'acc-admin-1',
+      Username: 'admin',
+      Email: 'admin@jmaa.edu',
+      Password: 'admin123',
+      Role: 'admin',
+      LinkedType: 'admin',
+      DisplayName: 'System Administrator (Al-Mushrif)',
+      DisplayNameArabic: 'المشرف العام على النظام',
+      IsActive: true,
+      CreatedAt: now,
+    },
+    {
+      AccountID: 'acc-cashier-1',
+      Username: 'cashier',
+      Email: 'cashier@jmaa.edu',
+      Password: 'cashier123',
+      Role: 'cashier',
+      LinkedType: 'cashier',
+      DisplayName: 'Ustadh Kamal Al-Maliki (Chief Cashier)',
+      DisplayNameArabic: 'أستاذ كمال المالكي (أمين الصندوق)',
+      IsActive: true,
+      CreatedAt: now,
+    },
+  ];
+
+  for (const t of teachers) {
+    const role: UserRole = t.Role || (t.IsMudir ? 'mudir' : 'teacher');
+    accounts.push({
+      AccountID: `acc-teacher-${t.TeacherID}`,
+      Username: `teacher${t.TeacherID}`,
+      Email: t.Email || `teacher${t.TeacherID}@jmaa.edu`,
+      Password: t.Password || (t.IsMudir ? 'mudir123' : 'teacher123'),
+      Role: role,
+      LinkedType: t.IsMudir ? 'mudir' : 'teacher',
+      LinkedID: t.TeacherID,
+      DisplayName: t.Name,
+      DisplayNameArabic: t.NameArabic,
+      IsActive: true,
+      CreatedAt: t.AdmissionDate || now,
+    });
+  }
+
+  for (const s of students) {
+    const roll = s.RollNo || `R${100 + s.StudentID}`;
+    accounts.push({
+      AccountID: `acc-student-${s.StudentID}`,
+      Username: roll,
+      Email: s.Email || `${roll.toLowerCase()}@student.jmaa.edu`,
+      Password: s.Password || (s.IsSSG ? 'ssg123' : 'student123'),
+      Role: s.IsSSG ? 'ssg' : 'student',
+      LinkedType: 'student',
+      LinkedID: s.StudentID,
+      DisplayName: s.Name,
+      DisplayNameArabic: s.NameArabic,
+      IsActive: true,
+      CreatedAt: s.AdmissionDate || now,
+    });
+  }
+
+  return accounts;
+}
 
 // 7. Default Grading Criteria (50% locked Tabulation Score + 50% customizable criteria)
 export const initialCriteria: GradingCriteria[] = [
@@ -688,6 +529,7 @@ const KEYS = {
   TEACHER_ATTENDANCE: 'jmaa_teacher_attendance',
   STUDENT_ATTENDANCE: 'jmaa_student_attendance',
   SUBJECT_UNLOCKS: 'jmaa_subject_unlocks',
+  ACCOUNTS: 'jmaa_accounts',
 };
 
 const CENTRAL_FOLDER_ID = '1fCXKezhMzm93fm9S98keWyxLfG-N2NDf';
@@ -775,7 +617,7 @@ export async function deleteEBookBlob(id: string): Promise<void> {
 }
 
 const DATA_VERSION_KEY = 'jmaa_data_version';
-const CURRENT_DATA_VERSION = 'v2_schedule_reset';
+const CURRENT_DATA_VERSION = 'v3_roster_db_sync';
 
 function ensureDataVersion(): void {
   if (typeof window === 'undefined') return;
@@ -786,6 +628,9 @@ function ensureDataVersion(): void {
       localStorage.removeItem(KEYS.SUBJECTS);
       localStorage.removeItem(KEYS.SUBJECT_TEACHERS);
       localStorage.removeItem(KEYS.SCHEDULES);
+      localStorage.removeItem(KEYS.STUDENTS);
+      localStorage.removeItem(KEYS.ENROLLMENTS);
+      localStorage.removeItem(KEYS.ACCOUNTS);
       localStorage.setItem(DATA_VERSION_KEY, CURRENT_DATA_VERSION);
     }
   } catch {
@@ -812,12 +657,67 @@ function setItem<T>(key: string, val: T): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(key, JSON.stringify(val));
+    fetch('/api/db', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value: val }),
+    }).catch(() => {
+      // Offline / static fallback - localStorage still holds the update
+    });
   } catch (e) {
     console.error('Storage error:', e);
   }
 }
 
+let serverSyncPromise: Promise<boolean> | null = null;
+
 export const DataStore = {
+  // Hydrate localStorage from server database (/api/db -> data/school-db.json)
+  async syncFromServer(force = false): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+    ensureDataVersion();
+    if (!force && serverSyncPromise) return serverSyncPromise;
+    serverSyncPromise = (async () => {
+      try {
+        const res = await fetch('/api/db', { cache: 'no-store' });
+        if (!res.ok) return false;
+        const db = await res.json();
+        if (db && typeof db === 'object') {
+          const map: Record<string, string> = {
+            classes: KEYS.CLASSES,
+            teachers: KEYS.TEACHERS,
+            subjects: KEYS.SUBJECTS,
+            subjectTeachers: KEYS.SUBJECT_TEACHERS,
+            schedules: KEYS.SCHEDULES,
+            students: KEYS.STUDENTS,
+            enrollments: KEYS.ENROLLMENTS,
+            accounts: KEYS.ACCOUNTS,
+            settings: KEYS.SETTINGS,
+            criteria: KEYS.CRITERIA,
+            grades: KEYS.GRADES,
+            fees: KEYS.FEES,
+            payments: KEYS.PAYMENTS,
+            payroll: KEYS.PAYROLL,
+            announcements: KEYS.ANNOUNCEMENTS,
+            forms: KEYS.FORMS,
+            teacherAttendance: KEYS.TEACHER_ATTENDANCE,
+            studentAttendance: KEYS.STUDENT_ATTENDANCE,
+          };
+          for (const [dbKey, lsKey] of Object.entries(map)) {
+            if (db[dbKey] !== undefined) {
+              localStorage.setItem(lsKey, JSON.stringify(db[dbKey]));
+            }
+          }
+          localStorage.setItem(DATA_VERSION_KEY, CURRENT_DATA_VERSION);
+          return true;
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    })();
+    return serverSyncPromise;
+  },
   // Settings
   getSettings(): SystemSettings {
     return getItem<SystemSettings>(KEYS.SETTINGS, initialSettings);
@@ -859,6 +759,19 @@ export const DataStore = {
     const trimmed = year.trim();
     const current = this.getAvailableAcademicYears();
     if (!trimmed || current.includes(trimmed)) return current;
+    if (typeof window !== 'undefined') {
+      try {
+        const rawSession = localStorage.getItem('jmaa_active_session');
+        if (rawSession) {
+          const parsed = JSON.parse(rawSession) as { role?: UserRole };
+          if (parsed?.role && parsed.role !== 'admin' && parsed.role !== 'mudir') {
+            return current;
+          }
+        }
+      } catch {
+        // Ignore session parse errors
+      }
+    }
     const next = [...current, trimmed].sort();
     this.updateSettings({ availableAcademicYears: next });
     return next;
@@ -912,6 +825,75 @@ export const DataStore = {
     setItem(KEYS.CLASSES, list);
   },
 
+  // User Accounts (Auto-provisioned for every Teacher & Student)
+  getAccounts(): UserAccount[] {
+    return getItem<UserAccount[]>(KEYS.ACCOUNTS, buildInitialAccounts());
+  },
+  saveAccount(account: UserAccount): UserAccount {
+    const list = this.getAccounts();
+    const idx = list.findIndex(a => a.AccountID === account.AccountID);
+    if (idx >= 0) {
+      list[idx] = { ...list[idx], ...account };
+    } else {
+      list.push(account);
+    }
+    setItem(KEYS.ACCOUNTS, list);
+    return account;
+  },
+  syncAccountForTeacher(t: TeacherItem): UserAccount {
+    const role: UserRole = t.Role || (t.IsMudir ? 'mudir' : 'teacher');
+    const existing = this.getAccounts().find(
+      a => a.AccountID === `acc-teacher-${t.TeacherID}` || (a.LinkedID === t.TeacherID && (a.LinkedType === 'teacher' || a.LinkedType === 'mudir'))
+    );
+    const account: UserAccount = {
+      AccountID: `acc-teacher-${t.TeacherID}`,
+      Username: existing?.Username || `teacher${t.TeacherID}`,
+      Email: t.Email || existing?.Email || `teacher${t.TeacherID}@jmaa.edu`,
+      Password: t.Password || existing?.Password || (t.IsMudir ? 'mudir123' : 'teacher123'),
+      Role: role,
+      LinkedType: t.IsMudir ? 'mudir' : 'teacher',
+      LinkedID: t.TeacherID,
+      DisplayName: t.Name,
+      DisplayNameArabic: t.NameArabic,
+      IsActive: true,
+      CreatedAt: existing?.CreatedAt || t.AdmissionDate || new Date().toISOString().split('T')[0],
+    };
+    return this.saveAccount(account);
+  },
+  syncAccountForStudent(s: StudentItem): UserAccount {
+    const roll = s.RollNo || `R${100 + s.StudentID}`;
+    const existing = this.getAccounts().find(
+      a => a.AccountID === `acc-student-${s.StudentID}` || (a.LinkedID === s.StudentID && a.LinkedType === 'student')
+    );
+    const account: UserAccount = {
+      AccountID: `acc-student-${s.StudentID}`,
+      Username: roll,
+      Email: s.Email || existing?.Email || `${roll.toLowerCase()}@student.jmaa.edu`,
+      Password: s.Password || existing?.Password || (s.IsSSG ? 'ssg123' : 'student123'),
+      Role: s.IsSSG ? 'ssg' : 'student',
+      LinkedType: 'student',
+      LinkedID: s.StudentID,
+      DisplayName: s.Name,
+      DisplayNameArabic: s.NameArabic,
+      IsActive: true,
+      CreatedAt: existing?.CreatedAt || s.AdmissionDate || new Date().toISOString().split('T')[0],
+    };
+    return this.saveAccount(account);
+  },
+  deleteAccountByLinked(linkedType: 'teacher' | 'student', linkedIds: number[]): void {
+    const idSet = new Set(linkedIds);
+    const list = this.getAccounts().filter(a => {
+      if (linkedType === 'teacher' && (a.LinkedType === 'teacher' || a.LinkedType === 'mudir') && a.LinkedID && idSet.has(a.LinkedID)) {
+        return false;
+      }
+      if (linkedType === 'student' && a.LinkedType === 'student' && a.LinkedID && idSet.has(a.LinkedID)) {
+        return false;
+      }
+      return true;
+    });
+    setItem(KEYS.ACCOUNTS, list);
+  },
+
   // Teachers
   getTeachers(): TeacherItem[] {
     const list = getItem<TeacherItem[]>(KEYS.TEACHERS, initialTeachers);
@@ -940,20 +922,38 @@ export const DataStore = {
     if (item.TeacherID && item.TeacherID > 0) {
       const idx = list.findIndex(t => t.TeacherID === item.TeacherID);
       if (idx >= 0) {
-        list[idx] = { ...list[idx], ...item, TeacherID: item.TeacherID };
+        const merged: TeacherItem = {
+          ...list[idx],
+          ...item,
+          TeacherID: item.TeacherID,
+          Email: item.Email || list[idx].Email || `teacher${item.TeacherID}@jmaa.edu`,
+          Password: item.Password || list[idx].Password || (item.IsMudir ? 'mudir123' : 'teacher123'),
+          Role: item.Role || (item.IsMudir ? 'mudir' : list[idx].Role || 'teacher'),
+        };
+        list[idx] = merged;
         setItem(KEYS.TEACHERS, list);
-        return list[idx];
+        this.syncAccountForTeacher(merged);
+        return merged;
       }
     }
     const nextId = list.length > 0 ? Math.max(...list.map(t => t.TeacherID)) + 1 : 1;
-    const newItem: TeacherItem = { ...item, TeacherID: nextId };
+    const newItem: TeacherItem = {
+      ...item,
+      TeacherID: nextId,
+      IdNumber: item.IdNumber || `TCH-${String(nextId).padStart(3, '0')}`,
+      Email: item.Email || `teacher${nextId}@jmaa.edu`,
+      Password: item.Password || (item.IsMudir ? 'mudir123' : 'teacher123'),
+      Role: item.Role || (item.IsMudir ? 'mudir' : 'teacher'),
+    };
     list.push(newItem);
     setItem(KEYS.TEACHERS, list);
+    this.syncAccountForTeacher(newItem);
     return newItem;
   },
   deleteTeacher(id: number): void {
     const list = this.getTeachers().filter(t => t.TeacherID !== id);
     setItem(KEYS.TEACHERS, list);
+    this.deleteAccountByLinked('teacher', [id]);
   },
 
   // Subjects
@@ -1386,15 +1386,35 @@ export const DataStore = {
     if (item.StudentID && item.StudentID > 0) {
       const idx = list.findIndex(s => s.StudentID === item.StudentID);
       if (idx >= 0) {
-        list[idx] = { ...list[idx], ...item, StudentID: item.StudentID };
+        const roll = item.RollNo || list[idx].RollNo || `R${100 + item.StudentID}`;
+        const merged: StudentItem = {
+          ...list[idx],
+          ...item,
+          StudentID: item.StudentID,
+          RollNo: roll,
+          IdNumber: item.IdNumber || list[idx].IdNumber || `STD-2026-${String(item.StudentID).padStart(4, '0')}`,
+          Email: item.Email || list[idx].Email || `${roll.toLowerCase()}@student.jmaa.edu`,
+          Password: item.Password || list[idx].Password || (item.IsSSG ? 'ssg123' : 'student123'),
+        };
+        list[idx] = merged;
         setItem(KEYS.STUDENTS, list);
-        return list[idx];
+        this.syncAccountForStudent(merged);
+        return merged;
       }
     }
     const nextId = list.length > 0 ? Math.max(...list.map(s => s.StudentID)) + 1 : 1;
-    const newItem: StudentItem = { ...item, StudentID: nextId };
+    const roll = item.RollNo || `R${100 + nextId}`;
+    const newItem: StudentItem = {
+      ...item,
+      StudentID: nextId,
+      RollNo: roll,
+      IdNumber: item.IdNumber || `STD-2026-${String(nextId).padStart(4, '0')}`,
+      Email: item.Email || `${roll.toLowerCase()}@student.jmaa.edu`,
+      Password: item.Password || (item.IsSSG ? 'ssg123' : 'student123'),
+    };
     list.push(newItem);
     setItem(KEYS.STUDENTS, list);
+    this.syncAccountForStudent(newItem);
 
     // Also create enrollment record(s) for the active/target academic year & semester
     const year = targetTerm?.academicYear || this.getActiveAcademicYear();
@@ -1416,11 +1436,39 @@ export const DataStore = {
     let nextId = list.length > 0 ? Math.max(...list.map(s => s.StudentID)) + 1 : 1;
     const added: StudentItem[] = [];
     for (const item of items) {
-      const newItem: StudentItem = { ...item, StudentID: nextId++ };
+      const id = nextId++;
+      const roll = item.RollNo || `R${100 + id}`;
+      const newItem: StudentItem = {
+        ...item,
+        StudentID: id,
+        RollNo: roll,
+        IdNumber: item.IdNumber || `STD-2026-${String(id).padStart(4, '0')}`,
+        Email: item.Email || `${roll.toLowerCase()}@student.jmaa.edu`,
+        Password: item.Password || (item.IsSSG ? 'ssg123' : 'student123'),
+      };
       list.push(newItem);
       added.push(newItem);
     }
     setItem(KEYS.STUDENTS, list);
+
+    const accounts = this.getAccounts();
+    const now = new Date().toISOString().split('T')[0];
+    for (const s of added) {
+      accounts.push({
+        AccountID: `acc-student-${s.StudentID}`,
+        Username: s.RollNo,
+        Email: s.Email || `${s.RollNo.toLowerCase()}@student.jmaa.edu`,
+        Password: s.Password || 'student123',
+        Role: s.IsSSG ? 'ssg' : 'student',
+        LinkedType: 'student',
+        LinkedID: s.StudentID,
+        DisplayName: s.Name,
+        DisplayNameArabic: s.NameArabic,
+        IsActive: true,
+        CreatedAt: s.AdmissionDate || now,
+      });
+    }
+    setItem(KEYS.ACCOUNTS, accounts);
 
     const year = targetTerm?.academicYear || this.getActiveAcademicYear();
     const sem = targetTerm?.semester || this.getActiveSemester();
@@ -1441,21 +1489,29 @@ export const DataStore = {
   deleteStudent(id: number): void {
     const list = this.getStudents().filter(s => s.StudentID !== id);
     setItem(KEYS.STUDENTS, list);
+    this.deleteAccountByLinked('student', [id]);
   },
   deleteStudentsBatch(ids: number[]): void {
     const idSet = new Set(ids);
     const list = this.getStudents().filter(s => !idSet.has(s.StudentID));
     setItem(KEYS.STUDENTS, list);
+    this.deleteAccountByLinked('student', ids);
   },
   updateStudentsBatch(ids: number[], updates: Partial<StudentItem>): void {
     const idSet = new Set(ids);
+    const updatedStudents: StudentItem[] = [];
     const list = this.getStudents().map(s => {
       if (idSet.has(s.StudentID)) {
-        return { ...s, ...updates };
+        const merged = { ...s, ...updates };
+        updatedStudents.push(merged);
+        return merged;
       }
       return s;
     });
     setItem(KEYS.STUDENTS, list);
+    for (const s of updatedStudents) {
+      this.syncAccountForStudent(s);
+    }
   },
 
   // Multi-Year & Semester Enrollment Management (Preserves Previous Academic Year Data)
@@ -2577,16 +2633,28 @@ export const DataStore = {
     this.saveTeacherAttendance(records);
   },
 
-  // Honors & Top Students Calculation
-  getTopStudents(classId?: number): { student: StudentItem; avgGrade: number; rank: number }[] {
-    const students = this.getStudents();
-    const grades = this.getGrades();
+  // Honors & Top Students Calculation (Scoped by Academic Year & Semester)
+  getTopStudents(
+    classId?: number,
+    academicYear?: string,
+    semester?: SemesterType
+  ): { student: StudentItem; avgGrade: number; rank: number }[] {
+    const yr = academicYear || this.getActiveAcademicYear();
+    const sem = semester || this.getActiveSemester();
+    const students = this.getStudentsForTerm(yr, sem);
+    const grades = this.getGradesForTerm(yr);
+    const semPeriods: GradingPeriod[] = sem === '2nd' ? ['4th', '5th', '6th'] : ['1st', '2nd', '3rd'];
 
     const targetStudents = classId ? students.filter(s => s.ClassID === classId) : students;
 
     const scores: { student: StudentItem; avgGrade: number }[] = [];
     for (const s of targetStudents) {
-      const sGrades = grades.filter(g => g.StudentID === s.StudentID && typeof g.FinalGrade === 'number');
+      const sGrades = grades.filter(
+        g =>
+          g.StudentID === s.StudentID &&
+          semPeriods.includes(g.Period) &&
+          typeof g.FinalGrade === 'number'
+      );
       if (sGrades.length > 0) {
         const total = sGrades.reduce((acc, curr) => acc + (curr.FinalGrade as number), 0);
         scores.push({ student: s, avgGrade: Math.round(total / sGrades.length) });

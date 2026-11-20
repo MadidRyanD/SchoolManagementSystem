@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import SchoolArabicTitle from '@/app/components/SchoolArabicTitle';
+import WebsiteBrandTitle from '@/app/components/WebsiteBrandTitle';
 import { DataStore } from '@/lib/store';
 import { AuthService } from '@/lib/auth';
+import { useAcademicTerm } from '@/lib/useAcademicTerm';
 import {
   UserSession,
   ClassItem,
@@ -54,15 +56,19 @@ export default function DashboardOverviewPage() {
     totalStudents: 0,
   });
 
+  const { academicYear, semester } = useAcademicTerm();
+
   useEffect(() => {
     const session = AuthService.getSession();
     setCurrentUser(session);
 
     const cls = DataStore.getClasses();
     const tchs = DataStore.getTeachers();
-    const stds = DataStore.getStudents();
+    const stds = DataStore.getStudentsForTerm(academicYear, semester);
     const ann = DataStore.getAnnouncements();
-    const subs = DataStore.getSubjects();
+    const subs = DataStore.getSubjects().filter(
+      s => !s.Semester || s.Semester === 'Both' || s.Semester === semester
+    );
 
     setClasses(cls);
     setSubjects(subs);
@@ -76,7 +82,7 @@ export default function DashboardOverviewPage() {
       totalTeachers: tchs.length,
       totalStudents: stds.length,
     });
-  }, []);
+  }, [academicYear, semester]);
 
   const role = currentUser?.role || 'admin';
 
@@ -129,9 +135,14 @@ export default function DashboardOverviewPage() {
                 <span className="block text-[10px] font-bold uppercase text-amber-200 tracking-widest font-sans">
                   Student Portal • بوابة الطالب
                 </span>
-                <h2 className="mt-1 text-base font-black text-white font-sans">
-                  JMAA-MoritAko
-                </h2>
+                <div className="mt-1 flex justify-center">
+                  <WebsiteBrandTitle
+                    variant="navbar"
+                    imgClassName="h-7 w-auto object-contain drop-shadow"
+                    fallbackClassName="text-base font-black text-white font-sans"
+                    fallbackText="JMAA-MoritAko"
+                  />
+                </div>
               </div>
 
               {/* Avatar overlapping banner */}

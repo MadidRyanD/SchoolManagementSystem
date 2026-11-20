@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CalendarDays, Plus, Check, X } from 'lucide-react';
 import { useAcademicTerm } from '@/lib/useAcademicTerm';
+import { AuthService } from '@/lib/auth';
+import { UserRole } from '@/lib/types';
 
 interface AcademicTermSwitcherProps {
   canAddYear?: boolean;
@@ -17,9 +19,20 @@ export default function AcademicTermSwitcher({
     useAcademicTerm();
   const [isAddingYear, setIsAddingYear] = useState(false);
   const [newYearInput, setNewYearInput] = useState('');
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+
+  useEffect(() => {
+    const session = AuthService.getSession();
+    setUserRole(session?.role || null);
+  }, []);
+
+  // Task 4: Students, teachers, and SSG officers cannot add a school year; only Principal (mudir) and Admin can
+  const isAllowedToAddYear =
+    Boolean(canAddYear) && (userRole === 'admin' || userRole === 'mudir');
 
   const handleAddYear = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAllowedToAddYear) return;
     const trimmed = newYearInput.trim();
     if (!trimmed) return;
     addAcademicYear(trimmed);
@@ -36,7 +49,7 @@ export default function AcademicTermSwitcher({
       {/* Academic Year Selector */}
       <div className="flex items-center gap-1">
         <CalendarDays className="w-3.5 h-3.5 text-[#126b38] shrink-0" />
-        {isAddingYear ? (
+        {isAddingYear && isAllowedToAddYear ? (
           <form onSubmit={handleAddYear} className="flex items-center gap-1">
             <input
               type="text"
@@ -79,7 +92,7 @@ export default function AcademicTermSwitcher({
                 </option>
               ))}
             </select>
-            {canAddYear && (
+            {isAllowedToAddYear && (
               <button
                 type="button"
                 onClick={() => setIsAddingYear(true)}

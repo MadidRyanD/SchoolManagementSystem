@@ -68,13 +68,20 @@ export default function StudentGradeView({
   grades,
   allStudents,
 }: StudentGradeViewProps) {
-  const { academicYear, semester: globalSemester } = useAcademicTerm();
+  const { academicYear, semester: globalSemester, setSemester: setGlobalSemester } = useAcademicTerm();
 
   // Active semester tab ('1st' shows Dawr 1, 2, 3 + 1st Sem; '2nd' shows Dawr 4, 5, 6 + 2nd Sem; 'both' shows all)
   const [selectedSemester, setSelectedSemester] = useState<'1st' | '2nd' | 'both'>(
     globalSemester === '2nd' ? '2nd' : '1st'
   );
   const [cardFilter, setCardFilter] = useState<FilterCardMode>('all-in-sem');
+
+  // Sync selectedSemester when globalSemester or academicYear changes via Breadcrumb / Term Switcher
+  React.useEffect(() => {
+    setSelectedSemester(globalSemester === '2nd' ? '2nd' : '1st');
+    setCardFilter('all-in-sem');
+    setPrintScope(globalSemester === '2nd' ? 'sem-2nd' : 'sem-1st');
+  }, [globalSemester, academicYear]);
 
   // Enrollment / Class History support (Requirement 9: completed subjects & ustadh remain even after new enrollment)
   const enrollmentHistory = useMemo(() => {
@@ -1492,6 +1499,7 @@ export default function StudentGradeView({
             type="button"
             onClick={() => {
               setSelectedSemester('1st');
+              setGlobalSemester('1st');
               setCardFilter('all-in-sem');
             }}
             className={`px-4 py-2 text-xs font-extrabold rounded-lg transition-all cursor-pointer ${
@@ -1506,6 +1514,7 @@ export default function StudentGradeView({
             type="button"
             onClick={() => {
               setSelectedSemester('2nd');
+              setGlobalSemester('2nd');
               setCardFilter('all-in-sem');
             }}
             className={`px-4 py-2 text-xs font-extrabold rounded-lg transition-all cursor-pointer ${

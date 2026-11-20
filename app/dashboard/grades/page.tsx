@@ -145,13 +145,23 @@ export default function GradesPage() {
   const { academicYear, semester } = useAcademicTerm();
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  const primarySemPeriod: GradingPeriod = semester === '2nd' ? '4th' : '1st';
+  const primarySemPeriodLabelAr = semester === '2nd' ? 'دور ٤ - الفصل الثاني' : 'دور ١ - الفصل الأول';
+
   useEffect(() => {
     loadData();
+    setSelectedPeriod(prev => {
+      if (semester === '1st' && ['4th', '5th', '6th'].includes(prev)) return '1st';
+      if (semester === '2nd' && ['1st', '2nd', '3rd'].includes(prev)) return '4th';
+      return prev;
+    });
   }, [academicYear, semester]);
 
   const loadData = () => {
     const cls = DataStore.getClasses();
-    const subs = DataStore.getSubjects();
+    const subs = DataStore.getSubjects().filter(
+      s => !s.Semester || s.Semester === 'Both' || s.Semester === semester
+    );
     const stds = DataStore.getStudentsForTerm(academicYear, semester);
     const tchs = DataStore.getTeachers();
     const stMap = DataStore.getSubjectTeachers();
@@ -175,7 +185,8 @@ export default function GradesPage() {
     }
   };
 
-  const gradingPeriods: GradingPeriod[] = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
+  const gradingPeriods: GradingPeriod[] =
+    semester === '2nd' ? ['4th', '5th', '6th'] : ['1st', '2nd', '3rd'];
 
   // TEACHER'S ASSIGNED SUBJECTS ONLY:
   // For teachers: only subjects they teach.
@@ -878,14 +889,14 @@ export default function GradesPage() {
                 {teacherSubjectsList.map(({ subject, classItem }) => {
                   const enrolledCount = students.filter(s => s.ClassID === classItem.ClassID).length;
 
-                  // Count graded students for Dawr 1
+                  // Count graded students for the active semester's primary Dawr
                   const gradedCount = students.filter(s => {
                     return grades.some(
                       g =>
                         g.StudentID === s.StudentID &&
                         g.SubjectID === subject.SubjectID &&
                         g.ClassID === classItem.ClassID &&
-                        g.Period === '1st' &&
+                        g.Period === primarySemPeriod &&
                         g.FinalGrade !== undefined &&
                         g.FinalGrade !== null
                     );
@@ -904,7 +915,7 @@ export default function GradesPage() {
                             مرحلة: {classItem.Level || classItem.ClassName}
                           </span>
                           <span className="text-[11px] font-bold text-slate-700 font-sans uppercase">
-                            [{classItem.Department.toUpperCase()}]
+                            [{classItem.Department.toUpperCase()} &bull; {semester === '1st' ? '1st Sem' : '2nd Sem'}]
                           </span>
                         </div>
 
@@ -929,7 +940,7 @@ export default function GradesPage() {
                             <span className="font-mono font-bold text-slate-900">{enrolledCount} طالب</span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-slate-500 font-medium">حالة الرصد (دور 1):</span>
+                            <span className="text-slate-500 font-medium">حالة الرصد ({primarySemPeriodLabelAr}):</span>
                             <span className={`font-bold ${gradedCount === enrolledCount && enrolledCount > 0 ? 'text-emerald-700' : 'text-amber-800'}`}>
                               {toHindiNumerals(gradedCount)} / {toHindiNumerals(enrolledCount)} مرصود
                             </span>
@@ -939,7 +950,7 @@ export default function GradesPage() {
                               g =>
                                 g.SubjectID === subject.SubjectID &&
                                 g.ClassID === classItem.ClassID &&
-                                g.Period === '1st' &&
+                                g.Period === primarySemPeriod &&
                                 g.FinalGrade !== undefined &&
                                 g.FinalGrade !== null
                             );
@@ -948,7 +959,7 @@ export default function GradesPage() {
                             let cHoursLeft = 0;
                             const check = DataStore.checkGradeLock(
                               d1Grades[0],
-                              '1st',
+                              primarySemPeriod,
                               classItem.ClassID,
                               subject.SubjectID
                             );
@@ -961,7 +972,7 @@ export default function GradesPage() {
 
                             return (
                               <div className="flex items-center justify-between pt-0.5 border-t border-slate-100">
-                                <span className="text-slate-500 font-medium">مهلة التعديل (دور 1):</span>
+                                <span className="text-slate-500 font-medium">مهلة التعديل ({primarySemPeriodLabelAr}):</span>
                                 {cStatus === 'locked' ? (
                                   <span className="font-bold text-red-700 inline-flex items-center gap-1 bg-red-50 px-2 py-0.5 rounded-md">
                                     <Lock className="w-3 h-3 text-red-600" /> مقفل (انتهت المهلة)
@@ -988,13 +999,13 @@ export default function GradesPage() {
                             g =>
                               g.SubjectID === subject.SubjectID &&
                               g.ClassID === classItem.ClassID &&
-                              g.Period === '1st' &&
+                              g.Period === primarySemPeriod &&
                               g.FinalGrade !== undefined &&
                               g.FinalGrade !== null
                           );
                           const isSubjectLocked = DataStore.checkGradeLock(
                             d1Grades[0],
-                            '1st',
+                            primarySemPeriod,
                             classItem.ClassID,
                             subject.SubjectID
                           ).isLocked;

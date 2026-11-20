@@ -88,6 +88,7 @@ export interface TeacherItem {
   ProfilePic?: string;
   IsMudir?: boolean;
   ManagementScope?: ManagementScope;
+  Role?: UserRole;
 }
 
 export interface StudentItem {
@@ -112,6 +113,22 @@ export interface StudentItem {
   Awards?: string[];
   IsSSG?: boolean;
   SSGPosition?: string;
+  Password?: string;
+  ProfileEditCount?: number;
+}
+
+export interface UserAccount {
+  AccountID: string;
+  Username: string;
+  Email: string;
+  Password: string;
+  Role: UserRole;
+  LinkedType: 'admin' | 'mudir' | 'cashier' | 'teacher' | 'student';
+  LinkedID?: number;
+  DisplayName: string;
+  DisplayNameArabic?: string;
+  IsActive: boolean;
+  CreatedAt: string;
 }
 
 export interface SubjectTeacherItem {
@@ -131,6 +148,8 @@ export interface ClassScheduleItem {
   EndTime: string;
   Room: string;
   CustomColor?: string;
+  Semester?: '1st' | '2nd' | 'Both';
+  AcademicYear?: string;
 }
 
 export interface GradingCriteria {

@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { DataStore } from '@/lib/store';
+import { useAcademicTerm } from '@/lib/useAcademicTerm';
 import { StudentItem, ClassItem } from '@/lib/types';
 import { Award, Trophy, Medal, Star, GraduationCap, Building2, Crown } from 'lucide-react';
 
 export default function HonorRollPage() {
+  const { academicYear, semester } = useAcademicTerm();
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<number>(0);
   const [topStudents, setTopStudents] = useState<{ student: StudentItem; avgGrade: number; rank: number }[]>([]);
@@ -13,8 +15,14 @@ export default function HonorRollPage() {
   useEffect(() => {
     const cls = DataStore.getClasses();
     setClasses(cls);
-    setTopStudents(DataStore.getTopStudents(selectedClassId === 0 ? undefined : selectedClassId));
-  }, [selectedClassId]);
+    setTopStudents(
+      DataStore.getTopStudents(
+        selectedClassId === 0 ? undefined : selectedClassId,
+        academicYear,
+        semester
+      )
+    );
+  }, [selectedClassId, academicYear, semester]);
 
   const getClass = (cid: number) => classes.find(c => c.ClassID === cid);
 

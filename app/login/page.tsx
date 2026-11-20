@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthService } from '@/lib/auth';
+import { DataStore } from '@/lib/store';
 import { UserRole } from '@/lib/types';
 import AcademicTermSwitcher from '@/app/dashboard/components/AcademicTermSwitcher';
 import SchoolArabicTitle from '@/app/components/SchoolArabicTitle';
+import WebsiteBrandTitle from '@/app/components/WebsiteBrandTitle';
 import {
   ShieldCheck,
   Crown,
@@ -29,6 +31,10 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>('admin');
+
+  useEffect(() => {
+    DataStore.syncFromServer();
+  }, []);
 
   const handleLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -104,8 +110,15 @@ export default function LoginPage() {
               <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
                 Jamiatu Monib Alkuzbary Al-Arabia
               </h1>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold tracking-wider uppercase">
-                <span>Portal: JMAA-MoritAko</span>
+              <div className="pt-1 flex justify-center lg:justify-start">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-gradient-to-r from-amber-300/20 via-white/95 to-amber-200/90 border-2 border-amber-400 shadow-lg shadow-amber-500/20">
+                  <WebsiteBrandTitle
+                    variant="login"
+                    imgClassName="h-11 sm:h-12 w-auto object-contain drop-shadow-xs"
+                    fallbackClassName="text-sm font-black text-emerald-900 tracking-wider uppercase font-mono"
+                    fallbackText="JMAA-MoritAko"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -161,7 +174,22 @@ export default function LoginPage() {
         {/* Right Column: Login Card */}
         <div className="lg:col-span-6 w-full max-w-xl mx-auto">
           <div className="bg-white/95 backdrop-blur-md py-7 px-6 shadow-2xl rounded-3xl sm:px-9 border border-white/20">
-          
+          {/* Highlighted Website Name Banner (3rd Picture: JMAA MoritAko) */}
+          <div className="mb-6 text-center">
+            <div className="relative mx-auto inline-flex flex-col items-center justify-center px-6 py-3 rounded-2xl bg-gradient-to-b from-[#fdfbf5] via-[#f6f0de] to-[#ebe0c3] border-2 border-amber-400/80 shadow-lg ring-4 ring-emerald-700/10">
+              <WebsiteBrandTitle
+                variant="login"
+                imgClassName="h-20 sm:h-24 w-auto object-contain drop-shadow-sm select-none"
+                fallbackClassName="text-2xl sm:text-3xl font-black text-[#126b38] tracking-wide font-mono"
+                fallbackText="JMAA-MoritAko"
+              />
+              <span className="mt-1 inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#126b38] text-amber-200 text-[10px] font-extrabold uppercase tracking-widest shadow-2xs">
+                <Sparkles className="w-3 h-3 text-amber-300" />
+                <span>Official Academic Portal &bull; البوابة الأكاديمية الرسمية</span>
+              </span>
+            </div>
+          </div>
+
           {/* 6-Role Fast Switcher */}
           <div className="mb-6">
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
